@@ -2,17 +2,18 @@ import { useState } from "react";
 import {
   useListDigestArticles,
   useUpdateDigestArticle,
+  useDeleteDigestArticle,
   DigestArticle,
 } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
-import { ExternalLink, Edit3, Save, X, Eye, RotateCcw } from "lucide-react";
+import { ExternalLink, Edit3, Save, X, Eye, RotateCcw, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { stripMarkdown } from "@/lib/utils";
@@ -24,15 +25,53 @@ const DISCIPLINE_BADGE: Record<string, string> = {
   "Multiple": "bg-violet-500/10 text-violet-400 border-violet-500/20",
 };
 
+interface ConfirmDeleteDialogProps {
+  open: boolean;
+  headline: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  deleting: boolean;
+}
+
+function ConfirmDeleteDialog({ open, headline, onConfirm, onCancel, deleting }: ConfirmDeleteDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onCancel(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-serif">Delete permanently?</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground mt-2 leading-relaxed">
+            This will permanently remove <span className="font-medium text-foreground">"{headline}"</span> from the system. This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-2 mt-2">
+          <Button variant="outline" onClick={onCancel} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={deleting}
+            className="gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            {deleting ? "Deleting..." : "Delete permanently"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 interface FullArticleDialogProps {
   article: DigestArticle | null;
   open: boolean;
   onClose: () => void;
   onRestore?: () => void;
+  onDelete?: () => void;
   restoring?: boolean;
 }
 
-function FullArticleDialog({ article, open, onClose, onRestore, restoring }: FullArticleDialogProps) {
+function FullArticleDialog({ article, open, onClose, onRestore, onDelete, restoring }: FullArticleDialogProps) {
   if (!article) return null;
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -99,11 +138,21 @@ function FullArticleDialog({ article, open, onClose, onRestore, restoring }: Ful
             </div>
           )}
 
-          <div className="border-t pt-4 flex gap-2">
+          <div className="border-t pt-4 flex gap-2 flex-wrap">
             {onRestore && (
               <Button onClick={onRestore} disabled={restoring} variant="outline" className="gap-2">
                 <RotateCcw className="h-4 w-4" />
                 {restoring ? "Restoring..." : "Restore to Review"}
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                onClick={onDelete}
+                variant="destructive"
+                className="gap-2 ml-auto"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete permanently
               </Button>
             )}
           </div>
@@ -115,12 +164,14 @@ function FullArticleDialog({ article, open, onClose, onRestore, restoring }: Ful
 
 function RejectedCard({ article }: { article: DigestArticle }) {
   const [viewOpen, setViewOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedHeadline, setEditedHeadline] = useState(article.headline);
   const [editedBody, setEditedBody] = useState(article.body);
   const [editedTake, setEditedTake] = useState(article.rgiTake ?? "");
 
   const update = useUpdateDigestArticle();
+  const deleteArticle = useDeleteDigestArticle();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -153,6 +204,21 @@ function RejectedCard({ article }: { article: DigestArticle }) {
           toast({ title: "Restored to review", description: "Article moved back to Pending Review." });
         },
         onError: () => toast({ title: "Restore failed", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleDeleteConfirm = () => {
+    deleteArticle.mutate(
+      { id: article.id },
+      {
+        onSuccess: () => {
+          setConfirmDeleteOpen(false);
+          setViewOpen(false);
+          invalidate();
+          toast({ title: "Article deleted", description: "The article has been permanently removed." });
+        },
+        onError: () => toast({ title: "Delete failed", variant: "destructive" }),
       }
     );
   };
@@ -190,7 +256,7 @@ function RejectedCard({ article }: { article: DigestArticle }) {
                 <CardTitle className="text-lg font-serif leading-snug">{article.headline}</CardTitle>
               )}
             </div>
-            <div className="flex gap-1.5 shrink-0">
+            <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
               <Button
                 size="sm"
                 variant="ghost"
@@ -224,6 +290,17 @@ function RejectedCard({ article }: { article: DigestArticle }) {
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 Restore
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0 text-destructive/60 hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setConfirmDeleteOpen(true)}
+                disabled={deleteArticle.isPending}
+                data-testid="btn-delete-rejected"
+                title="Delete permanently"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
@@ -278,7 +355,16 @@ function RejectedCard({ article }: { article: DigestArticle }) {
         open={viewOpen}
         onClose={() => setViewOpen(false)}
         onRestore={handleRestore}
+        onDelete={() => { setViewOpen(false); setConfirmDeleteOpen(true); }}
         restoring={update.isPending}
+      />
+
+      <ConfirmDeleteDialog
+        open={confirmDeleteOpen}
+        headline={article.headline}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        deleting={deleteArticle.isPending}
       />
     </>
   );
@@ -293,7 +379,7 @@ export default function Rejected() {
         <h1 className="text-3xl font-serif tracking-tight text-foreground">Rejected</h1>
         <p className="text-muted-foreground mt-1 text-sm">
           {articles.length > 0
-            ? `${articles.length} rejected ${articles.length === 1 ? "entry" : "entries"} — click to read in full or restore to review`
+            ? `${articles.length} rejected ${articles.length === 1 ? "entry" : "entries"} — restore to review or delete permanently`
             : "Digest entries that were rejected during review."}
         </p>
       </div>
