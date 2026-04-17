@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useGetDashboardSummary, useGetScrapeStatus, useTriggerScrape } from "@workspace/api-client-react";
+import { useState, useMemo } from "react";
+import { useGetDashboardSummary, useGetScrapeStatus, useTriggerScrape, useListArticles, type Article } from "@workspace/api-client-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -104,7 +104,17 @@ function TopStoryModal({ article, open, onClose }: { article: TopArticle | null;
               <Badge variant="outline" className={`text-[10px] ml-auto ${disciplineColor}`}>{discipline}</Badge>
             )}
           </div>
-          <DialogTitle className="text-xl font-serif leading-snug">{article.headline}</DialogTitle>
+          <DialogTitle className="text-xl font-serif leading-snug">
+            <a
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors inline-flex items-start gap-2 group"
+            >
+              {article.headline}
+              <ExternalLink className="h-4 w-4 mt-1 shrink-0 opacity-0 group-hover:opacity-60 transition-opacity" />
+            </a>
+          </DialogTitle>
           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2 flex-wrap">
             <span className="font-semibold text-foreground">{article.sourceName}</span>
             {article.author && <span>by {article.author}</span>}
@@ -210,10 +220,9 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
                 const isHigh = article.relevancyScore >= 8;
                 const isMid = article.relevancyScore >= 6.5;
                 return (
-                  <button
+                  <div
                     key={article.id}
-                    onClick={() => open(article)}
-                    className="w-full text-left rounded-lg border border-border bg-background/50 hover:bg-muted/50 hover:border-primary/30 transition-all p-4 group"
+                    className="rounded-lg border border-border bg-background/50 hover:bg-muted/50 hover:border-primary/30 transition-all p-4 group"
                   >
                     <div className="flex items-start gap-4">
                       {/* Rank */}
@@ -234,9 +243,16 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
                           ))}
                         </div>
 
-                        <p className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors">
+                        {/* Headline — primary click = open source URL */}
+                        <a
+                          href={article.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-sm leading-snug hover:text-primary transition-colors flex items-start gap-1.5 group/link"
+                        >
                           {article.headline}
-                        </p>
+                          <ExternalLink className="h-3 w-3 mt-0.5 shrink-0 opacity-0 group-hover/link:opacity-60 transition-opacity text-muted-foreground" />
+                        </a>
 
                         {article.teaserSummary && (
                           <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{article.teaserSummary}</p>
@@ -247,22 +263,18 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
                           {article.author && <span>· {article.author}</span>}
                           {article.publishedAt && (
                             <span title={format(new Date(article.publishedAt), "MMMM d, yyyy 'at' h:mm a")}>
-                              · {format(new Date(article.publishedAt), "MMM d, yyyy")}
-                              <span className="text-muted-foreground/50"> — </span>
-                              {format(new Date(article.publishedAt), "h:mm a")}
-                              <span className="text-muted-foreground/50"> · </span>
-                              {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
+                              · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
                             </span>
                           )}
-                          <a
-                            href={article.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="ml-auto inline-flex items-center gap-1 text-primary/60 hover:text-primary transition-colors"
+                          {/* RGI Analysis button */}
+                          <button
+                            onClick={() => open(article)}
+                            className="ml-auto inline-flex items-center gap-1 text-[10px] font-medium text-primary/50 hover:text-primary transition-colors"
+                            title="View RGI analysis"
                           >
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
+                            <BookOpen className="h-3 w-3" />
+                            RGI Analysis
+                          </button>
                         </div>
                       </div>
 
@@ -271,7 +283,7 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
                         {article.relevancyScore.toFixed(1)}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
 
@@ -294,6 +306,103 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
         </CardContent>
       </Card>
     </>
+  );
+}
+
+function TopicArticlesModal({
+  topic,
+  open,
+  onClose,
+}: {
+  topic: string | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const { data: allArticles = [], isLoading } = useListArticles(
+    topic ? { topicTag: topic, limit: 100 } : {},
+    { query: { enabled: open && !!topic } }
+  );
+
+  // Filter to today only on the client side
+  const articles = useMemo(() => {
+    return (allArticles as Article[])
+      .filter((a) => {
+        const ref = a.publishedAt ? new Date(a.publishedAt) : new Date(a.scrapedAt);
+        return ref >= today;
+      })
+      .sort((a, b) => b.relevancyScore - a.relevancyScore);
+  }, [allArticles, today]);
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs font-semibold uppercase tracking-wide">{topic}</Badge>
+            <span className="text-muted-foreground text-xs">· Today's articles</span>
+          </div>
+          <DialogTitle className="text-lg font-serif">
+            {topic} Intelligence
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto space-y-2 mt-2 pr-1">
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((n) => <Skeleton key={n} className="h-20 w-full" />)}
+            </div>
+          ) : articles.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="text-sm font-medium text-muted-foreground">No articles found for {topic} today.</p>
+              <p className="text-xs text-muted-foreground mt-1">Try scraping again or check back later.</p>
+            </div>
+          ) : (
+            articles.map((article) => {
+              const isHigh = article.relevancyScore >= 8;
+              const isMid = article.relevancyScore >= 6.5;
+              const pubDate = article.publishedAt ? new Date(article.publishedAt) : null;
+              return (
+                <a
+                  key={article.id}
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-3 rounded-lg border border-border bg-background/50 hover:bg-muted/40 hover:border-primary/30 transition-all p-3 group"
+                >
+                  {/* Score */}
+                  <div className={`shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center text-[11px] font-bold tabular-nums ${isHigh ? "text-amber-400 border-amber-500/40" : isMid ? "text-primary border-primary/40" : "text-slate-400 border-slate-500/20"}`}>
+                    {article.relevancyScore.toFixed(1)}
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <p className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors">
+                      {article.headline}
+                      <ExternalLink className="inline-block h-3 w-3 ml-1.5 mb-0.5 opacity-0 group-hover:opacity-60 transition-opacity" />
+                    </p>
+                    {article.teaserSummary && (
+                      <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{article.teaserSummary}</p>
+                    )}
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground flex-wrap">
+                      <span className="font-medium text-foreground/60">{article.sourceName}</span>
+                      {pubDate && (
+                        <span>· {formatDistanceToNow(pubDate, { addSuffix: true })}</span>
+                      )}
+                    </div>
+                  </div>
+                </a>
+              );
+            })
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -427,6 +536,8 @@ function TopPicksSection({
 export default function Dashboard() {
   const [briefLoading, setBriefLoading] = useState(false);
   const [topicModalOpen, setTopicModalOpen] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [topicArticlesOpen, setTopicArticlesOpen] = useState(false);
   const { data: summary, isLoading } = useGetDashboardSummary();
   const { data: scrapeStatus } = useGetScrapeStatus();
   const triggerScrape = useTriggerScrape();
@@ -486,9 +597,19 @@ export default function Dashboard() {
 
   const hasArticles = summary.totalArticlesToday > 0;
 
+  const handleTopicClick = (topic: string) => {
+    setSelectedTopic(topic);
+    setTopicArticlesOpen(true);
+  };
+
   return (
     <div className="space-y-5">
       <GenerateModal open={topicModalOpen} onOpenChange={setTopicModalOpen} initialMode="topic_article" />
+      <TopicArticlesModal
+        topic={selectedTopic}
+        open={topicArticlesOpen}
+        onClose={() => { setTopicArticlesOpen(false); setSelectedTopic(null); }}
+      />
 
       {/* ── Action Bar ── */}
       <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center gap-3 flex-wrap">
@@ -581,13 +702,17 @@ export default function Dashboard() {
             <CardContent className="pt-0 space-y-1.5">
               {summary.topicIntelligence && summary.topicIntelligence.length > 0 ? (
                 summary.topicIntelligence.slice(0, 8).map((ti, i) => (
-                  <div key={ti.topic} className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-border bg-background/50 hover:bg-muted/30 transition-colors">
+                  <button
+                    key={ti.topic}
+                    onClick={() => handleTopicClick(ti.topic)}
+                    className="w-full text-left flex items-start gap-3 px-3 py-2.5 rounded-lg border border-border bg-background/50 hover:bg-muted/30 hover:border-primary/20 transition-colors group cursor-pointer"
+                  >
                     <span className="text-base font-bold text-muted-foreground/25 w-5 text-right shrink-0 tabular-nums leading-snug mt-0.5">
                       {i + 1}
                     </span>
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-semibold text-sm leading-none">{ti.topic}</span>
+                        <span className="font-semibold text-sm leading-none group-hover:text-primary transition-colors">{ti.topic}</span>
                         {ti.hasEmergingSignal && (
                           <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-wide">
                             <Zap className="h-2 w-2" />Signal
@@ -599,6 +724,7 @@ export default function Dashboard() {
                         >
                           {ti.discipline}
                         </Badge>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary/60 transition-colors" />
                       </div>
                       <ImportanceBar score={ti.importanceScore} />
                       <div className="flex items-center justify-between gap-2">
@@ -609,7 +735,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))
               ) : (
                 <div className="text-center py-10 text-muted-foreground text-sm">

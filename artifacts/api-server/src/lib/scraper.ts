@@ -1,6 +1,6 @@
 import { db, sourcesTable, articlesTable } from "@workspace/db";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
-import { eq, and, gte, sql } from "drizzle-orm";
+import { eq, and, gte, sql, desc } from "drizzle-orm";
 import { logger } from "./logger";
 
 export interface ScrapedItem {
@@ -284,6 +284,23 @@ export function getScrapeStatus() {
     lastScrapeAt: lastScrapeAt?.toISOString() ?? null,
     lastScrapeArticlesFound,
   };
+}
+
+// Initialize lastScrapeAt from the database on startup so it is never null
+// if any data has ever been scraped.
+export async function initializeScrapeStatus(): Promise<void> {
+  try {
+    const [latest] = await db
+      .select({ scrapedAt: articlesTable.scrapedAt })
+      .from(articlesTable)
+      .orderBy(desc(articlesTable.scrapedAt))
+      .limit(1);
+    if (latest?.scrapedAt) {
+      lastScrapeAt = new Date(latest.scrapedAt);
+    }
+  } catch (err) {
+    logger.error({ err }, "Failed to initialize scrape status from DB");
+  }
 }
 
 export async function runScrape(): Promise<{
