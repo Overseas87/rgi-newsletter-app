@@ -33,28 +33,25 @@ Source Articles (synthesize ALL of these into one unified brief):
 
 Editor Notes: {NOTES}
 
-The brief must follow this exact five-part structure in the body (written as flowing prose, not as labeled sections):
+Write a concise, focused brief following this three-part logic in the body (flowing prose, no labeled sections):
 
-1. CONTEXT — What is happening? Frame the moment with precision. Use specific facts, data, and examples from the sources. Set the stage without editorializing.
+1. WHAT IS HAPPENING — Frame the key development with precision. Use specific facts and examples from the sources. Be direct — one tight paragraph that sets the context without padding.
 
-2. SYNTHESIS — What connects these stories? This is the analytical heart of the piece. Identify the pattern, tension, or trend that runs across all the sources. Name it. Explain why it matters that these things are happening simultaneously.
+2. THE PATTERN — What connects these signals? Identify the underlying trend or tension. Why does this matter now? This is the analytical heart: name the pattern and explain its strategic significance.
 
-3. IMPLICATIONS — What does this mean for organizations and leaders? Be specific about consequences — who is affected, how, on what timeline. Think in terms of risk, opportunity, and strategic positioning.
-
-4. RGI PERSPECTIVE — Connect this moment to one or more of RGI's three disciplines (Strategic Foresight, System Vitality, Civic Stewardship). What would a thoughtful RGI fellow say about this? This is where RGI's voice is strongest.
-
-5. WHAT LEADERS SHOULD WATCH — Conclude with 2-3 forward-looking indicators, questions, or actions leaders should monitor in the coming weeks and months.
+3. IMPLICATIONS FOR LEADERS — Who is affected, how, and on what timeline? Be concrete about risk, opportunity, and the decisions leaders face as a result. End with 1-2 things to watch.
 
 Requirements:
-- Minimum 700 words, target 800-900 words
-- Write as clean, flowing prose — no bullet points, no visible section headers, no markdown formatting in the body
-- The five parts should flow naturally as paragraphs, not labeled sections
-- Analytical, rigorous, non-sensational tone throughout
+- Body: 400-700 words maximum. Be ruthlessly concise. Every sentence must earn its place.
+- Write as clean, flowing prose — no bullet points, no visible headers, no markdown in the body
+- Analytical and direct — avoid padding, vague generalities, and filler transitions
+- All claims must trace to the provided sources
 
 Return ONLY a valid JSON object with these exact fields:
-- headline: string (strong, direct, analytical — not clickbait; no colons splitting into two halves; written as a senior editor would headline a Foreign Affairs piece)
-- body: string (the complete synthesized brief as described above, 700-900 words, clean prose only — no markdown, no headers, no bullets)
-- rgiTake: string (3-5 sentences of INTERPRETATION, not description. Name the RGI discipline(s) explicitly. State a clear point of view — what RGI actually thinks about this, why it matters NOW, and what it demands of leaders. This must read as an editorial opinion from a senior RGI fellow, not a neutral summary. Use active voice: "This signals...", "Leaders who ignore this...", "The strategic imperative here is..." — never "This article discusses...")
+- headline: string (strong, direct, analytical — not clickbait; no colons; written as a senior editor would headline a Foreign Affairs piece)
+- body: string (the complete 400-700 word brief as described — clean prose only, no markdown, no headers, no bullets)
+- rgiTake: string (3-4 sentences of sharp editorial OPINION. Name the RGI discipline explicitly. State what RGI concludes — not what happened. Use active voice: "This signals...", "The strategic imperative here is...", "Leaders who ignore this..." — never "This article discusses...")
+- keyTakeaways: string array of EXACTLY 5 items — each a short, crisp, actionable insight a leader can act on. Start each with a strong verb or noun. No filler. These should be scannable in 10 seconds.
 - topicTags: string array (choose only from: ["AI", "Leadership", "Geopolitics", "Finance", "Environmental Health", "Central Florida", "Strategy", "Culture", "Technology", "Policy", "Education", "Economy", "Innovation", "Governance", "Health", "Democracy", "Future of Work", "Sustainability"])
 - discipline: string (exactly one of: "Strategic Foresight", "System Vitality", "Civic Stewardship", or "Multiple")
 - relevancyScore: number 1-10 (how strategically significant this is for senior leaders at the intersection of business, policy, and society)
@@ -82,7 +79,7 @@ BODY (write as flowing prose paragraphs, following this internal logic in order)
 5. Why This Matters for Leaders — what should senior leaders do differently, watch more carefully, or think about differently as a result of today's intelligence? 2-3 concrete, decision-relevant observations.
 
 Requirements:
-- Total body word count: 900-1200 words
+- Total body word count: 600-800 words — tight, authoritative, scannable
 - Tone: HBR/Foreign Affairs — analytical, rigorous, free of hype
 - No emojis, no informal language, no vague generalities
 - Every claim traces back to a source in the provided articles — no fabrication
@@ -90,9 +87,10 @@ Requirements:
 
 Return ONLY a valid JSON object with these fields:
 - headline: string (the day's single most important strategic development, one declarative sentence)
-- executiveSummary: string array (exactly 6 bullet strings, each one tight sentence)
-- body: string (the full 900-1200 word prose brief as described above — no markdown, no headers, no bullets in the body)
-- rgiTake: string (3-5 sentences of sharp editorial OPINION, not description. Name the RGI discipline(s) explicitly. State what today's events mean — not what happened, but what RGI concludes from it. Use active, opinionated voice: "Today's convergence signals...", "The strategic imperative for leaders is...", "Organizations that fail to act on this..." — never summarize or describe. This is the pull-quote that captures RGI's distinctive analytical perspective on the day.)
+- executiveSummary: string array (exactly 6 bullet strings, each one tight sentence — the 6 things a senior leader must know today)
+- body: string (the full 600-800 word prose brief as described above — no markdown, no headers, no bullets in the body)
+- rgiTake: string (3-4 sentences of sharp editorial OPINION. Name the RGI discipline(s) explicitly. State what RGI concludes from today — not what happened. Use active, opinionated voice: "Today's convergence signals...", "The strategic imperative for leaders is...", "Organizations that fail to act on this..." — never summarize or describe.)
+- keyTakeaways: string array of EXACTLY 5 items — crisp, actionable insights for leaders drawn from today's brief. Start each with a strong verb or noun. Scannable in 10 seconds. No filler.
 - topicTags: string array (from: ["AI", "Leadership", "Geopolitics", "Finance", "Environmental Health", "Central Florida", "Strategy", "Culture", "Technology", "Policy", "Education", "Economy", "Innovation", "Governance", "Health", "Democracy", "Future of Work", "Sustainability"])
 - discipline: string (one of: "Strategic Foresight", "System Vitality", "Civic Stewardship", "Multiple")
 - relevancyScore: number 1-10
@@ -106,6 +104,7 @@ export async function generateDigestArticle(
   headline: string;
   body: string;
   rgiTake: string;
+  keyTakeaways: string[];
   topicTags: string[];
   discipline: string;
   relevancyScore: number;
@@ -153,6 +152,7 @@ export async function generateDigestArticle(
       headline: parsed.headline || "Untitled Brief",
       body: parsed.body || "",
       rgiTake: parsed.rgiTake || "",
+      keyTakeaways: Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : [],
       topicTags: parsed.topicTags || [],
       discipline: parsed.discipline || "Multiple",
       relevancyScore: parsed.relevancyScore || 7,
@@ -170,6 +170,7 @@ export async function generateDailyBrief(
   executiveSummary: string[];
   body: string;
   rgiTake: string;
+  keyTakeaways: string[];
   topicTags: string[];
   discipline: string;
   relevancyScore: number;
@@ -237,6 +238,7 @@ export async function generateDailyBrief(
       executiveSummary: Array.isArray(parsed.executiveSummary) ? parsed.executiveSummary : [],
       body: parsed.body || "",
       rgiTake: parsed.rgiTake || "",
+      keyTakeaways: Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : [],
       topicTags: parsed.topicTags || [],
       discipline: parsed.discipline || "Multiple",
       relevancyScore: parsed.relevancyScore || 8,

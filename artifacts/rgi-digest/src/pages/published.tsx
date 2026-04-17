@@ -68,6 +68,19 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
               <p className="text-sm italic text-foreground/80 leading-relaxed">{article.rgiTake}</p>
             </div>
           )}
+          {article.keyTakeaways && article.keyTakeaways.length > 0 && (
+            <div className="rounded-xl border border-border bg-muted/30 p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Key Takeaways</p>
+              <ul className="space-y-2">
+                {article.keyTakeaways.map((item, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                    <span className="flex-shrink-0 w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {article.topicTags && article.topicTags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {article.topicTags.map((tag) => (

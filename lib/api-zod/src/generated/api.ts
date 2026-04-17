@@ -125,6 +125,7 @@ export const ListDigestArticlesResponseItem = zod.object({
   body: zod.string(),
   executiveSummary: zod.array(zod.string()),
   rgiTake: zod.string(),
+  keyTakeaways: zod.array(zod.string()),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
   sourceArticles: zod
@@ -192,6 +193,7 @@ export const GetDigestArticleResponse = zod.object({
   body: zod.string(),
   executiveSummary: zod.array(zod.string()),
   rgiTake: zod.string(),
+  keyTakeaways: zod.array(zod.string()),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
   sourceArticles: zod
@@ -258,6 +260,7 @@ export const UpdateDigestArticleResponse = zod.object({
   body: zod.string(),
   executiveSummary: zod.array(zod.string()),
   rgiTake: zod.string(),
+  keyTakeaways: zod.array(zod.string()),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
   sourceArticles: zod
@@ -320,6 +323,7 @@ export const ApproveDigestArticleResponse = zod.object({
   body: zod.string(),
   executiveSummary: zod.array(zod.string()),
   rgiTake: zod.string(),
+  keyTakeaways: zod.array(zod.string()),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
   sourceArticles: zod
@@ -379,6 +383,7 @@ export const RejectDigestArticleResponse = zod.object({
   body: zod.string(),
   executiveSummary: zod.array(zod.string()),
   rgiTake: zod.string(),
+  keyTakeaways: zod.array(zod.string()),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
   sourceArticles: zod
@@ -438,6 +443,7 @@ export const RegenerateDigestArticleResponse = zod.object({
   body: zod.string(),
   executiveSummary: zod.array(zod.string()),
   rgiTake: zod.string(),
+  keyTakeaways: zod.array(zod.string()),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
   sourceArticles: zod

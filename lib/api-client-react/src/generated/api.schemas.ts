@@ -90,6 +90,7 @@ export interface DigestArticle {
   body: string;
   executiveSummary: string[];
   rgiTake: string;
+  keyTakeaways: string[];
   topicTags: string[];
   sourceArticleIds: number[];
   sourceArticles?: Article[];

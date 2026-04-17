@@ -556,6 +556,10 @@ components:
             type: string
         rgiTake:
           type: string
+        keyTakeaways:
+          type: array
+          items:
+            type: string
         topicTags:
           type: array
           items:
@@ -590,6 +594,7 @@ components:
         - body
         - executiveSummary
         - rgiTake
+        - keyTakeaways
         - topicTags
         - sourceArticleIds
         - status
