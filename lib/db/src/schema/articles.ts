@@ -8,6 +8,7 @@ export const articlesTable = pgTable("articles", {
   url: text("url").notNull(),
   sourceName: text("source_name").notNull(),
   sourceUrl: text("source_url"),
+  author: text("author"),
   relevancyScore: real("relevancy_score").notNull().default(0),
   topicTags: text("topic_tags").array().notNull().default([]),
   teaserSummary: text("teaser_summary"),

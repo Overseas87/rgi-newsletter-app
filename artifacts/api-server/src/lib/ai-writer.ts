@@ -3,46 +3,59 @@ import { db, articlesTable } from "@workspace/db";
 import { inArray } from "drizzle-orm";
 import { logger } from "./logger";
 
-const RGI_SYSTEM_PROMPT = `You are the senior editorial AI for the Rick Goings Institute (RGI) at Rollins College — an institution that equips leaders to build organizations that last, contribute, and stay vital in demanding times.
+const RGI_SYSTEM_PROMPT = `You are the senior intelligence editor for the Rick Goings Institute (RGI) at Rollins College — an institution dedicated to equipping leaders to build organizations that last, contribute, and stay vital in demanding times.
 
-RGI's perspective connects current events to three core disciplines:
+RGI's three core disciplines:
 
-1. Strategic Foresight: The capacity to anticipate change, read signals in the environment, and position organizations advantageously for futures that are not yet visible. This includes AI acceleration, geopolitical volatility, market transitions, weak signal detection, and pattern recognition across complex systems.
+1. Strategic Foresight: The capacity to anticipate change, read signals in the environment, and position organizations advantageously for futures not yet visible. Encompasses AI acceleration, geopolitical volatility, market transitions, weak signal detection, and pattern recognition across complex systems.
 
 2. System Vitality: The organizational energy, resilience, and adaptive capacity needed to sustain high performance across cycles of disruption and renewal. Organizations as living systems driven by human energy, trust, purpose, and institutional health.
 
 3. Civic Stewardship: The responsibility leaders bear to the communities and institutions that grant them legitimacy. Corporations as citizens with obligations beyond profit — to civic life, democratic institutions, and long-term community wellbeing.
 
-RGI's editorial voice:
-- Rigorous, pragmatic, and grounded in liberal arts and advanced management thinking
-- Connects macro trends to the daily decisions of real leaders
-- Never sensationalist; avoids hyperbole and empty speculation
+RGI's editorial standards:
+- Synthesizes intelligence, not summaries — always finds the thread connecting disparate signals
+- Writes at the level of Harvard Business Review or Foreign Affairs — analytical, rigorous, worth reading twice
 - Uses precise, direct language that respects the reader's intelligence and experience
-- Connects specific news events to timeless leadership principles and disciplines
-- Does not fabricate facts — synthesizes only from the provided source material
-- Writes at the level of HBR or Foreign Affairs — thoughtful, substantial, and worth reading twice
-- Always grounds analysis in what this means for leaders making decisions right now`;
+- Never sensationalist — avoids hyperbole, jargon, and empty speculation
+- Grounds macro trends in the actual decisions real leaders face right now
+- Never fabricates data — derives all analysis from the provided source material
+- Prioritizes insight over information, pattern over event, implication over description`;
 
-const ARTICLE_PROMPT = `Generate a full-length newsletter article for RGI editors based on the following source article(s).
+const SYNTHESIS_PROMPT = `You are writing an RGI Strategic Intelligence Brief — a premium, editor-curated intelligence piece synthesizing multiple source articles into a single coherent analysis.
 
-The article must be substantial — at minimum 500 words, ideally 700-900 words. Think of it as a full-page feature, not a brief. The structure should be:
-1. A strong opening paragraph that frames the significance of the story
-2. Two to three paragraphs developing the analysis with specific detail and insight
-3. A paragraph connecting the story to organizational and leadership implications
-4. A concluding paragraph that points toward what leaders should watch or do next
+CRITICAL INSTRUCTION: Do NOT summarize these articles individually. Instead, read them as a collection of signals. Identify what they have in common. Extract the underlying pattern. Then write ONE integrated piece that reveals the deeper narrative connecting them all.
 
-Source Articles:
+Source Articles (synthesize ALL of these into one unified brief):
 {SOURCES}
 
-Editor Notes (if any): {NOTES}
+Editor Notes: {NOTES}
+
+The brief must follow this exact five-part structure in the body (written as flowing prose, not as labeled sections):
+
+1. CONTEXT — What is happening? Frame the moment with precision. Use specific facts, data, and examples from the sources. Set the stage without editorializing.
+
+2. SYNTHESIS — What connects these stories? This is the analytical heart of the piece. Identify the pattern, tension, or trend that runs across all the sources. Name it. Explain why it matters that these things are happening simultaneously.
+
+3. IMPLICATIONS — What does this mean for organizations and leaders? Be specific about consequences — who is affected, how, on what timeline. Think in terms of risk, opportunity, and strategic positioning.
+
+4. RGI PERSPECTIVE — Connect this moment to one or more of RGI's three disciplines (Strategic Foresight, System Vitality, Civic Stewardship). What would a thoughtful RGI fellow say about this? This is where RGI's voice is strongest.
+
+5. WHAT LEADERS SHOULD WATCH — Conclude with 2-3 forward-looking indicators, questions, or actions leaders should monitor in the coming weeks and months.
+
+Requirements:
+- Minimum 700 words, target 800-900 words
+- Write as clean, flowing prose — no bullet points, no visible section headers, no markdown formatting in the body
+- The five parts should flow naturally as paragraphs, not labeled sections
+- Analytical, rigorous, non-sensational tone throughout
 
 Return ONLY a valid JSON object with these exact fields:
-- headline: string (compelling, direct — not clickbait; written as a quality editor would)
-- body: string (the full multi-paragraph article in RGI's editorial voice, 500-900 words, written as clean prose — no bullet points, no headers within the body, no markdown formatting)
-- rgiTake: string (3-4 sentences explicitly stating RGI's perspective on why this story matters to leaders right now — this must be present, substantive, and directly connected to one or more of the three disciplines)
-- topicTags: string array (choose from: AI, Leadership, Geopolitics, Finance, Environmental Health, Central Florida, Strategy, Culture, Technology, Policy, Education, Economy, Innovation, Governance, Health, Democracy, Future of Work, Sustainability)
+- headline: string (strong, direct, analytical — not clickbait; no colons splitting into two halves; written as a senior editor would headline a Foreign Affairs piece)
+- body: string (the complete synthesized brief as described above, 700-900 words, clean prose only — no markdown, no headers, no bullets)
+- rgiTake: string (3-5 sentences articulating RGI's specific perspective — which discipline(s) this engages, and what it means for the leaders RGI serves. This is the pull-quote-worthy distillation of the piece's significance.)
+- topicTags: string array (choose only from: ["AI", "Leadership", "Geopolitics", "Finance", "Environmental Health", "Central Florida", "Strategy", "Culture", "Technology", "Policy", "Education", "Economy", "Innovation", "Governance", "Health", "Democracy", "Future of Work", "Sustainability"])
 - discipline: string (exactly one of: "Strategic Foresight", "System Vitality", "Civic Stewardship", or "Multiple")
-- relevancyScore: number from 1 to 10 (how relevant this is to RGI's mission and audience)
+- relevancyScore: number 1-10 (how strategically significant this is for senior leaders at the intersection of business, policy, and society)
 
 Return ONLY valid JSON. No explanation, no markdown code blocks, no preamble.`;
 
@@ -68,12 +81,12 @@ export async function generateDigestArticle(
 
   const sourcesText = articles
     .map(
-      (a) =>
-        `HEADLINE: ${a.headline}\nSOURCE: ${a.sourceName}\nURL: ${a.url}\nCONTENT: ${(a.content || a.teaserSummary || a.headline).slice(0, 3000)}`
+      (a, i) =>
+        `SOURCE ${i + 1}:\nHeadline: ${a.headline}\nPublication: ${a.sourceName}${a.author ? `\nAuthor: ${a.author}` : ""}\nURL: ${a.url}\nContent: ${(a.content || a.teaserSummary || a.headline).slice(0, 4000)}`
     )
     .join("\n\n---\n\n");
 
-  const prompt = ARTICLE_PROMPT.replace("{SOURCES}", sourcesText).replace(
+  const prompt = SYNTHESIS_PROMPT.replace("{SOURCES}", sourcesText).replace(
     "{NOTES}",
     editorNotes || "None"
   );
@@ -92,7 +105,7 @@ export async function generateDigestArticle(
     const cleanText = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
     const parsed = JSON.parse(cleanText);
     return {
-      headline: parsed.headline || "Untitled Article",
+      headline: parsed.headline || "Untitled Brief",
       body: parsed.body || "",
       rgiTake: parsed.rgiTake || "",
       topicTags: parsed.topicTags || [],

@@ -1,0 +1,123 @@
+FEATURE ADDITION: MULTI-LAYER DATA SOURCING (NEWS + SOCIAL INTELLIGENCE)
+Objective
+
+Extend the existing data sourcing system to include social media intelligence sources (Twitter/X and LinkedIn) in addition to traditional news sources.
+
+The goal is to capture:
+
+early signals
+executive communication
+real-time developments
+high-value insights before they appear in news articles
+🧠 1. ADD NEW DATA LAYER: SOCIAL INTELLIGENCE SOURCES
+
+Add support for scraping and ingesting content from:
+
+Platforms:
+Twitter/X
+LinkedIn
+Types of sources:
+official company accounts (e.g. Tesla, OpenAI, major institutions)
+CEOs and executives
+policymakers
+academics and thought leaders
+institutional accounts
+🧩 2. SOURCE CLASSIFICATION SYSTEM (IMPORTANT)
+
+Each source must be classified into categories:
+
+Tier 1: High credibility institutional (NYT, Bloomberg, etc.)
+Tier 2: Professional/analytical sources (think tanks, experts)
+Tier 3: Social media sources (Twitter/X, LinkedIn)
+
+⚠️ BUT:
+Social media must NOT automatically rank low
+
+Instead:
+
+credibility depends on who posted
+not the platform itself
+⚖️ 3. CONTEXT-AWARE RELEVANCY SCORING
+
+Update the relevancy scoring system:
+
+Each item is scored based on:
+
+relevance to RGI disciplines
+recency (same-day priority)
+source credibility
+author authority (NEW)
+engagement signals (optional)
+Example logic:
+Elon Musk announcement → high authority
+random tweet → low authority
+🔍 4. DISPLAY SOCIAL CONTENT IN FEED
+
+In the “Daily Intelligence Feed”:
+
+Include social posts alongside news articles.
+
+Each item must show:
+
+platform (Twitter/X or LinkedIn badge)
+author name
+author type (CEO, policymaker, etc.)
+timestamp
+short preview
+relevance score
+link to original post
+🧠 5. SOCIAL SIGNAL DETECTION (IMPORTANT FEATURE)
+
+Add logic to detect:
+
+breaking announcements
+major statements
+emerging narratives
+
+Mark these with a label:
+
+👉 “Signal” or “Emerging Signal”
+
+✍️ 6. AI SYNTHESIS MUST INCLUDE SOCIAL SIGNALS
+
+When generating articles:
+
+AI must:
+
+integrate social posts into the narrative
+distinguish between:
+reported news
+direct statements
+
+Example:
+
+“According to Reuters…”
+“In a direct statement on X, Tesla announced…”
+🧩 7. CUSTOM SOURCE INPUT (EXTENSION)
+
+Allow editor to:
+
+add specific:
+Twitter/X handles
+LinkedIn profiles
+assign:
+authority level
+priority weight
+⚠️ 8. FILTER LOW-QUALITY SOCIAL CONTENT
+
+The system must:
+
+ignore spam
+ignore low-value opinion posts
+prioritize:
+original information
+credible voices
+decision-relevant content
+🎯 FINAL RULE
+
+The system must treat:
+
+news → validated reporting
+social → early signal / direct insight
+
+Both are essential, but serve different roles.

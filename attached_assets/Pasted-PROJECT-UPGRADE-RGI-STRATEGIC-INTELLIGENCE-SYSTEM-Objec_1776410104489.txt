@@ -1,0 +1,185 @@
+PROJECT UPGRADE: RGI STRATEGIC INTELLIGENCE SYSTEM
+Objective
+
+Upgrade the existing prototype from a basic AI news summarizer into a high-quality, editor-driven intelligence system for the Rick Goings Institute (RGI).
+
+The system must prioritize:
+
+insight over summary
+relevance over volume
+human judgment over automation
+🔴 1. CORE SHIFT (VERY IMPORTANT)
+
+The system must change from:
+
+automatically generating articles
+
+to:
+
+allowing the editor to select important stories and generate high-quality intelligence briefs
+
+🧠 2. DAILY INTELLIGENCE FEED (NEW MAIN FEATURE)
+
+Create a new top-level dashboard section:
+
+👉 “Daily Intelligence Feed”
+
+This displays all scraped content BEFORE article generation.
+
+Each item must show:
+
+headline
+source name
+author (if available)
+publish date + exact time
+topic tag(s)
+1–2 sentence preview summary
+relevancy score (1–10)
+direct link to original source
+Add functionality:
+sorting (by relevance, time, source)
+filtering (by topic, source, score)
+clean card-based UI
+✋ 3. ARTICLE SELECTION SYSTEM (KEY FEATURE)
+
+Add ability to:
+
+select multiple articles via checkbox
+selection persists visually
+
+Add button at top:
+
+👉 “Generate RGI Strategic Brief”
+
+🧠 4. MULTI-SOURCE SYNTHESIS (CRITICAL)
+
+When generating an article:
+
+AI must:
+
+combine selected sources
+identify patterns across articles
+remove redundancy
+extract the core narrative
+
+❗ Do NOT summarize articles individually
+❗ MUST synthesize them into ONE coherent piece
+
+✍️ 5. HIGH-QUALITY ARTICLE OUTPUT (MAJOR IMPROVEMENT)
+
+Each generated article must follow this structure:
+
+Structure:
+Strong headline
+Context: what happened
+Synthesis: what connects these stories
+Implications: what this means
+RGI Perspective (core insight)
+Why this matters for leaders
+Requirements:
+minimum 600–900 words
+professional, analytical tone
+no fluff, no repetition
+written like Harvard Business Review / McKinsey
+🧠 6. TOPIC INTELLIGENCE SECTION (NEW)
+
+Add a section:
+
+👉 “What Matters Today”
+
+For each topic:
+
+topic name
+number of articles detected
+importance score
+short explanation of significance
+connection to:
+Strategic Foresight
+System Vitality
+Civic Stewardship
+⚡ 7. SCRAPING IMPROVEMENTS
+improve scraping speed using parallel processing
+only include articles from last 24 hours
+always show:
+
+👉 “Last scraped: [DATE + TIME + MINUTES]” (top of dashboard)
+
+move “Scrape Now” button to top
+✅ 8. APPROVAL SYSTEM (FIX + IMPROVE)
+
+When clicking:
+
+Approve:
+move article to “Published” immediately
+show confirmation message
+Regenerate:
+create a completely new version
+show loading state
+Reject:
+move to “Rejected”
+
+All actions must:
+
+work reliably
+never fail silently
+📄 9. FULL ARTICLE VIEW
+
+Clicking an article must:
+
+open full-page reading view
+display:
+full article
+RGI perspective
+sources used
+relevance score
+topic tags
+🧩 10. SOURCE MANAGEMENT (IMPROVE)
+
+Allow editor to:
+
+add new sources (URL, LinkedIn, Twitter/X)
+remove sources
+assign importance level
+
+Sources must influence:
+
+scraping
+relevancy scoring
+🎨 11. BRANDING & NAMING
+
+Update UI to reflect RGI identity:
+
+dark navy base
+gold accents
+clean white typography
+
+Rename app to:
+
+👉 “RGI Strategic Intelligence Brief”
+
+⚠️ FINAL SYSTEM RULES
+
+The system must:
+
+only use real, current data
+never hallucinate information
+always include source links
+prioritize quality over quantity
+target 1–2 high-quality articles per day
+🧠 RGI VOICE (IMPORTANT)
+
+All output must reflect:
+
+leadership-focused thinking
+long-term perspective
+connection to:
+Strategic Foresight
+System Vitality
+Civic Stewardship
+
+Tone must be:
+
+analytical
+rigorous
+non-sensational
+END OF PROMPT
