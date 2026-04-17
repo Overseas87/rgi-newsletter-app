@@ -1,0 +1,191 @@
+Implement the following improvements in order of priority. These are upgrades to the existing system, not a rebuild.
+
+1. Fix and stabilize the scoring system (highest priority)
+
+Redesign the relevancy score so it is not influenced mainly by recency. The score must always be out of 10 and based primarily on importance.
+
+Relevancy should be calculated based on:
+
+strategic impact (business, markets, geopolitics, technology)
+alignment with RGI focus areas
+cross-topic importance (does it affect multiple systems)
+source authority
+recency (small weight only)
+
+Recency must not dominate the score. A highly relevant article from 20 hours ago must rank above a weak article from 2 hours ago.
+
+Add an authenticity score (also out of 10) that reflects source credibility, authority, and whether the information is supported or primary.
+
+Use both scores together to rank Top Stories.
+
+2. Improve Top Stories quality
+
+Tighten filtering so only high-signal content appears.
+
+Remove:
+
+lifestyle content
+local irrelevant stories
+low-impact articles
+
+Only show articles that matter for:
+
+business
+finance
+AI
+geopolitics
+leadership
+systems-level developments
+
+If fewer than 5 strong stories exist, show fewer instead of filling with weak ones.
+
+3. Fix time logic and freshness
+
+Only use content from the last 24 hours, but do not prioritize newer articles automatically.
+
+Always show:
+
+exact publish time
+“X hours ago”
+
+Ensure “Last Scraped” always shows a real timestamp and never “Never.”
+
+4. Fix navigation flow (critical UX)
+
+Make “What Matters Today” fully clickable.
+
+When clicking a topic:
+
+open a topic view
+show all related articles from last 24h
+
+When clicking an article:
+
+always open the original source in a new tab
+
+This flow must always work:
+dashboard → topic → source
+
+5. Improve article generation intelligence
+
+When generating topic articles with multiple topics selected:
+
+do NOT create separate sections per topic
+identify the strongest connection between topics
+build one coherent narrative
+
+The system must:
+
+detect cause-and-effect relationships
+prioritize meaningful connections
+ignore weak or forced links
+
+Even with many selected topics, the output must stay focused and make sense.
+
+6. Reduce article length and improve structure
+
+All generated articles must be:
+
+400–600 words
+
+Each article must include:
+
+short main narrative
+RGI Take (clear opinion)
+Key Takeaways (3–5 bullet points, always visible)
+
+Bullet points can be full sentences.
+
+7. Upgrade the RGI Take (very important)
+
+The RGI Take must:
+
+not summarize
+clearly agree, partially agree, or disagree with the source
+explain why
+
+It should:
+
+challenge weak narratives
+add long-term perspective
+focus on leadership and system implications
+8. Fix editorial direction (text + voice)
+
+When the user inputs editorial direction (text or voice):
+
+the AI must strongly follow it
+tone, structure, and focus must visibly change
+
+Voice input must:
+
+convert to text
+be editable
+influence the output
+9. Fix article editing (bug)
+
+When the user edits an article and clicks save:
+
+changes must persist immediately
+updated version must be shown everywhere
+editing must work for all article states
+10. Clean up Intelligence Feed
+
+If checkboxes exist:
+
+either connect them to a function (e.g. generate article from selected items)
+or remove them
+
+No unclear UI elements should remain.
+
+11. Improve article lifecycle control
+
+Allow full flexibility:
+
+Published → move back to Pending or Rejected
+Rejected → can be published anytime
+Articles are never locked
+
+Unpublishing removes it from “Published” but keeps it saved.
+
+12. Add “Today’s Top Picks” (editor layer)
+
+Show best generated article candidates.
+
+Allow user to:
+
+review
+compare
+choose which to publish
+
+Goal:
+generate multiple → publish 1–2
+
+13. Improve UI details
+remove red color for ratings (use neutral or gold/blue)
+ensure RGI logo always shows (including fullscreen)
+keep layout clean and focused on Top Stories
+14. Strengthen source system
+
+Ensure system actually includes:
+
+Twitter/X
+LinkedIn
+company announcements
+institutional sources
+
+Treat high-authority posts as valid signals.
+
+15. Performance + stability
+scraping must be fast
+no blocking UI
+show loading states
+handle errors clearly
+🎯 Final Goal
+
+After these improvements, the system should:
+
+show only what truly matters
+rank correctly
+generate short, high-quality articles
+allow full editorial control
+feel reliable under daily use
