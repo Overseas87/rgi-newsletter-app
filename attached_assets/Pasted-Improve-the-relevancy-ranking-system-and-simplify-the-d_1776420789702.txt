@@ -1,0 +1,24 @@
+Improve the relevancy ranking system and simplify the dashboard layout so that the interface feels clear, consistent, and trustworthy.
+
+First, fix the relevancy scoring distribution. Not all topics and articles should have the same or maximum score. Avoid assigning values like 10 out of 10 to multiple items unless they are truly exceptional. The scoring system must create differentiation so that some items clearly rank higher than others. Introduce a more realistic spread of scores (for example, 6.5 to 9.5) so the user can actually distinguish importance.
+
+Second, ensure that the “What Matters Today” topics are ranked based on real differences in importance. Do not assign identical scores to all topics. The ranking must reflect actual variation in relevance, based on the underlying articles.
+
+Third, remove duplicate or unnecessary article sections from the dashboard. There should only be one clear “Top Stories Today” section in the center. Do not display additional lists of articles above or below that repeat or contradict the main selection. The dashboard should not contain multiple competing article lists.
+
+Fourth, enforce a clean layout structure. The dashboard should have:
+
+Top Stories Today as the main, central section
+What Matters Today as a smaller panel on the right with a maximum of five topics
+No additional article sections that create confusion or clutter
+
+Fifth, ensure alignment between topics and articles. The topics shown on the right must be derived directly from the same set of top-ranked articles. A topic should only appear if it is supported by strong underlying articles. The topics and top stories must reinforce each other and not contradict each other.
+
+Sixth, remove any low-quality or unclear articles from the main view. If certain articles do not meet the relevance threshold or do not clearly belong in the top set, they should not be displayed at all. It is better to show fewer high-quality items than to include weaker or confusing ones.
+
+The overall goal is to create a clean, focused dashboard where:
+
+only the most important articles are shown
+topics clearly explain those articles
+the ranking feels intentional and trustworthy
+there is no duplication or confusion

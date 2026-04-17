@@ -11,22 +11,84 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, X, Check, Newspaper, Twitter, Linkedin, BookOpen, Building2, TrendingUp, Globe } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Newspaper, Twitter, Linkedin, BookOpen, Building2, TrendingUp, Globe, Info } from "lucide-react";
+
+// Credibility score computation
+// Tier sets the base range, type applies a modifier.
+// The score (0–100) determines how much weight this source's articles carry in the composite relevancy ranking.
+function computeCredibility(source: Source): { score: number; explanation: string } {
+  const tierBase: Record<number, number> = { 1: 88, 2: 68, 3: 48 };
+  const typeBonus: Record<string, number> = {
+    institutional: 8,
+    market: 4,
+    rss: 0,
+    website: 0,
+    corporate: -6,
+    linkedin: -8,
+    twitter: -10,
+  };
+  const authorityAdjust = source.authorityLevel != null
+    ? (3 - source.authorityLevel) * 4  // level 1 = +8, level 2 = +4, level 3 = 0, level 4 = -4, level 5 = -8
+    : 0;
+
+  const raw = (tierBase[source.tier] ?? 68) + (typeBonus[source.type] ?? 0) + authorityAdjust;
+  const score = Math.max(10, Math.min(100, Math.round(raw)));
+
+  const tierLabel = source.tier === 1 ? "premier source (Tier 1)" : source.tier === 2 ? "standard source (Tier 2)" : "supplemental source (Tier 3)";
+  const typeLabel: Record<string, string> = {
+    institutional: "institutional credibility bonus",
+    market: "financial data credibility bonus",
+    corporate: "slight discount (corporate PR risk)",
+    linkedin: "social platform discount applied",
+    twitter: "social platform discount applied",
+    rss: "",
+    website: "",
+  };
+  const parts = [
+    `Classified as a ${tierLabel}`,
+    typeLabel[source.type] ? typeLabel[source.type] : null,
+    source.authorityLevel != null && source.authorityLevel <= 2 ? "high editorial authority" : null,
+    source.authorityLevel != null && source.authorityLevel >= 4 ? "lower institutional authority" : null,
+  ].filter(Boolean);
+
+  return { score, explanation: parts.join(". ") + "." };
+}
+
+function CredibilityBar({ score }: { score: number }) {
+  const color =
+    score >= 80 ? "bg-emerald-500" :
+    score >= 65 ? "bg-blue-500" :
+    score >= 50 ? "bg-amber-400" :
+    "bg-slate-400";
+  const labelColor =
+    score >= 80 ? "text-emerald-700 bg-emerald-50 border-emerald-200" :
+    score >= 65 ? "text-blue-700 bg-blue-50 border-blue-200" :
+    score >= 50 ? "text-amber-700 bg-amber-50 border-amber-200" :
+    "text-slate-600 bg-slate-50 border-slate-200";
+
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${score}%` }} />
+      </div>
+      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border tabular-nums ${labelColor}`}>{score}</span>
+    </div>
+  );
+}
 
 const TIER_LABELS: Record<number, string> = {
-  1: "Tier 1 — Premier",
-  2: "Tier 2 — Standard",
-  3: "Tier 3 — Supplemental",
+  1: "Tier 1 — Premier Sources",
+  2: "Tier 2 — Standard Sources",
+  3: "Tier 3 — Supplemental Sources",
 };
 
-const TIER_COLORS: Record<number, string> = {
-  1: "bg-primary/10 text-primary border-primary/20",
-  2: "bg-secondary text-secondary-foreground",
-  3: "bg-muted text-muted-foreground",
+const TIER_DESCRIPTIONS: Record<number, string> = {
+  1: "Highest editorial authority. Major newspapers, global financial press, and primary institutional voices. These sources carry the most weight in composite scoring.",
+  2: "Established publications with consistent editorial standards. Industry press, regional business journals, and reputable think tanks.",
+  3: "Supplemental intelligence. Corporate communications, social channels, and niche sources that provide signals but are treated with greater skepticism.",
 };
 
 type SourceType = "rss" | "website" | "twitter" | "linkedin" | "institutional" | "corporate" | "market";
@@ -34,11 +96,11 @@ type SourceType = "rss" | "website" | "twitter" | "linkedin" | "institutional" |
 const TYPE_META: Record<SourceType, { label: string; icon: typeof Newspaper; color: string }> = {
   rss: { label: "RSS", icon: Newspaper, color: "bg-muted text-muted-foreground border-border" },
   website: { label: "Web", icon: Globe, color: "bg-muted text-muted-foreground border-border" },
-  twitter: { label: "X / Twitter", icon: Twitter, color: "bg-sky-500/10 text-sky-400 border-sky-500/20" },
-  linkedin: { label: "LinkedIn", icon: Linkedin, color: "bg-blue-600/10 text-blue-400 border-blue-600/20" },
-  institutional: { label: "Institutional", icon: BookOpen, color: "bg-violet-500/10 text-violet-400 border-violet-500/20" },
-  corporate: { label: "Corporate", icon: Building2, color: "bg-orange-500/10 text-orange-400 border-orange-500/20" },
-  market: { label: "Market", icon: TrendingUp, color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+  twitter: { label: "X / Twitter", icon: Twitter, color: "bg-sky-50 text-sky-700 border-sky-200" },
+  linkedin: { label: "LinkedIn", icon: Linkedin, color: "bg-blue-50 text-blue-700 border-blue-200" },
+  institutional: { label: "Institutional", icon: BookOpen, color: "bg-violet-50 text-violet-700 border-violet-200" },
+  corporate: { label: "Corporate", icon: Building2, color: "bg-orange-50 text-orange-700 border-orange-200" },
+  market: { label: "Market", icon: TrendingUp, color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
 };
 
 function TypeBadge({ type }: { type: string }) {
@@ -53,6 +115,7 @@ function TypeBadge({ type }: { type: string }) {
 
 function SourceRow({ source }: { source: Source }) {
   const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState(source.name);
   const [url, setUrl] = useState(source.url);
   const [tier, setTier] = useState(String(source.tier));
@@ -60,8 +123,9 @@ function SourceRow({ source }: { source: Source }) {
   const update = useUpdateSource();
   const remove = useDeleteSource();
   const queryClient = useQueryClient();
-
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["listSources"] });
+
+  const { score, explanation } = computeCredibility(source);
 
   const handleSave = () => {
     update.mutate(
@@ -71,10 +135,7 @@ function SourceRow({ source }: { source: Source }) {
   };
 
   const handleToggle = (active: boolean) => {
-    update.mutate(
-      { id: source.id, data: { isActive: active } },
-      { onSuccess: invalidate }
-    );
+    update.mutate({ id: source.id, data: { isActive: active } }, { onSuccess: invalidate });
   };
 
   const handleDelete = () => {
@@ -120,39 +181,55 @@ function SourceRow({ source }: { source: Source }) {
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-4">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                <span className="font-medium text-sm">{source.name}</span>
-                <TypeBadge type={source.type} />
-                <Badge variant="outline" className={`text-[10px] ${TIER_COLORS[source.tier]}`}>
-                  T{source.tier}
-                </Badge>
-                {source.authorName && (
-                  <span className="text-xs text-muted-foreground">· {source.authorName}</span>
-                )}
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                  <span className="font-medium text-sm">{source.name}</span>
+                  <TypeBadge type={source.type} />
+                  {source.authorName && (
+                    <span className="text-xs text-muted-foreground">· {source.authorName}</span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground font-mono truncate">{source.url}</p>
               </div>
-              <p className="text-xs text-muted-foreground font-mono truncate">{source.url}</p>
+              <div className="flex items-center gap-3 shrink-0">
+                <CredibilityBar score={score} />
+                <button
+                  onClick={() => setExpanded((e) => !e)}
+                  className="text-muted-foreground/50 hover:text-muted-foreground"
+                  title="Why this score?"
+                >
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+                <Switch
+                  checked={source.isActive}
+                  onCheckedChange={handleToggle}
+                  data-testid={`toggle-source-${source.id}`}
+                />
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditing(true)} data-testid="btn-edit-source">
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  onClick={handleDelete}
+                  data-testid="btn-delete-source"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <Switch
-                checked={source.isActive}
-                onCheckedChange={handleToggle}
-                data-testid={`toggle-source-${source.id}`}
-              />
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditing(true)} data-testid="btn-edit-source">
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={handleDelete}
-                data-testid="btn-delete-source"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+            {expanded && (
+              <div className="mt-2 px-3 py-2.5 rounded-md bg-muted/40 border border-border">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Credibility Rationale</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{explanation}</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1.5">
+                  Score of {score}/100 means articles from this source receive a {score >= 80 ? "high" : score >= 65 ? "standard" : "reduced"} authenticity weighting in the composite relevancy formula.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
@@ -187,10 +264,7 @@ export default function Sources() {
       { data: { name: newName, url: newUrl, type: newType, tier: Number(newTier) as 1 | 2 | 3 } },
       {
         onSuccess: () => {
-          setNewName("");
-          setNewUrl("");
-          setNewTier("1");
-          setNewType("rss");
+          setNewName(""); setNewUrl(""); setNewTier("1"); setNewType("rss");
           setShowAdd(false);
           queryClient.invalidateQueries({ queryKey: ["listSources"] });
         },
@@ -198,7 +272,6 @@ export default function Sources() {
     );
   };
 
-  // Group by type for display summary
   const typeCounts = Object.keys(TYPE_META).reduce((acc, t) => {
     acc[t] = sources.filter((s: Source) => s.type === t).length;
     return acc;
@@ -209,13 +282,19 @@ export default function Sources() {
     sources: sources.filter((s: Source) => s.tier === tier),
   }));
 
+  const avgByTier = [1, 2, 3].reduce((acc, tier) => {
+    const t = sources.filter((s: Source) => s.tier === tier);
+    acc[tier] = t.length > 0 ? Math.round(t.reduce((s, src) => s + computeCredibility(src as Source).score, 0) / t.length) : 0;
+    return acc;
+  }, {} as Record<number, number>);
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-serif tracking-tight text-foreground">Source Management</h1>
+          <h1 className="text-3xl font-serif tracking-tight text-foreground">Sources</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            {sources.length} sources configured across {grouped.filter((g) => g.sources.length > 0).length} tiers
+            {sources.filter((s: Source) => s.isActive).length} active sources across {grouped.filter((g) => g.sources.length > 0).length} tiers
           </p>
         </div>
         <Button onClick={() => setShowAdd(true)} data-testid="btn-add-source">
@@ -223,14 +302,38 @@ export default function Sources() {
         </Button>
       </div>
 
+      {/* Credibility legend */}
+      <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+        <div className="flex items-start gap-2">
+          <Info className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+          <div>
+            <p className="text-xs font-semibold text-foreground mb-1">How Credibility Scores Work</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Each source carries a credibility score (0–100) that is factored into the composite relevancy formula used to rank articles. A source's credibility accounts for 35% of an article's final score — alongside the AI's raw relevancy assessment (65%). This means high-relevance content from low-credibility sources cannot dominate the feed over verified journalism.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { label: "80–100", desc: "Premier", color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+            { label: "65–79", desc: "Standard", color: "text-blue-700 bg-blue-50 border-blue-200" },
+            { label: "50–64", desc: "Supplemental", color: "text-amber-700 bg-amber-50 border-amber-200" },
+            { label: "< 50", desc: "Low weight", color: "text-slate-600 bg-slate-50 border-slate-200" },
+          ].map((item) => (
+            <div key={item.label} className={`rounded-md border px-2.5 py-2 ${item.color}`}>
+              <p className="text-[10px] font-bold tabular-nums">{item.label}</p>
+              <p className="text-[10px] opacity-70">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-muted-foreground">Click the <Info className="h-2.5 w-2.5 inline" /> icon on any source to see why it has its credibility score.</p>
+      </div>
+
       {/* Type summary */}
       <div className="flex flex-wrap gap-2">
         {Object.entries(typeCounts).filter(([, c]) => c > 0).map(([type, count]) => (
           <div key={type} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs ${TYPE_META[type as SourceType]?.color ?? ""}`}>
-            {(() => {
-              const Icon = TYPE_META[type as SourceType]?.icon ?? Newspaper;
-              return <Icon className="h-3 w-3" />;
-            })()}
+            {(() => { const Icon = TYPE_META[type as SourceType]?.icon ?? Newspaper; return <Icon className="h-3 w-3" />; })()}
             <span className="font-medium">{TYPE_META[type as SourceType]?.label}</span>
             <span className="opacity-60">({count})</span>
           </div>
@@ -241,23 +344,16 @@ export default function Sources() {
       {showAdd && (
         <Card>
           <CardContent className="p-5 space-y-4">
-            <h3 className="font-semibold text-sm">New Source</h3>
+            <h3 className="font-semibold text-sm">Add New Source</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs mb-1 block">Name</Label>
-                <Input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Publication name"
-                  data-testid="input-new-name"
-                />
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Publication name" data-testid="input-new-name" />
               </div>
               <div>
                 <Label className="text-xs mb-1 block">Tier</Label>
                 <Select value={newTier} onValueChange={setNewTier}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1">Tier 1 — Premier</SelectItem>
                     <SelectItem value="2">Tier 2 — Standard</SelectItem>
@@ -269,9 +365,7 @@ export default function Sources() {
             <div>
               <Label className="text-xs mb-1 block">Source Type</Label>
               <Select value={newType} onValueChange={(v) => setNewType(v as SourceType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {SOURCE_TYPE_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -284,7 +378,7 @@ export default function Sources() {
               <Input
                 value={newUrl}
                 onChange={(e) => setNewUrl(e.target.value)}
-                placeholder={newType === "rss" ? "https://example.com/feed.xml" : newType === "twitter" ? "https://nitter.net/username/rss" : "https://example.com/feed"}
+                placeholder={newType === "rss" ? "https://example.com/feed.xml" : "https://example.com"}
                 className="font-mono text-xs"
                 data-testid="input-new-url"
               />
@@ -304,13 +398,21 @@ export default function Sources() {
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-10">
           {grouped.map(({ tier, sources: tierSources }) => (
             <div key={tier}>
-              <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
-                {TIER_LABELS[tier]}
-                <span className="font-normal opacity-60">({tierSources.length})</span>
-              </h2>
+              <div className="flex items-end justify-between mb-1">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  {TIER_LABELS[tier]}
+                  <span className="font-normal opacity-60">({tierSources.length})</span>
+                </h2>
+                {tierSources.length > 0 && (
+                  <span className="text-[10px] text-muted-foreground">
+                    Avg credibility: <span className="font-semibold tabular-nums">{avgByTier[tier]}</span>/100
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed mb-3">{TIER_DESCRIPTIONS[tier]}</p>
               {tierSources.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic pl-1">No sources in this tier.</p>
               ) : (

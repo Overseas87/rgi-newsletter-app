@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,12 +10,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
   Wand2, FileText, Loader2, Globe, Tag, ChevronRight,
   Volume2, VolumeX, RefreshCw, Send, CheckCircle, Trash2,
+  ArrowLeft, ListChecks,
 } from "lucide-react";
 import { VoiceInput } from "@/components/voice-input";
 
@@ -28,7 +30,17 @@ const TOPIC_GROUPS = [
 ];
 
 type Mode = "daily_brief" | "topic_article";
-type Stage = "configure" | "preview";
+type Stage = "configure" | "select_articles" | "preview";
+
+interface CandidateArticle {
+  id: number;
+  headline: string;
+  sourceName: string;
+  relevancyScore: number;
+  topicTags: string[];
+  viewpoint?: string | null;
+  url?: string | null;
+}
 
 interface GeneratedArticle {
   id: number;
@@ -57,6 +69,12 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
   const [refining, setRefining] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [refineHistory, setRefineHistory] = useState<string[]>([]);
+
+  // Article selection state
+  const [candidates, setCandidates] = useState<CandidateArticle[]>([]);
+  const [selectedArticleIds, setSelectedArticleIds] = useState<Set<number>>(new Set());
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
@@ -87,7 +105,52 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
       setRefineHistory([]);
       setSelectedTopics(new Set());
       setEditorNotes("");
+      setCandidates([]);
+      setSelectedArticleIds(new Set());
     }, 300);
+  };
+
+  // Fetch candidate articles matching selected topics
+  const fetchCandidates = async () => {
+    if (selectedTopics.size === 0) {
+      toast({ title: "Select at least one topic", variant: "destructive" });
+      return;
+    }
+    setLoadingCandidates(true);
+    try {
+      const res = await fetch(`${base}/api/articles?minScore=6.5&limit=200`);
+      if (!res.ok) throw new Error("Failed to fetch articles");
+      const data: CandidateArticle[] = await res.json();
+      const topics = Array.from(selectedTopics);
+      const matching = data
+        .filter((a) => a.topicTags?.some((t) => topics.includes(t)))
+        .sort((a, b) => b.relevancyScore - a.relevancyScore)
+        .slice(0, 40);
+      setCandidates(matching);
+      setSelectedArticleIds(new Set(matching.map((a) => a.id)));
+      setStage("select_articles");
+    } catch {
+      toast({ title: "Failed to load articles", description: "Could not retrieve matching articles. Try again.", variant: "destructive" });
+    } finally {
+      setLoadingCandidates(false);
+    }
+  };
+
+  const toggleArticle = (id: number) => {
+    setSelectedArticleIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedArticleIds.size === candidates.length) {
+      setSelectedArticleIds(new Set());
+    } else {
+      setSelectedArticleIds(new Set(candidates.map((a) => a.id)));
+    }
   };
 
   const handleGenerateDailyBrief = async () => {
@@ -120,17 +183,21 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
     }
   };
 
-  const handleGenerateTopicArticle = async () => {
-    if (selectedTopics.size === 0) {
-      toast({ title: "Select at least one topic", variant: "destructive" });
+  const handleGenerateFromSelection = async () => {
+    const ids = Array.from(selectedArticleIds);
+    if (ids.length === 0) {
+      toast({ title: "Select at least one article", variant: "destructive" });
       return;
     }
     setLoading(true);
     try {
-      const res = await fetch(`${base}/api/digest/generate-on-demand`, {
+      const res = await fetch(`${base}/api/digest/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topics: Array.from(selectedTopics), editorNotes: editorNotes.trim() || null }),
+        body: JSON.stringify({
+          articleIds: ids,
+          editorNotes: editorNotes.trim() || null,
+        }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Unknown error" }));
@@ -214,8 +281,126 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
     setSpeaking(true);
   };
 
-  const selectedCount = selectedTopics.size;
+  // ── Stage: Article selection ─────────────────────────────────────────────
+  if (stage === "select_articles") {
+    const allSelected = selectedArticleIds.size === candidates.length;
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="px-6 pt-5 pb-3 border-b border-border shrink-0">
+            <div className="flex items-center gap-2">
+              <ListChecks className="h-4 w-4 text-primary" />
+              <DialogTitle className="text-sm font-semibold">Select Source Articles</DialogTitle>
+            </div>
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              {Array.from(selectedTopics).map((t) => (
+                <Badge key={t} variant="outline" className="text-[10px] border-primary/30 text-primary">{t}</Badge>
+              ))}
+            </div>
+          </DialogHeader>
 
+          {/* Selection controls */}
+          <div className="px-6 py-2.5 border-b border-border/60 bg-muted/20 flex items-center justify-between shrink-0">
+            <p className="text-xs text-muted-foreground">
+              {candidates.length === 0
+                ? "No articles found for selected topics in the current window."
+                : `${candidates.length} article${candidates.length !== 1 ? "s" : ""} match your topics. ${selectedArticleIds.size} selected.`}
+            </p>
+            {candidates.length > 0 && (
+              <button
+                onClick={handleSelectAll}
+                className="text-xs text-primary hover:underline font-medium"
+              >
+                {allSelected ? "Deselect all" : "Select all"}
+              </button>
+            )}
+          </div>
+
+          <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2">
+            {candidates.length === 0 ? (
+              <div className="py-12 text-center text-muted-foreground">
+                <p className="text-sm font-medium">No matching articles found</p>
+                <p className="text-xs mt-1">Try running a scrape first, or select different topics.</p>
+              </div>
+            ) : (
+              candidates.map((article) => {
+                const isSelected = selectedArticleIds.has(article.id);
+                const topScore = article.relevancyScore >= 8.5;
+                return (
+                  <div
+                    key={article.id}
+                    onClick={() => toggleArticle(article.id)}
+                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                      isSelected
+                        ? "border-primary/40 bg-primary/5"
+                        : "border-border bg-card hover:border-border/60"
+                    }`}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleArticle(article.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={`text-sm font-medium leading-snug ${isSelected ? "text-foreground" : "text-foreground/80"}`}>
+                          {article.headline}
+                        </p>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                          topScore
+                            ? "bg-amber-50 text-amber-700 border border-amber-200"
+                            : "bg-muted text-muted-foreground border border-border"
+                        }`}>
+                          {article.relevancyScore?.toFixed(1)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-[10px] text-muted-foreground font-medium">{article.sourceName}</span>
+                        {article.topicTags?.slice(0, 3).map((t) => (
+                          <span key={t} className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                            selectedTopics.has(t)
+                              ? "bg-primary/8 text-primary border-primary/20"
+                              : "bg-muted text-muted-foreground border-border"
+                          }`}>{t}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-border flex items-center justify-between shrink-0 bg-card/50">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setStage("configure")}
+              className="gap-1.5"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to Topics
+            </Button>
+            <Button
+              onClick={handleGenerateFromSelection}
+              disabled={loading || selectedArticleIds.size === 0}
+              className="gap-2 min-w-52"
+              data-testid="btn-generate-from-selection"
+            >
+              {loading
+                ? <><Loader2 className="h-4 w-4 animate-spin" />Generating…</>
+                : <><Wand2 className="h-4 w-4" />Generate from {selectedArticleIds.size} Article{selectedArticleIds.size !== 1 ? "s" : ""}</>
+              }
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // ── Stage: Preview / Refine ──────────────────────────────────────────────
   if (stage === "preview" && generatedArticle) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
@@ -242,7 +427,6 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
           </DialogHeader>
 
           <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
-            {/* Article Preview */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 flex-wrap">
                 {generatedArticle.discipline && (
@@ -329,7 +513,6 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
             </div>
           </div>
 
-          {/* Footer Actions */}
           <div className="px-6 py-4 border-t border-border flex items-center justify-between shrink-0 bg-card/50">
             <Button
               variant="ghost"
@@ -366,6 +549,9 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
     );
   }
 
+  // ── Stage: Configure ─────────────────────────────────────────────────────
+  const selectedCount = selectedTopics.size;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
@@ -375,13 +561,12 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
             <DialogTitle className="text-xl font-serif">Generate Intelligence</DialogTitle>
           </div>
 
-          {/* Mode Selector Tabs */}
           <div className="grid grid-cols-2 gap-2 mb-2">
             <button
               onClick={() => setMode("daily_brief")}
               className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
                 mode === "daily_brief"
-                  ? "border-primary bg-primary/8 text-foreground"
+                  ? "border-primary bg-primary/5 text-foreground"
                   : "border-border bg-card text-muted-foreground hover:border-border/80 hover:text-foreground"
               }`}
               data-testid="mode-daily-brief"
@@ -399,7 +584,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
               onClick={() => setMode("topic_article")}
               className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
                 mode === "topic_article"
-                  ? "border-primary bg-primary/8 text-foreground"
+                  ? "border-primary bg-primary/5 text-foreground"
                   : "border-border bg-card text-muted-foreground hover:border-border/80 hover:text-foreground"
               }`}
               data-testid="mode-topic-article"
@@ -408,7 +593,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
               <div>
                 <p className="font-semibold text-sm leading-tight">Topic Article</p>
                 <p className="text-xs mt-1 leading-snug opacity-70">
-                  Deep-dive analysis on a specific theme
+                  Deep-dive on a theme — you choose the source articles
                 </p>
               </div>
             </button>
@@ -439,7 +624,6 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
                 </div>
               </div>
 
-              {/* Editorial Direction for daily brief */}
               <div>
                 <Label className="text-sm font-semibold mb-1.5 block">
                   Editorial Direction <span className="text-muted-foreground font-normal">(optional)</span>
@@ -462,7 +646,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
 
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground leading-relaxed">
                 <FileText className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                Automatically selects today's top articles (score 6.0+) across all sources. You can refine the output after generation.
+                Automatically selects today's top articles (score 6.5+) across all sources. You can refine the output after generation.
               </div>
 
               <div className="flex items-center justify-between pt-1">
@@ -494,7 +678,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
                             key={topic}
                             className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-all ${
                               selectedTopics.has(topic)
-                                ? "border-primary/40 bg-primary/8 text-foreground"
+                                ? "border-primary/40 bg-primary/5 text-foreground"
                                 : "border-border bg-background hover:border-border/60 hover:bg-card"
                             }`}
                             onClick={() => toggleTopic(topic)}
@@ -536,27 +720,25 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
                     disabled={loading}
                   />
                 </div>
-                <p className="text-[10px] text-muted-foreground/60 mt-1">Click the mic to speak your editorial direction</p>
               </div>
 
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground leading-relaxed">
-                <FileText className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                Selects the highest-scoring articles matching your topics and synthesizes them into a focused brief. You can refine the output after generation.
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-700 leading-relaxed">
+                <ListChecks className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                After selecting topics, you will review all matching articles and choose exactly which ones to include before generation.
               </div>
 
               <div className="flex items-center justify-between pt-1">
-                <Button variant="ghost" onClick={handleClose} disabled={loading}>Cancel</Button>
+                <Button variant="ghost" onClick={handleClose} disabled={loadingCandidates}>Cancel</Button>
                 <Button
-                  onClick={handleGenerateTopicArticle}
-                  disabled={loading || selectedCount === 0}
-                  className="gap-2 min-w-44"
-                  data-testid="btn-confirm-generate"
+                  onClick={fetchCandidates}
+                  disabled={selectedCount === 0 || loadingCandidates}
+                  className="gap-2 min-w-52"
+                  data-testid="btn-review-articles"
                 >
-                  {loading ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" />Generating…</>
-                  ) : (
-                    <><Tag className="h-4 w-4" />Generate{selectedCount > 0 ? ` (${selectedCount})` : ""}</>
-                  )}
+                  {loadingCandidates
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Loading articles…</>
+                    : <><ListChecks className="h-4 w-4" />Review Matching Articles</>
+                  }
                 </Button>
               </div>
             </div>
