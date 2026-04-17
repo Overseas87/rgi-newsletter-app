@@ -74,9 +74,9 @@
   --popover-foreground: 210 30% 96%;
   --popover-border: 220 30% 20%;
 
-  /* Gold accent — RGI primary action color */
-  --primary: 43 74% 49%;
-  --primary-foreground: 222 47% 9%;
+  /* RGI blue — primary brand color */
+  --primary: 213 72% 50%;
+  --primary-foreground: 0 0% 100%;
 
   --secondary: 220 30% 20%;
   --secondary-foreground: 210 30% 96%;
@@ -92,17 +92,17 @@
 
   --border: 220 30% 20%;
   --input: 220 30% 20%;
-  --ring: 43 74% 49%;
+  --ring: 213 72% 50%;
 
   /* Sidebar — slightly darker navy */
   --sidebar: 222 47% 7%;
   --sidebar-foreground: 210 30% 96%;
   --sidebar-border: 220 30% 16%;
-  --sidebar-primary: 43 74% 49%;
-  --sidebar-primary-foreground: 222 47% 9%;
+  --sidebar-primary: 213 72% 50%;
+  --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 220 30% 16%;
   --sidebar-accent-foreground: 210 30% 96%;
-  --sidebar-ring: 43 74% 49%;
+  --sidebar-ring: 213 72% 50%;
 
   /* Typography stack */
   --app-font-sans: "Inter", system-ui, sans-serif;
@@ -127,8 +127,8 @@
   --popover: 222 47% 13%;
   --popover-foreground: 210 30% 96%;
   --popover-border: 220 30% 20%;
-  --primary: 43 74% 49%;
-  --primary-foreground: 222 47% 9%;
+  --primary: 213 72% 50%;
+  --primary-foreground: 0 0% 100%;
   --secondary: 220 30% 20%;
   --secondary-foreground: 210 30% 96%;
   --muted: 220 30% 20%;
@@ -139,15 +139,15 @@
   --destructive-foreground: 210 30% 96%;
   --border: 220 30% 20%;
   --input: 220 30% 20%;
-  --ring: 43 74% 49%;
+  --ring: 213 72% 50%;
   --sidebar: 222 47% 7%;
   --sidebar-foreground: 210 30% 96%;
   --sidebar-border: 220 30% 16%;
-  --sidebar-primary: 43 74% 49%;
-  --sidebar-primary-foreground: 222 47% 9%;
+  --sidebar-primary: 213 72% 50%;
+  --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 220 30% 16%;
   --sidebar-accent-foreground: 210 30% 96%;
-  --sidebar-ring: 43 74% 49%;
+  --sidebar-ring: 213 72% 50%;
 }
 
 @layer base {
@@ -199,16 +199,16 @@
     color: hsl(var(--muted-foreground));
   }
 
-  /* Gold divider */
+  /* RGI blue divider */
   .rgi-divider {
     border: none;
-    border-top: 1px solid hsl(43 74% 49% / 0.25);
+    border-top: 1px solid hsl(213 72% 50% / 0.25);
   }
 
   /* Sidebar nav active state */
   .nav-active {
-    background-color: hsl(43 74% 49% / 0.12);
-    color: hsl(43 74% 60%);
-    border-left: 2px solid hsl(43 74% 49%);
+    background-color: hsl(213 72% 50% / 0.12);
+    color: hsl(213 72% 68%);
+    border-left: 2px solid hsl(213 72% 50%);
   }
 }

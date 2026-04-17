@@ -31,21 +31,16 @@ const NAV_ITEMS = [
   { path: "/settings", label: "Settings", icon: SettingsIcon },
 ];
 
-function RGILogo({ size = 28 }: { size?: number }) {
+function RGILogoImg({ className }: { className?: string }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 40 40"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-label="RGI Logo"
-    >
-      <path d="M20 20 C16 13, 9 9, 20 3 C27 0, 25 9, 20 20Z" fill="#C9A227"/>
-      <path d="M20 20 C27 16, 31 9, 37 20 C40 27, 31 25, 20 20Z" fill="#C9A227"/>
-      <path d="M20 20 C24 27, 31 31, 20 37 C13 40, 15 31, 20 20Z" fill="#C9A227"/>
-      <path d="M20 20 C13 24, 9 31, 3 20 C0 13, 9 15, 20 20Z" fill="#C9A227"/>
-    </svg>
+    <div className={`bg-white rounded-md px-2 py-1 flex items-center justify-center ${className ?? ""}`}>
+      <img
+        src="/rgi-logo.png"
+        alt="The Rick Goings Institute"
+        className="h-8 w-auto object-contain"
+        draggable={false}
+      />
+    </div>
   );
 }
 
@@ -107,10 +102,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       <header className="md:hidden flex items-center justify-between p-4 border-b border-sidebar-border bg-sidebar">
         <Link href="/" className="flex items-center gap-2.5">
-          <RGILogo size={24} />
-          <div>
-            <span className="font-serif font-bold text-base text-primary tracking-tight leading-none">Rick Goings Institute</span>
-          </div>
+          <RGILogoImg />
         </Link>
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
@@ -121,14 +113,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           <SheetContent side="left" className="w-64 p-0 bg-sidebar border-sidebar-border">
             <div className="px-5 py-6 border-b border-sidebar-border">
               <Link href="/" onClick={() => setMobileOpen(false)}>
-                <div className="flex items-center gap-3 mb-2">
-                  <RGILogo size={28} />
-                  <div>
-                    <p className="font-serif font-bold text-lg text-primary leading-tight">Rick Goings Institute</p>
-                  </div>
-                </div>
+                <RGILogoImg className="mb-3 w-full justify-start" />
               </Link>
-              <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-widest font-semibold pl-1">
+              <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-widest font-semibold">
                 Strategic Intelligence Brief
               </p>
             </div>
@@ -141,16 +128,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       <aside className="hidden md:flex flex-col w-60 border-r border-sidebar-border bg-sidebar shrink-0">
         {/* Brand mark */}
         <Link href="/">
-          <div className="px-5 pt-7 pb-5 border-b border-sidebar-border cursor-pointer">
-            <div className="flex items-center gap-3 mb-2">
-              <RGILogo size={30} />
-              <div className="min-w-0">
-                <p className="font-serif font-bold text-[15px] text-primary leading-tight tracking-tight">
-                  Rick Goings<br />Institute
-                </p>
-              </div>
-            </div>
-            <p className="text-[9px] text-sidebar-foreground/40 uppercase tracking-widest font-bold pl-0.5">
+          <div className="px-4 pt-5 pb-4 border-b border-sidebar-border cursor-pointer space-y-2">
+            <RGILogoImg />
+            <p className="text-[9px] text-sidebar-foreground/40 uppercase tracking-widest font-bold">
               Strategic Intelligence Brief
             </p>
           </div>
