@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, digestArticlesTable, articlesTable } from "@workspace/db";
-import { eq, inArray, desc } from "drizzle-orm";
+import { eq, inArray, desc, and, gte } from "drizzle-orm";
 import {
   ListDigestArticlesQueryParams,
   GenerateDigestArticleBody,
@@ -141,6 +141,103 @@ router.post("/digest/daily-brief", async (req, res): Promise<void> => {
   } catch (e) {
     req.log.error({ err: e }, "Failed to generate daily brief");
     res.status(500).json({ error: String(e instanceof Error ? e.message : "Failed to generate daily brief") });
+  }
+});
+
+// On-demand generation: editor picks topics, system finds matching articles and synthesizes
+router.post("/digest/generate-on-demand", async (req, res): Promise<void> => {
+  const topics: string[] = Array.isArray(req.body?.topics) ? req.body.topics : [];
+  const editorNotes: string | null = req.body?.editorNotes || null;
+  const minScore: number = typeof req.body?.minScore === "number" ? req.body.minScore : 6.0;
+
+  if (topics.length === 0) {
+    res.status(400).json({ error: "At least one topic is required" });
+    return;
+  }
+
+  req.log.info({ topics, editorNotes }, "On-demand brief generation requested");
+
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Fetch all today's articles above the minimum score
+    const candidates = await db
+      .select()
+      .from(articlesTable)
+      .where(
+        and(
+          gte(articlesTable.scrapedAt, today),
+          gte(articlesTable.relevancyScore, minScore)
+        )
+      )
+      .orderBy(desc(articlesTable.relevancyScore))
+      .limit(80);
+
+    // Filter to articles matching at least one selected topic
+    const matching = candidates.filter((a) =>
+      topics.some((t) => a.topicTags.includes(t))
+    );
+
+    if (matching.length < 2) {
+      // Fallback: take top scoring articles regardless of topic filter
+      const fallback = candidates.slice(0, 10);
+      if (fallback.length < 2) {
+        res.status(422).json({
+          error: "Not enough articles found today for the selected topics. Try running a scrape first.",
+        });
+        return;
+      }
+      req.log.warn({ topics, found: fallback.length }, "Not enough topic-matched articles, using top articles as fallback");
+      const selectedIds = fallback.slice(0, 10).map((a) => a.id);
+      const generated = await generateDigestArticle(selectedIds, editorNotes);
+      const [digestArticle] = await db
+        .insert(digestArticlesTable)
+        .values({
+          headline: generated.headline,
+          body: generated.body,
+          rgiTake: generated.rgiTake,
+          topicTags: generated.topicTags,
+          sourceArticleIds: selectedIds,
+          relevancyScore: generated.relevancyScore,
+          discipline: generated.discipline,
+          status: "pending_review",
+          editorNotes,
+        })
+        .returning();
+      await db.update(articlesTable).set({ status: "selected" }).where(inArray(articlesTable.id, selectedIds));
+      const enriched = await enrichDigestArticle(digestArticle);
+      return void res.status(201).json(enriched);
+    }
+
+    // Take top 12 topic-matched articles
+    const selectedIds = matching.slice(0, 12).map((a) => a.id);
+
+    const topicsNote = `Focus: ${topics.join(", ")}${editorNotes ? `. Editor direction: ${editorNotes}` : ""}`;
+    const generated = await generateDigestArticle(selectedIds, topicsNote);
+
+    const [digestArticle] = await db
+      .insert(digestArticlesTable)
+      .values({
+        headline: generated.headline,
+        body: generated.body,
+        rgiTake: generated.rgiTake,
+        topicTags: generated.topicTags,
+        sourceArticleIds: selectedIds,
+        relevancyScore: generated.relevancyScore,
+        discipline: generated.discipline,
+        status: "pending_review",
+        editorNotes: topicsNote,
+      })
+      .returning();
+
+    await db.update(articlesTable).set({ status: "selected" }).where(inArray(articlesTable.id, selectedIds));
+
+    const enriched = await enrichDigestArticle(digestArticle);
+    res.status(201).json(enriched);
+  } catch (e) {
+    req.log.error({ err: e }, "On-demand generation failed");
+    res.status(500).json({ error: String(e instanceof Error ? e.message : "Failed to generate brief") });
   }
 });
 

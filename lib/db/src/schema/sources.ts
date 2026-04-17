@@ -2,11 +2,13 @@ import { pgTable, text, serial, timestamp, integer, boolean } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
+export const SOURCE_TYPES = ["rss", "website", "twitter", "linkedin", "institutional", "corporate", "market"] as const;
+
 export const sourcesTable = pgTable("sources", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   url: text("url").notNull(),
-  type: text("type", { enum: ["rss", "website", "twitter", "linkedin"] }).notNull().default("rss"),
+  type: text("type", { enum: SOURCE_TYPES }).notNull().default("rss"),
   tier: integer("tier").notNull().default(1),
   isActive: boolean("is_active").notNull().default(true),
   authorName: text("author_name"),

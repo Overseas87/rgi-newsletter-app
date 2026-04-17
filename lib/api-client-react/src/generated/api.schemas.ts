@@ -140,6 +140,9 @@ export const SourceType = {
   website: "website",
   twitter: "twitter",
   linkedin: "linkedin",
+  institutional: "institutional",
+  corporate: "corporate",
+  market: "market",
 } as const;
 
 export type SourceTier = (typeof SourceTier)[keyof typeof SourceTier];
@@ -176,6 +179,9 @@ export const CreateSourceBodyType = {
   website: "website",
   twitter: "twitter",
   linkedin: "linkedin",
+  institutional: "institutional",
+  corporate: "corporate",
+  market: "market",
 } as const;
 
 export type CreateSourceBodyTier =

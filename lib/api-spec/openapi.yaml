@@ -639,7 +639,7 @@ components:
           type: string
         type:
           type: string
-          enum: [rss, website, twitter, linkedin]
+          enum: [rss, website, twitter, linkedin, institutional, corporate, market]
         tier:
           type: integer
           enum: [1, 2, 3]
@@ -673,7 +673,7 @@ components:
           type: string
         type:
           type: string
-          enum: [rss, website, twitter, linkedin]
+          enum: [rss, website, twitter, linkedin, institutional, corporate, market]
         tier:
           type: integer
           enum: [1, 2, 3]

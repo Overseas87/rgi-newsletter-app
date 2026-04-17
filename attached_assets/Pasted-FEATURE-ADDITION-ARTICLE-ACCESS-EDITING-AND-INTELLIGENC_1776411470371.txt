@@ -1,0 +1,122 @@
+FEATURE ADDITION: ARTICLE ACCESS, EDITING, AND INTELLIGENCE QUALITY IMPROVEMENT
+🔴 1. FIX: FULL ARTICLE ACCESS (CRITICAL BUG)
+Problem:
+
+Rejected and pending articles only show a preview or first sentence.
+
+Fix:
+
+For ALL article states:
+
+Pending
+Approved
+Rejected
+
+The user must be able to:
+
+👉 click the article
+👉 open a full-page view
+👉 read the entire article
+
+Requirements for full article view:
+
+Display:
+
+full text (not truncated)
+headline
+topic tags
+relevancy score
+sources used
+RGI perspective section
+Rule:
+
+Rejection must NOT limit visibility
+👉 it only changes status, not access
+
+🧠 2. ARTICLE EDITING & CONTROL (MAJOR UPGRADE)
+
+The user must be able to:
+
+edit articles directly before approving
+adjust tone, structure, and emphasis
+save edited version
+Add buttons:
+“Edit Article”
+“Save Changes”
+“Approve Edited Version”
+Editing must:
+be smooth and inline
+not reset the article
+preserve structure
+✍️ 3. IMPROVE ARTICLE GENERATION QUALITY (CORE UPGRADE)
+
+The AI must stop producing:
+👉 short summaries
+
+It must produce:
+👉 high-quality intelligence articles
+
+New requirement:
+
+Each article must answer:
+
+👉 “What actually matters today — and why?”
+
+Article must include:
+Headline
+Executive summary (short and sharp)
+Core developments (what happened)
+Interpretation (what it means)
+RGI perspective
+Leadership implications
+Length:
+minimum 700–1000 words
+no shallow summaries
+🧠 4. ALIGN WITH RGI INTERESTS (IMPORTANT)
+
+The system must prioritize topics relevant to:
+
+business
+markets / finance
+AI and technology
+geopolitics
+leadership and organizations
+economic developments
+The system must avoid:
+irrelevant general news
+entertainment content
+low-impact topics
+⚖️ 5. INTELLIGENCE PRIORITIZATION
+
+The article generator must:
+
+focus on high-impact developments
+filter out noise
+combine multiple sources
+highlight what is actually important
+🧩 6. USER-GUIDED GENERATION (REFINEMENT)
+
+Allow user to:
+
+influence article focus before generation
+choose:
+topics
+level of depth
+number of themes
+🎯 7. GOAL OF THE SYSTEM
+
+After this update, the user experience should be:
+
+👉 I can:
+
+open ANY article fully (even rejected)
+edit and refine it
+generate meaningful, deep content
+understand what actually matters today
+⚠️ FINAL RULE
+
+The system must:
+
+prioritize insight over summarization
+produce content that is worth reading
+feel like a professional intelligence briefing
