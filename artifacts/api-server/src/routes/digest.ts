@@ -14,7 +14,7 @@ import {
   RegenerateDigestArticleParams,
   RegenerateDigestArticleBody,
 } from "@workspace/api-zod";
-import { generateDigestArticle, generateDailyBrief } from "../lib/ai-writer";
+import { generateDigestArticle, generateDailyBrief, refineArticle } from "../lib/ai-writer";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -105,11 +105,12 @@ router.post("/digest/daily-brief", async (req, res): Promise<void> => {
   const articleIds: number[] | undefined = Array.isArray(req.body?.articleIds)
     ? req.body.articleIds
     : undefined;
+  const editorNotes: string | null = req.body?.editorNotes || null;
 
-  req.log.info({ articleIds, auto: !articleIds }, "Generating daily intelligence brief");
+  req.log.info({ articleIds, auto: !articleIds, hasNotes: !!editorNotes }, "Generating daily intelligence brief");
 
   try {
-    const generated = await generateDailyBrief(articleIds);
+    const generated = await generateDailyBrief(articleIds, editorNotes);
 
     const [digestArticle] = await db
       .insert(digestArticlesTable)
@@ -375,6 +376,26 @@ router.post("/digest/:id/reject", async (req, res): Promise<void> => {
 
   const enriched = await enrichDigestArticle(updated);
   res.json(enriched);
+});
+
+router.post("/digest/:id/refine", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid article ID" });
+    return;
+  }
+  const { instruction } = req.body;
+  if (!instruction || typeof instruction !== "string" || !instruction.trim()) {
+    res.status(400).json({ error: "Refinement instruction is required" });
+    return;
+  }
+  try {
+    const refined = await refineArticle(id, instruction);
+    res.json(refined);
+  } catch (err) {
+    logger.error({ err }, "Article refinement failed");
+    res.status(500).json({ error: err instanceof Error ? err.message : "Refinement failed" });
+  }
 });
 
 router.post("/digest/:id/regenerate", async (req, res): Promise<void> => {

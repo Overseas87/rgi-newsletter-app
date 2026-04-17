@@ -45,6 +45,7 @@ Dark navy/white/gold palette. No emojis. HBR/Foreign Affairs aesthetic. Serif he
 | `/published` | Published Archive | All approved briefs |
 | `/rejected` | Rejected | Rejected briefs |
 | `/sources` | Source Management | Add/edit/toggle news and social sources |
+| `/newsletter` | Newsletter | Topic subscriptions, generate AI weekly digest, manage subscribers |
 | `/settings` | Settings | Relevancy threshold, scrape schedule |
 
 ## Core Features
@@ -128,6 +129,12 @@ Dark navy/white/gold palette. No emojis. HBR/Foreign Affairs aesthetic. Serif he
 | POST | /api/digest/:id/approve | Approve digest article |
 | POST | /api/digest/:id/reject | Reject digest article |
 | POST | /api/digest/:id/regenerate | Regenerate digest article |
+| POST | /api/digest/:id/refine | AI-refine article content from editor instruction (iterative editing) |
+| POST | /api/newsletter/subscribe | Subscribe with email + selected topics |
+| GET | /api/newsletter/subscribers | List active subscribers |
+| DELETE | /api/newsletter/unsubscribe/:id | Unsubscribe |
+| GET | /api/newsletter/digests | List generated weekly digests |
+| POST | /api/newsletter/generate-digest | AI-generate a weekly digest from published articles |
 | POST | /api/scrape | Trigger manual scrape |
 | GET | /api/scrape/status | Get scrape status |
 
@@ -144,6 +151,12 @@ id, name, url, type, tier (1-3), authorName, authorType, authorityLevel (1-5), d
 
 ### settings
 id, relevancyThreshold, scrapeIntervalHours, scrapeTimeUtc
+
+### newsletter_subscribers
+id, email (unique), name, topics (text[]), isActive, subscribedAt
+
+### newsletter_digests
+id, weekOf, headline, body, topicTags (text[]), subscriberCount, generatedAt
 
 ## OpenAPI / Codegen
 

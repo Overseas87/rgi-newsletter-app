@@ -1,6 +1,6 @@
 import { anthropic } from "@workspace/integrations-anthropic-ai";
-import { db, articlesTable } from "@workspace/db";
-import { inArray, gte, desc } from "drizzle-orm";
+import { db, articlesTable, digestArticlesTable, newsletterSubscribersTable } from "@workspace/db";
+import { inArray, gte, desc, eq } from "drizzle-orm";
 import { logger } from "./logger";
 
 const RGI_SYSTEM_PROMPT = `You are the senior intelligence editor for the Rick Goings Institute (RGI) at Rollins College — an institution dedicated to equipping leaders to build organizations that last, contribute, and stay vital in demanding times.
@@ -59,6 +59,12 @@ Return ONLY a valid JSON object with these exact fields:
 - relevancyScore: number 1-10 (how strategically significant this is for senior leaders at the intersection of business, policy, and society)
 
 Return ONLY valid JSON. No explanation, no markdown code blocks, no preamble.`;
+
+const DAILY_BRIEF_EDITORIAL_SUFFIX = `
+
+EDITORIAL DIRECTION — MANDATORY PRIORITY:
+{NOTES}
+The above direction MUST shape the emphasis, angle, and framing of the brief. Apply it throughout — not just in one section.`;
 
 const DAILY_BRIEF_PROMPT = `You are writing the RGI Daily Strategic Intelligence Brief — a comprehensive executive briefing that synthesizes everything that matters from today's intelligence feed into one authoritative, well-structured analysis.
 
@@ -165,8 +171,198 @@ export async function generateDigestArticle(
   }
 }
 
+const REFINE_PROMPT = `You are the senior intelligence editor at the Rick Goings Institute (RGI). An article has already been drafted and the editor has requested specific changes.
+
+CURRENT ARTICLE:
+Headline: {HEADLINE}
+
+Body:
+{BODY}
+
+RGI Take:
+{RGI_TAKE}
+
+Key Takeaways:
+{KEY_TAKEAWAYS}
+
+EDITOR'S REFINEMENT INSTRUCTION (MANDATORY — apply this precisely):
+{INSTRUCTION}
+
+Rewrite the article following the editor's instruction exactly. Maintain RGI's analytical voice, precision, and format. The instruction is the highest priority — restructure, refocus, shorten, expand, or reframe as directed.
+
+Return ONLY a valid JSON object with these fields:
+- headline: string (updated if needed based on instruction)
+- body: string (revised article body — clean prose, no markdown, no headers, no bullets in body)
+- rgiTake: string (3-4 sentences of RGI editorial opinion — update if instruction affects the take)
+- keyTakeaways: string array of EXACTLY 5 crisp actionable insights
+
+Return ONLY valid JSON. No explanation, no markdown code blocks.`;
+
+const NEWSLETTER_DIGEST_PROMPT = `You are the senior intelligence editor at the Rick Goings Institute (RGI) writing a weekly newsletter digest for subscribers interested in {TOPICS}.
+
+Below are this week's top published RGI strategic briefs relevant to those topics:
+
+{ARTICLES}
+
+Write a concise weekly digest email that:
+1. Opens with a brief "This Week in Intelligence" introduction (2-3 sentences) summarizing the most important development of the week
+2. For each article, writes 2-3 sentences capturing the key insight and why it matters — link to the original brief
+3. Closes with a short "RGI Perspective" paragraph naming the biggest strategic pattern across all topics this week
+
+Requirements:
+- Tone: professional, insightful, editorial — not promotional
+- No emojis, no excessive enthusiasm
+- Target 400-600 words total
+- All content must trace to the provided articles
+
+Return ONLY a valid JSON object:
+- headline: string (one declarative sentence summarizing the week's strategic theme)
+- body: string (the full newsletter text as described — clean prose with article references)
+- topicTags: string array (the topics this digest covers)
+
+Return ONLY valid JSON.`;
+
+export async function refineArticle(
+  articleId: number,
+  instruction: string
+): Promise<{
+  headline: string;
+  body: string;
+  rgiTake: string;
+  keyTakeaways: string[];
+}> {
+  const [article] = await db
+    .select()
+    .from(digestArticlesTable)
+    .where(eq(digestArticlesTable.id, articleId))
+    .limit(1);
+
+  if (!article) {
+    throw new Error("Article not found");
+  }
+
+  const prompt = REFINE_PROMPT
+    .replace("{HEADLINE}", article.headline)
+    .replace("{BODY}", article.body)
+    .replace("{RGI_TAKE}", article.rgiTake || "")
+    .replace("{KEY_TAKEAWAYS}", JSON.stringify(article.keyTakeaways || []))
+    .replace("{INSTRUCTION}", instruction.trim());
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 8192,
+    system: RGI_SYSTEM_PROMPT,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const block = message.content[0];
+  const text = block.type === "text" ? block.text : "{}";
+
+  try {
+    const cleanText = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
+    const parsed = JSON.parse(cleanText);
+
+    const refined = {
+      headline: parsed.headline || article.headline,
+      body: parsed.body || article.body,
+      rgiTake: parsed.rgiTake || article.rgiTake,
+      keyTakeaways: Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : article.keyTakeaways,
+    };
+
+    // Persist the refinement back to the DB
+    await db
+      .update(digestArticlesTable)
+      .set({
+        headline: refined.headline,
+        body: refined.body,
+        rgiTake: refined.rgiTake,
+        keyTakeaways: refined.keyTakeaways,
+      })
+      .where(eq(digestArticlesTable.id, articleId));
+
+    return refined;
+  } catch (e) {
+    logger.error({ err: e, text }, "Failed to parse refined article response");
+    throw new Error("Failed to parse refined article");
+  }
+}
+
+export async function generateNewsletterDigest(
+  topics: string[],
+  weekOf: string
+): Promise<{
+  headline: string;
+  body: string;
+  topicTags: string[];
+  subscriberCount: number;
+}> {
+  // Fetch recent approved articles matching the selected topics
+  const allApproved = await db
+    .select()
+    .from(digestArticlesTable)
+    .where(eq(digestArticlesTable.status, "approved"))
+    .orderBy(desc(digestArticlesTable.createdAt))
+    .limit(40);
+
+  const matching = topics.length > 0
+    ? allApproved.filter((a) => a.topicTags.some((t) => topics.includes(t)))
+    : allApproved;
+
+  const forDigest = matching.slice(0, 12);
+
+  if (forDigest.length === 0) {
+    throw new Error("No approved articles found for the selected topics");
+  }
+
+  const articlesText = forDigest
+    .map((a, i) =>
+      `BRIEF ${i + 1}:\nHeadline: ${a.headline}\nDiscipline: ${a.discipline || "—"}\nTopics: ${a.topicTags.join(", ")}\nSummary: ${a.body.slice(0, 800)}\nRGI Take: ${a.rgiTake?.slice(0, 300) || "—"}`
+    )
+    .join("\n\n---\n\n");
+
+  const prompt = NEWSLETTER_DIGEST_PROMPT
+    .replace("{TOPICS}", topics.length > 0 ? topics.join(", ") : "all topics")
+    .replace("{ARTICLES}", articlesText);
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 4096,
+    system: RGI_SYSTEM_PROMPT,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const block = message.content[0];
+  const text = block.type === "text" ? block.text : "{}";
+
+  try {
+    const cleanText = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
+    const parsed = JSON.parse(cleanText);
+
+    // Count active subscribers interested in these topics
+    const subscribers = await db
+      .select()
+      .from(newsletterSubscribersTable)
+      .where(eq(newsletterSubscribersTable.isActive, true));
+
+    const relevantCount = topics.length > 0
+      ? subscribers.filter((s) => s.topics.some((t) => topics.includes(t))).length
+      : subscribers.length;
+
+    return {
+      headline: parsed.headline || "RGI Weekly Intelligence Digest",
+      body: parsed.body || "",
+      topicTags: parsed.topicTags || topics,
+      subscriberCount: relevantCount,
+    };
+  } catch (e) {
+    logger.error({ err: e, text }, "Failed to parse newsletter digest response");
+    throw new Error("Failed to generate newsletter digest");
+  }
+}
+
 export async function generateDailyBrief(
-  articleIds?: number[]
+  articleIds?: number[],
+  editorNotes?: string | null
 ): Promise<{
   headline: string;
   executiveSummary: string[];
@@ -217,7 +413,12 @@ export async function generateDailyBrief(
     )
     .join("\n\n---\n\n");
 
-  const prompt = DAILY_BRIEF_PROMPT.replace("{SOURCE_COUNT}", String(articles.length))
+  const editorialSuffix = editorNotes?.trim()
+    ? DAILY_BRIEF_EDITORIAL_SUFFIX.replace("{NOTES}", editorNotes.trim())
+    : "";
+
+  const prompt = (DAILY_BRIEF_PROMPT + editorialSuffix)
+    .replace("{SOURCE_COUNT}", String(articles.length))
     .replace("{THEME_COUNT}", String(topicSet.size))
     .replace("{SOURCES}", sourcesText);
 

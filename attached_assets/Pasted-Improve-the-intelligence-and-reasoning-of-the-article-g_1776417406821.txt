@@ -1,0 +1,26 @@
+Improve the intelligence and reasoning of the article generation system so that it does not simply combine topics, but instead connects them into a coherent and meaningful narrative.
+
+When the user selects multiple topics (for example geopolitics, economy, and environmental health), the system must not treat them as separate sections. Instead, it must analyze how these topics are actually connected in the real world and build one unified story.
+
+The system must identify relationships between topics. For example, if geopolitics includes war or conflict, the system should connect this to economic impacts such as oil prices, supply chains, or inflation, and then connect those effects to environmental consequences such as emissions, energy production, or regulatory responses. The article must feel like one continuous argument, not multiple disconnected summaries.
+
+When generating an article, the system must first analyze all relevant data from the last 24 hours and detect the key themes. Then it must identify how these themes interact with each other. Only after this step should it generate the article.
+
+If the user selects multiple topics, the system must prioritize building a logical chain of cause and effect. The article should explain how one development leads to another and why these topics are connected.
+
+Even if the user selects many different topics, the system must still produce a coherent output. It should not try to cover everything equally. Instead, it should:
+
+identify the strongest underlying narrative
+focus on the most meaningful connections
+ignore weak or irrelevant links
+
+The article must always feel focused, even when multiple topics are selected.
+
+If the selected topics are too unrelated, the system must intelligently narrow the focus and prioritize the most relevant overlaps. It should avoid forcing artificial connections that do not make sense.
+
+The system must behave like an analyst, not a summarizer. It must interpret information, identify patterns, and explain relationships between developments.
+
+The goal of every generated article is to answer:
+“What is actually happening, how are these developments connected, and why does it matter?”
+
+The output should feel like a clear, structured explanation of a situation, not a collection of separate topic summaries.

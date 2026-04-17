@@ -13,6 +13,7 @@ import Rejected from "@/pages/rejected";
 import Sources from "@/pages/sources";
 import Settings from "@/pages/settings";
 import About from "@/pages/about";
+import Newsletter from "@/pages/newsletter";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ function Router() {
         <Route path="/sources" component={Sources} />
         <Route path="/settings" component={Settings} />
         <Route path="/about" component={About} />
+        <Route path="/newsletter" component={Newsletter} />
         <Route component={NotFound} />
       </Switch>
     </SidebarLayout>
