@@ -250,43 +250,34 @@ router.post("/digest/:id/regenerate", async (req, res): Promise<void> => {
     return;
   }
 
-  // Set to regenerating
-  await db
-    .update(digestArticlesTable)
-    .set({ status: "regenerating" })
-    .where(eq(digestArticlesTable.id, params.data.id));
+  try {
+    // Synchronously regenerate — client waits for the AI response
+    const generated = await generateDigestArticle(
+      existing.sourceArticleIds,
+      body.data.editorNotes
+    );
 
-  // Regenerate in background
-  generateDigestArticle(existing.sourceArticleIds, body.data.editorNotes)
-    .then(async (generated) => {
-      await db
-        .update(digestArticlesTable)
-        .set({
-          headline: generated.headline,
-          body: generated.body,
-          rgiTake: generated.rgiTake,
-          topicTags: generated.topicTags,
-          relevancyScore: generated.relevancyScore,
-          discipline: generated.discipline,
-          status: "pending_review",
-          editorNotes: body.data.editorNotes ?? null,
-        })
-        .where(eq(digestArticlesTable.id, params.data.id));
-    })
-    .catch((err) => {
-      logger.error({ err }, "Regeneration failed");
-      db.update(digestArticlesTable)
-        .set({ status: "pending_review" })
-        .where(eq(digestArticlesTable.id, params.data.id));
-    });
+    const [updated] = await db
+      .update(digestArticlesTable)
+      .set({
+        headline: generated.headline,
+        body: generated.body,
+        rgiTake: generated.rgiTake,
+        topicTags: generated.topicTags,
+        relevancyScore: generated.relevancyScore,
+        discipline: generated.discipline,
+        status: "pending_review",
+        editorNotes: body.data.editorNotes ?? existing.editorNotes,
+      })
+      .where(eq(digestArticlesTable.id, params.data.id))
+      .returning();
 
-  const [updated] = await db
-    .select()
-    .from(digestArticlesTable)
-    .where(eq(digestArticlesTable.id, params.data.id));
-
-  const enriched = await enrichDigestArticle(updated);
-  res.json(enriched);
+    const enriched = await enrichDigestArticle(updated);
+    res.json(enriched);
+  } catch (err) {
+    logger.error({ err }, "Regeneration failed");
+    res.status(500).json({ error: "Failed to regenerate article" });
+  }
 });
 
 export default router;

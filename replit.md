@@ -33,13 +33,25 @@ Dark navy/white/gold palette. No emojis. Morning Brew meets HBR aesthetic. Serif
 
 ## Key Features
 
-1. **Dashboard** — Stats overview: articles scraped today, pending review count, active sources, trending topics, top articles by relevancy score
-2. **Today's Topics** — View AI-scored articles (1-10) with discipline alignment tags; select articles to generate digest entries
-3. **Pending Review** — Review AI-written digest entries; Approve / Edit / Regenerate / Reject each entry
-4. **Published Archive** — All approved and published digest entries
+1. **Dashboard** — Prominent "Scrape Now" banner at top with full last-scraped timestamp; stats (articles today, pending, approved, active sources); Trending Topics ranking grid; Top Articles by relevancy
+2. **Today's Topics** — "Today's Topic Rankings" section (top 6 tags with discipline icons, color-coded); search/filter by discipline; select articles to generate digest entries
+3. **Pending Review** — Full-length Claude-written articles (500-900 words, multi-paragraph); eye icon for full-page article Dialog; Edit/Save/Cancel inline editing; Approve/Regenerate/Reject with toast notifications
+4. **Published Archive** — All approved digest entries; full-page article Dialog view; queries `status="approved"`
 5. **Rejected** — Items rejected during review
-6. **Source Management** — CRUD for RSS feeds organized by tier (Tier 1 Premier, Tier 2 Standard, Tier 3 Supplemental); toggle active/inactive
+6. **Source Management** — 45 active RSS sources across Tier 1/2/3; CRUD with toggle; covers AI/tech, leadership, geopolitics, finance, environment, social impact, Central Florida
 7. **Settings** — Configure minimum relevancy threshold, scrape interval, scrape time
+
+## Layer 2 Bug Fixes & Enhancements (Completed)
+
+- Published page now correctly queries `status="approved"` (not "published")
+- Regenerate endpoint is synchronous — UI waits for Claude's response (~15-30s)
+- Toast notifications wired for all approve/reject/regenerate/save actions
+- AI writer prompt updated for 500-900 word articles with clean prose (no markdown)
+- Markdown stripping utility (`stripMarkdown`) applied to all article body displays
+- Dashboard redesigned with prominent Scrape Now banner + full datetime timestamp
+- Topics page enhanced with Topic Rankings section (discipline-inferred, color-coded)
+- Full-page article Dialog added to Review and Published pages
+- Sources expanded from 14 to 45 RSS feeds (WSJ, FT, BBC, Foreign Affairs, CFR, Brookings, Nature, SSIR, etc.)
 
 ## RGI Disciplines
 

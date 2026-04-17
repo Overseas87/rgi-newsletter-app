@@ -13,11 +13,72 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, XCircle, RefreshCw, Edit3, Save, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { stripMarkdown } from "@/lib/utils";
+import { CheckCircle, XCircle, RefreshCw, Edit3, Save, X, Eye, ExternalLink } from "lucide-react";
+import { format } from "date-fns";
+
+function FullArticleDialog({ article, open, onClose }: { article: DigestArticle | null; open: boolean; onClose: () => void }) {
+  if (!article) return null;
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <Badge variant="outline" className="text-xs">{article.discipline}</Badge>
+            <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
+              Score: {article.relevancyScore}
+            </Badge>
+          </div>
+          <DialogTitle className="text-2xl font-serif leading-tight text-left">{article.headline}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-6 mt-2">
+          <div>
+            {article.body.split("\n\n").filter(Boolean).map((para, i) => (
+              <p key={i} className="text-sm leading-relaxed text-foreground/90 mb-4">{stripMarkdown(para)}</p>
+            ))}
+          </div>
+          {article.rgiTake && (
+            <div className="border-l-4 border-primary/60 pl-5 py-2 bg-primary/5 rounded-r-md">
+              <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">RGI Take</p>
+              <p className="text-sm italic text-foreground/80 leading-relaxed">{article.rgiTake}</p>
+            </div>
+          )}
+          {article.topicTags && article.topicTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {article.topicTags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-xs font-normal">{tag}</Badge>
+              ))}
+            </div>
+          )}
+          {article.sourceArticles && article.sourceArticles.length > 0 && (
+            <div className="border-t pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Source</p>
+              {article.sourceArticles.map((src) => (
+                <a
+                  key={src.id}
+                  href={src.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+                >
+                  {src.sourceName}: {src.headline}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function DigestCard({ article }: { article: DigestArticle }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
   const [editedHeadline, setEditedHeadline] = useState(article.headline);
   const [editedBody, setEditedBody] = useState(article.body);
   const [editedTake, setEditedTake] = useState(article.rgiTake ?? "");
@@ -27,9 +88,11 @@ function DigestCard({ article }: { article: DigestArticle }) {
   const regenerate = useRegenerateDigestArticle();
   const update = useUpdateDigestArticle();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["listDigestArticles"] });
+    queryClient.invalidateQueries({ queryKey: ["getDashboardSummary"] });
   };
 
   const handleSave = () => {
@@ -38,71 +101,131 @@ function DigestCard({ article }: { article: DigestArticle }) {
         id: article.id,
         data: { headline: editedHeadline, body: editedBody, rgiTake: editedTake },
       },
-      { onSuccess: () => { setIsEditing(false); invalidate(); } }
+      {
+        onSuccess: () => {
+          setIsEditing(false);
+          invalidate();
+          toast({ title: "Changes saved", description: "Your edits have been saved successfully." });
+        },
+        onError: () => {
+          toast({ title: "Save failed", description: "Could not save your changes. Please try again.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleApprove = () => {
+    approve.mutate(
+      { id: article.id },
+      {
+        onSuccess: () => {
+          invalidate();
+          toast({ title: "Article approved", description: "The article has been published to the archive." });
+        },
+        onError: () => {
+          toast({ title: "Approval failed", description: "Could not approve the article. Please try again.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleReject = () => {
+    reject.mutate(
+      { id: article.id },
+      {
+        onSuccess: () => {
+          invalidate();
+          toast({ title: "Article rejected", description: "The article has been moved to Rejected." });
+        },
+        onError: () => {
+          toast({ title: "Rejection failed", description: "Could not reject the article.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleRegenerate = () => {
+    regenerate.mutate(
+      { id: article.id, data: {} },
+      {
+        onSuccess: () => {
+          invalidate();
+          toast({ title: "Article regenerated", description: "Claude has written a new version of this article." });
+        },
+        onError: () => {
+          toast({ title: "Regeneration failed", description: "Could not regenerate the article. Please try again.", variant: "destructive" });
+        },
+      }
     );
   };
 
   return (
-    <Card className="relative" data-testid={`digest-card-${article.id}`}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1.5 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="outline" className="text-xs">
-                {article.discipline}
-              </Badge>
-              {article.topicTags?.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs font-normal">{tag}</Badge>
-              ))}
+    <>
+      <Card className="relative" data-testid={`digest-card-${article.id}`}>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1.5 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className="text-xs">{article.discipline}</Badge>
+                <Badge variant="outline" className="text-xs text-muted-foreground">
+                  Score: {article.relevancyScore}
+                </Badge>
+                {article.topicTags?.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs font-normal">{tag}</Badge>
+                ))}
+              </div>
+              {isEditing ? (
+                <Input
+                  value={editedHeadline}
+                  onChange={(e) => setEditedHeadline(e.target.value)}
+                  className="text-lg font-semibold"
+                  data-testid="input-headline"
+                />
+              ) : (
+                <CardTitle className="text-xl font-serif leading-snug">{article.headline}</CardTitle>
+              )}
             </div>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="ghost" onClick={() => setViewOpen(true)} data-testid="btn-preview">
+                <Eye className="h-4 w-4" />
+              </Button>
+              {isEditing ? (
+                <>
+                  <Button size="sm" onClick={handleSave} disabled={update.isPending} data-testid="btn-save">
+                    <Save className="h-4 w-4 mr-1" /> Save
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)} data-testid="btn-cancel">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => setIsEditing(true)} data-testid="btn-edit">
+                  <Edit3 className="h-4 w-4 mr-1" /> Edit
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Article Body</p>
             {isEditing ? (
-              <Input
-                value={editedHeadline}
-                onChange={(e) => setEditedHeadline(e.target.value)}
-                className="text-lg font-semibold"
-                data-testid="input-headline"
+              <Textarea
+                value={editedBody}
+                onChange={(e) => setEditedBody(e.target.value)}
+                className="min-h-[240px] text-sm leading-relaxed"
+                data-testid="textarea-body"
               />
             ) : (
-              <CardTitle className="text-xl font-serif leading-snug">{article.headline}</CardTitle>
+              <div className="text-sm leading-relaxed text-foreground/90">
+                {article.body.split("\n\n").filter(Boolean).map((para, i) => (
+                  <p key={i} className="mb-3">{stripMarkdown(para)}</p>
+                ))}
+              </div>
             )}
           </div>
-          <div className="flex gap-2 shrink-0">
-            {isEditing ? (
-              <>
-                <Button size="sm" onClick={handleSave} disabled={update.isPending} data-testid="btn-save">
-                  <Save className="h-4 w-4 mr-1" /> Save
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)} data-testid="btn-cancel">
-                  <X className="h-4 w-4" />
-                </Button>
-              </>
-            ) : (
-              <Button size="sm" variant="outline" onClick={() => setIsEditing(true)} data-testid="btn-edit">
-                <Edit3 className="h-4 w-4 mr-1" /> Edit
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardHeader>
 
-      <CardContent className="space-y-4">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Article Body</p>
-          {isEditing ? (
-            <Textarea
-              value={editedBody}
-              onChange={(e) => setEditedBody(e.target.value)}
-              className="min-h-[200px] text-sm leading-relaxed"
-              data-testid="textarea-body"
-            />
-          ) : (
-            <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
-              {article.body}
-            </div>
-          )}
-        </div>
-
-        {(article.rgiTake || isEditing) && (
           <div className="border-l-2 border-primary/40 pl-4">
             <p className="text-xs font-medium text-primary/80 uppercase tracking-wider mb-2">RGI Take</p>
             {isEditing ? (
@@ -114,44 +237,68 @@ function DigestCard({ article }: { article: DigestArticle }) {
                 data-testid="textarea-rgi-take"
               />
             ) : (
-              <p className="text-sm italic text-muted-foreground leading-relaxed">{article.rgiTake}</p>
+              <p className="text-sm italic text-muted-foreground leading-relaxed">
+                {article.rgiTake || "No RGI Take provided."}
+              </p>
             )}
           </div>
-        )}
-      </CardContent>
 
-      <CardFooter className="flex gap-3 pt-4 border-t">
-        <Button
-          size="sm"
-          onClick={() => approve.mutate({ id: article.id }, { onSuccess: invalidate })}
-          disabled={approve.isPending}
-          data-testid="btn-approve"
-          className="bg-emerald-600 hover:bg-emerald-700"
-        >
-          <CheckCircle className="h-4 w-4 mr-1" /> Approve
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => regenerate.mutate({ id: article.id, data: {} }, { onSuccess: invalidate })}
-          disabled={regenerate.isPending}
-          data-testid="btn-regenerate"
-        >
-          <RefreshCw className={`h-4 w-4 mr-1 ${regenerate.isPending ? "animate-spin" : ""}`} />
-          {regenerate.isPending ? "Regenerating..." : "Regenerate"}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => reject.mutate({ id: article.id }, { onSuccess: invalidate })}
-          disabled={reject.isPending}
-          className="text-destructive border-destructive/30 hover:bg-destructive/5 ml-auto"
-          data-testid="btn-reject"
-        >
-          <XCircle className="h-4 w-4 mr-1" /> Reject
-        </Button>
-      </CardFooter>
-    </Card>
+          {article.sourceArticles && article.sourceArticles.length > 0 && (
+            <div className="text-xs text-muted-foreground border-t pt-3">
+              <span className="font-medium">Source: </span>
+              {article.sourceArticles.map((src) => (
+                <a
+                  key={src.id}
+                  href={src.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary/70 hover:underline inline-flex items-center gap-0.5"
+                >
+                  {src.sourceName}
+                  <ExternalLink className="h-3 w-3 ml-0.5" />
+                </a>
+              ))}
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex gap-3 pt-4 border-t">
+          <Button
+            size="sm"
+            onClick={handleApprove}
+            disabled={approve.isPending}
+            data-testid="btn-approve"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            <CheckCircle className="h-4 w-4 mr-1" />
+            {approve.isPending ? "Approving..." : "Approve"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRegenerate}
+            disabled={regenerate.isPending}
+            data-testid="btn-regenerate"
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 ${regenerate.isPending ? "animate-spin" : ""}`} />
+            {regenerate.isPending ? "Regenerating with Claude..." : "Regenerate"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleReject}
+            disabled={reject.isPending}
+            className="text-destructive border-destructive/30 hover:bg-destructive/5 ml-auto"
+            data-testid="btn-reject"
+          >
+            <XCircle className="h-4 w-4 mr-1" />
+            {reject.isPending ? "Rejecting..." : "Reject"}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <FullArticleDialog article={article} open={viewOpen} onClose={() => setViewOpen(false)} />
+    </>
   );
 }
 
@@ -178,8 +325,8 @@ export default function Review() {
         </div>
       ) : (
         <div className="space-y-6">
-          <Badge variant="outline">{articles.length} pending</Badge>
-          {articles.map((article) => (
+          <Badge variant="outline">{(articles as DigestArticle[]).length} pending</Badge>
+          {(articles as DigestArticle[]).map((article) => (
             <DigestCard key={article.id} article={article} />
           ))}
         </div>
