@@ -4,8 +4,10 @@ import { z } from "zod/v4";
 
 export const digestArticlesTable = pgTable("digest_articles", {
   id: serial("id").primaryKey(),
+  articleType: text("article_type", { enum: ["daily_brief", "topic_article"] }).notNull().default("topic_article"),
   headline: text("headline").notNull(),
   body: text("body").notNull(),
+  executiveSummary: text("executive_summary").array().notNull().default([]),
   rgiTake: text("rgi_take").notNull(),
   topicTags: text("topic_tags").array().notNull().default([]),
   sourceArticleIds: integer("source_article_ids").array().notNull().default([]),

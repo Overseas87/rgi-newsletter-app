@@ -120,8 +120,10 @@ export const ListDigestArticlesQueryParams = zod.object({
 
 export const ListDigestArticlesResponseItem = zod.object({
   id: zod.number(),
+  articleType: zod.enum(["daily_brief", "topic_article"]),
   headline: zod.string(),
   body: zod.string(),
+  executiveSummary: zod.array(zod.string()),
   rgiTake: zod.string(),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
@@ -185,8 +187,10 @@ export const GetDigestArticleParams = zod.object({
 
 export const GetDigestArticleResponse = zod.object({
   id: zod.number(),
+  articleType: zod.enum(["daily_brief", "topic_article"]),
   headline: zod.string(),
   body: zod.string(),
+  executiveSummary: zod.array(zod.string()),
   rgiTake: zod.string(),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
@@ -249,8 +253,10 @@ export const UpdateDigestArticleBody = zod.object({
 
 export const UpdateDigestArticleResponse = zod.object({
   id: zod.number(),
+  articleType: zod.enum(["daily_brief", "topic_article"]),
   headline: zod.string(),
   body: zod.string(),
+  executiveSummary: zod.array(zod.string()),
   rgiTake: zod.string(),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
@@ -309,8 +315,10 @@ export const ApproveDigestArticleParams = zod.object({
 
 export const ApproveDigestArticleResponse = zod.object({
   id: zod.number(),
+  articleType: zod.enum(["daily_brief", "topic_article"]),
   headline: zod.string(),
   body: zod.string(),
+  executiveSummary: zod.array(zod.string()),
   rgiTake: zod.string(),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
@@ -366,8 +374,10 @@ export const RejectDigestArticleBody = zod.object({
 
 export const RejectDigestArticleResponse = zod.object({
   id: zod.number(),
+  articleType: zod.enum(["daily_brief", "topic_article"]),
   headline: zod.string(),
   body: zod.string(),
+  executiveSummary: zod.array(zod.string()),
   rgiTake: zod.string(),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
@@ -423,8 +433,10 @@ export const RegenerateDigestArticleBody = zod.object({
 
 export const RegenerateDigestArticleResponse = zod.object({
   id: zod.number(),
+  articleType: zod.enum(["daily_brief", "topic_article"]),
   headline: zod.string(),
   body: zod.string(),
+  executiveSummary: zod.array(zod.string()),
   rgiTake: zod.string(),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),

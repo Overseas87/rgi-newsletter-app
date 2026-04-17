@@ -72,8 +72,10 @@ router.post("/digest/generate", async (req, res): Promise<void> => {
     const [digestArticle] = await db
       .insert(digestArticlesTable)
       .values({
+        articleType: "topic_article",
         headline: generated.headline,
         body: generated.body,
+        executiveSummary: [],
         rgiTake: generated.rgiTake,
         topicTags: generated.topicTags,
         sourceArticleIds: body.data.articleIds,
@@ -108,23 +110,19 @@ router.post("/digest/daily-brief", async (req, res): Promise<void> => {
   try {
     const generated = await generateDailyBrief(articleIds);
 
-    // Build the editor notes field to store the executive summary
-    const executiveSummaryText = generated.executiveSummary.length > 0
-      ? "EXECUTIVE SUMMARY:\n" + generated.executiveSummary.map((s) => `• ${s}`).join("\n")
-      : null;
-
     const [digestArticle] = await db
       .insert(digestArticlesTable)
       .values({
+        articleType: "daily_brief",
         headline: generated.headline,
         body: generated.body,
+        executiveSummary: generated.executiveSummary,
         rgiTake: generated.rgiTake,
         topicTags: generated.topicTags,
         sourceArticleIds: generated.sourceArticleIds,
         relevancyScore: generated.relevancyScore,
         discipline: generated.discipline,
         status: "pending_review",
-        editorNotes: executiveSummaryText,
       })
       .returning();
 
@@ -194,8 +192,10 @@ router.post("/digest/generate-on-demand", async (req, res): Promise<void> => {
       const [digestArticle] = await db
         .insert(digestArticlesTable)
         .values({
+          articleType: "topic_article",
           headline: generated.headline,
           body: generated.body,
+          executiveSummary: [],
           rgiTake: generated.rgiTake,
           topicTags: generated.topicTags,
           sourceArticleIds: selectedIds,
@@ -219,8 +219,10 @@ router.post("/digest/generate-on-demand", async (req, res): Promise<void> => {
     const [digestArticle] = await db
       .insert(digestArticlesTable)
       .values({
+        articleType: "topic_article",
         headline: generated.headline,
         body: generated.body,
+        executiveSummary: [],
         rgiTake: generated.rgiTake,
         topicTags: generated.topicTags,
         sourceArticleIds: selectedIds,

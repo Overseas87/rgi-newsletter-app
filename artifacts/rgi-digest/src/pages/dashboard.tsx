@@ -14,12 +14,14 @@ import {
   TrendingUp,
   Zap,
   Twitter,
-  BookOpen,
-  Newspaper,
   AlertCircle,
   Wand2,
   ChevronRight,
+  Globe,
+  Tag,
+  Loader2,
 } from "lucide-react";
+import { GenerateModal } from "@/components/generate-modal";
 import { ArticleCard } from "@/components/article-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQueryClient } from "@tanstack/react-query";
@@ -44,6 +46,7 @@ function ImportanceBar({ score }: { score: number }) {
 
 export default function Dashboard() {
   const [briefLoading, setBriefLoading] = useState(false);
+  const [topicModalOpen, setTopicModalOpen] = useState(false);
   const { data: summary, isLoading } = useGetDashboardSummary();
   const { data: scrapeStatus } = useGetScrapeStatus();
   const triggerScrape = useTriggerScrape();
@@ -55,9 +58,7 @@ export default function Dashboard() {
     triggerScrape.mutate(undefined, {
       onSuccess: () => {
         toast({ title: "Scrape started", description: "Fetching articles from all active sources. Check back in a moment." });
-        setTimeout(() => {
-          queryClient.invalidateQueries();
-        }, 5000);
+        setTimeout(() => queryClient.invalidateQueries(), 5000);
       },
       onError: () => {
         toast({ title: "Scrape failed", description: "Could not trigger a scrape. Please try again.", variant: "destructive" });
@@ -74,24 +75,15 @@ export default function Dashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Unknown error" }));
         throw new Error(err.error || "Generation failed");
       }
-
-      toast({
-        title: "Daily Intelligence Brief generated",
-        description: "The comprehensive brief is now in Pending Review.",
-      });
+      toast({ title: "Daily Intelligence Brief generated", description: "The comprehensive brief is now in Pending Review." });
       queryClient.invalidateQueries();
       navigate("/review");
     } catch (e) {
-      toast({
-        title: "Brief generation failed",
-        description: String(e instanceof Error ? e.message : e),
-        variant: "destructive",
-      });
+      toast({ title: "Brief generation failed", description: String(e instanceof Error ? e.message : e), variant: "destructive" });
     } finally {
       setBriefLoading(false);
     }
@@ -118,38 +110,77 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Header + Controls */}
-      <div className="flex items-center justify-between gap-6 p-5 rounded-xl border border-border bg-card">
-        <div>
-          <h1 className="text-2xl font-serif tracking-tight text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {scrapeStatus?.lastScrapeAt ? (
-              <>Last scraped: <span className="font-medium text-foreground">{format(new Date(scrapeStatus.lastScrapeAt), "MMMM d, yyyy 'at' h:mm a")}</span></>
-            ) : (
-              "No scrape has run yet."
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
+      <GenerateModal open={topicModalOpen} onOpenChange={setTopicModalOpen} initialMode="topic_article" />
+
+      {/* Header */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-serif tracking-tight text-foreground">Dashboard</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {scrapeStatus?.lastScrapeAt ? (
+                <>Last scraped: <span className="font-medium text-foreground">{format(new Date(scrapeStatus.lastScrapeAt), "MMMM d, yyyy 'at' h:mm a")}</span></>
+              ) : "No scrape has run yet."}
+            </p>
+          </div>
           <Button
             onClick={handleScrape}
             disabled={triggerScrape.isPending || scrapeStatus?.isRunning}
             variant="outline"
-            className="gap-2"
+            size="sm"
+            className="gap-2 shrink-0"
             data-testid="btn-trigger-scrape-dashboard"
           >
             <RefreshCw className={`h-4 w-4 ${scrapeStatus?.isRunning || triggerScrape.isPending ? "animate-spin" : ""}`} />
             {scrapeStatus?.isRunning ? "Scraping..." : triggerScrape.isPending ? "Starting..." : "Scrape Now"}
           </Button>
-          <Button
-            onClick={handleGenerateDailyBrief}
-            disabled={briefLoading || !hasArticles}
-            className="gap-2"
-            data-testid="btn-generate-daily-brief"
-          >
-            <Wand2 className={`h-4 w-4 ${briefLoading ? "animate-pulse" : ""}`} />
-            {briefLoading ? "Generating Brief..." : "Generate Daily Brief"}
-          </Button>
+        </div>
+
+        {/* Generation Controls — Two distinct sections */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Section 1: Daily Brief */}
+          <div className="rounded-xl border border-blue-500/20 bg-blue-500/[0.04] p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-blue-400" />
+              <p className="text-sm font-bold text-blue-400 uppercase tracking-wider">Daily Intelligence Brief</p>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Synthesizes all of today's top articles into one authoritative macro document — executive summary, dominant narrative, cross-theme intelligence, RGI perspective.
+            </p>
+            <Button
+              onClick={handleGenerateDailyBrief}
+              disabled={briefLoading || !hasArticles}
+              className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              data-testid="btn-generate-daily-brief"
+            >
+              {briefLoading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" />Generating Brief…</>
+              ) : (
+                <><Globe className="h-4 w-4" />Generate Daily Brief</>
+              )}
+            </Button>
+          </div>
+
+          {/* Section 2: Topic Article */}
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Tag className="h-4 w-4 text-emerald-400" />
+              <p className="text-sm font-bold text-emerald-400 uppercase tracking-wider">Topic Article</p>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Deep-dive analysis on a specific topic. Select themes from the intelligence feed — the system finds relevant articles and synthesizes one focused strategic brief.
+            </p>
+            <Button
+              onClick={() => setTopicModalOpen(true)}
+              disabled={!hasArticles}
+              variant="outline"
+              className="w-full gap-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+              data-testid="btn-generate-topic-article"
+            >
+              <Tag className="h-4 w-4" />
+              Generate Topic Article
+            </Button>
+          </div>
         </div>
       </div>
 

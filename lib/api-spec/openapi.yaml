@@ -543,10 +543,17 @@ components:
       properties:
         id:
           type: integer
+        articleType:
+          type: string
+          enum: [daily_brief, topic_article]
         headline:
           type: string
         body:
           type: string
+        executiveSummary:
+          type: array
+          items:
+            type: string
         rgiTake:
           type: string
         topicTags:
@@ -578,8 +585,10 @@ components:
           type: ["string", "null"]
       required:
         - id
+        - articleType
         - headline
         - body
+        - executiveSummary
         - rgiTake
         - topicTags
         - sourceArticleIds

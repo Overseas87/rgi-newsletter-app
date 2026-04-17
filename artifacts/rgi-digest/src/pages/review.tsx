@@ -17,16 +17,33 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { stripMarkdown } from "@/lib/utils";
-import { CheckCircle, XCircle, RefreshCw, Edit3, Save, X, Eye, ExternalLink } from "lucide-react";
+import { CheckCircle, XCircle, RefreshCw, Edit3, Save, X, Eye, ExternalLink, Globe, Tag } from "lucide-react";
 import { format } from "date-fns";
+
+function ArticleTypeBadge({ articleType }: { articleType: string }) {
+  if (articleType === "daily_brief") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wide">
+        <Globe className="h-2.5 w-2.5" />Daily Brief
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wide">
+      <Tag className="h-2.5 w-2.5" />Topic Article
+    </span>
+  );
+}
 
 function FullArticleDialog({ article, open, onClose }: { article: DigestArticle | null; open: boolean; onClose: () => void }) {
   if (!article) return null;
+  const isDailyBrief = article.articleType === "daily_brief";
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2 flex-wrap mb-2">
+            <ArticleTypeBadge articleType={article.articleType} />
             <Badge variant="outline" className="text-xs">{article.discipline}</Badge>
             <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
               Score: {article.relevancyScore}
@@ -35,6 +52,19 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
           <DialogTitle className="text-2xl font-serif leading-tight text-left">{article.headline}</DialogTitle>
         </DialogHeader>
         <div className="space-y-6 mt-2">
+          {isDailyBrief && article.executiveSummary && article.executiveSummary.length > 0 && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Executive Summary</p>
+              <ul className="space-y-2">
+                {article.executiveSummary.map((bullet, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-foreground/90">
+                    <span className="text-primary font-bold mt-0.5 shrink-0">•</span>
+                    {bullet}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div>
             {article.body.split("\n\n").filter(Boolean).map((para, i) => (
               <p key={i} className="text-sm leading-relaxed text-foreground/90 mb-4">{stripMarkdown(para)}</p>
@@ -166,6 +196,7 @@ function DigestCard({ article }: { article: DigestArticle }) {
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1.5 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
+                <ArticleTypeBadge articleType={article.articleType} />
                 <Badge variant="outline" className="text-xs">{article.discipline}</Badge>
                 <Badge variant="outline" className="text-xs text-muted-foreground">
                   Score: {article.relevancyScore}

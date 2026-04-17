@@ -64,6 +64,14 @@ export interface Article {
   disciplineAlignment?: string | null;
 }
 
+export type DigestArticleArticleType =
+  (typeof DigestArticleArticleType)[keyof typeof DigestArticleArticleType];
+
+export const DigestArticleArticleType = {
+  daily_brief: "daily_brief",
+  topic_article: "topic_article",
+} as const;
+
 export type DigestArticleStatus =
   (typeof DigestArticleStatus)[keyof typeof DigestArticleStatus];
 
@@ -77,8 +85,10 @@ export const DigestArticleStatus = {
 
 export interface DigestArticle {
   id: number;
+  articleType: DigestArticleArticleType;
   headline: string;
   body: string;
+  executiveSummary: string[];
   rgiTake: string;
   topicTags: string[];
   sourceArticleIds: number[];
