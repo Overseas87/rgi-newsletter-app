@@ -100,11 +100,11 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-[100dvh] flex flex-col md:flex-row bg-background text-foreground dark">
+    <div className="min-h-[100dvh] flex flex-col md:flex-row bg-background text-foreground">
       <GenerateModal open={generateOpen} onOpenChange={setGenerateOpen} />
 
       {/* Mobile Header */}
-      <header className="md:hidden flex items-center justify-between p-4 border-b border-sidebar-border bg-sidebar">
+      <header className="md:hidden flex items-center justify-between p-4 border-b border-sidebar-border bg-sidebar dark">
         <Link href="/" className="flex items-center gap-2.5">
           <RGILogoImg />
         </Link>
@@ -114,7 +114,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-0 bg-sidebar border-sidebar-border">
+          <SheetContent side="left" className="w-64 p-0 bg-sidebar border-sidebar-border dark">
             <div className="px-5 py-6 border-b border-sidebar-border">
               <Link href="/" onClick={() => setMobileOpen(false)}>
                 <RGILogoImg className="mb-3 w-full justify-start" />
@@ -129,7 +129,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-60 border-r border-sidebar-border bg-sidebar shrink-0">
+      <aside className="hidden md:flex flex-col w-60 border-r border-sidebar-border bg-sidebar shrink-0 dark">
         {/* Brand mark */}
         <Link href="/">
           <div className="px-4 pt-5 pb-4 border-b border-sidebar-border cursor-pointer space-y-2">
