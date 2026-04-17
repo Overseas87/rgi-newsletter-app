@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useListDigestArticles,
   useApproveDigestArticle,
@@ -125,6 +125,15 @@ function DigestCard({ article }: { article: DigestArticle }) {
   const [editedHeadline, setEditedHeadline] = useState(article.headline);
   const [editedBody, setEditedBody] = useState(article.body);
   const [editedTake, setEditedTake] = useState(article.rgiTake ?? "");
+
+  // Sync local edit state when the article prop updates (e.g. after a save or regenerate)
+  useEffect(() => {
+    if (!isEditing) {
+      setEditedHeadline(article.headline);
+      setEditedBody(article.body);
+      setEditedTake(article.rgiTake ?? "");
+    }
+  }, [article.headline, article.body, article.rgiTake, isEditing]);
 
   const approve = useApproveDigestArticle();
   const reject = useRejectDigestArticle();

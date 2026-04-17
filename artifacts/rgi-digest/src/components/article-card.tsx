@@ -16,9 +16,9 @@ interface ArticleCardProps {
 }
 
 export function getScoreColor(score: number) {
-  if (score >= 9) return "bg-red-500/10 text-red-500 border-red-500/30";
-  if (score >= 7.5) return "bg-orange-500/10 text-orange-400 border-orange-500/30";
-  if (score >= 6) return "bg-yellow-500/10 text-yellow-400 border-yellow-500/30";
+  if (score >= 9) return "bg-amber-500/15 text-amber-400 border-amber-500/30";
+  if (score >= 7.5) return "bg-primary/10 text-primary border-primary/30";
+  if (score >= 6) return "bg-slate-500/10 text-slate-400 border-slate-500/20";
   return "bg-muted text-muted-foreground border-border";
 }
 

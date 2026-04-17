@@ -12,6 +12,7 @@ import Published from "@/pages/published";
 import Rejected from "@/pages/rejected";
 import Sources from "@/pages/sources";
 import Settings from "@/pages/settings";
+import About from "@/pages/about";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ function Router() {
         <Route path="/rejected" component={Rejected} />
         <Route path="/sources" component={Sources} />
         <Route path="/settings" component={Settings} />
+        <Route path="/about" component={About} />
         <Route component={NotFound} />
       </Switch>
     </SidebarLayout>

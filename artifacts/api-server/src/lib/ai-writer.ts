@@ -31,7 +31,9 @@ ATTRIBUTION RULE: When a source is marked [PRIMARY SIGNAL], that is a direct, or
 Source Articles (synthesize ALL of these into one unified brief):
 {SOURCES}
 
-Editor Notes: {NOTES}
+EDITORIAL DIRECTION — MANDATORY PRIORITY:
+{NOTES}
+The above direction MUST shape the entire article — its angle, tone, emphasis, and structure. This is not a suggestion. If the editor specifies a focus, lead with it. If the editor names a specific angle or audience, build the entire piece around it. The final article must clearly and unmistakably reflect these instructions. Ignore this at the cost of the entire piece.
 
 Write a concise, focused brief following this three-part logic in the body (flowing prose, no labeled sections):
 
@@ -42,7 +44,7 @@ Write a concise, focused brief following this three-part logic in the body (flow
 3. IMPLICATIONS FOR LEADERS — Who is affected, how, and on what timeline? Be concrete about risk, opportunity, and the decisions leaders face as a result. End with 1-2 things to watch.
 
 Requirements:
-- Body: 400-700 words maximum. Be ruthlessly concise. Every sentence must earn its place.
+- Body: 400-600 words, target around 500 words. Be ruthlessly concise. Every sentence must earn its place.
 - Write as clean, flowing prose — no bullet points, no visible headers, no markdown in the body
 - Analytical and direct — avoid padding, vague generalities, and filler transitions
 - All claims must trace to the provided sources
@@ -79,7 +81,7 @@ BODY (write as flowing prose paragraphs, following this internal logic in order)
 5. Why This Matters for Leaders — what should senior leaders do differently, watch more carefully, or think about differently as a result of today's intelligence? 2-3 concrete, decision-relevant observations.
 
 Requirements:
-- Total body word count: 600-800 words — tight, authoritative, scannable
+- Total body word count: 500-700 words — tight, authoritative, scannable. Target 500 words.
 - Tone: HBR/Foreign Affairs — analytical, rigorous, free of hype
 - No emojis, no informal language, no vague generalities
 - Every claim traces back to a source in the provided articles — no fabrication
@@ -130,10 +132,10 @@ export async function generateDigestArticle(
     )
     .join("\n\n---\n\n");
 
-  const prompt = SYNTHESIS_PROMPT.replace("{SOURCES}", sourcesText).replace(
-    "{NOTES}",
-    editorNotes || "None"
-  );
+  const notesText = editorNotes?.trim()
+    ? editorNotes.trim()
+    : "No specific editorial direction — apply your best analytical judgment to identify the most important pattern across the provided sources.";
+  const prompt = SYNTHESIS_PROMPT.replace("{SOURCES}", sourcesText).replace("{NOTES}", notesText);
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",

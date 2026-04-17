@@ -1,0 +1,21 @@
+Improve the relevancy scoring system across the entire app. The relevancy score is one of the most important parts of the product and must be accurate, consistent, and clearly based on the RGI perspective. Both scraped articles and AI-generated articles must be evaluated using a strong and well-defined scoring logic.
+
+The relevancy score must always be out of 10 and must reflect how important a piece of information is for leaders, organizations, and decision-making. The scoring must prioritize topics such as business, finance, AI, geopolitics, leadership, economic systems, and major societal developments. Articles that do not relate to these areas must be filtered out or receive a very low score.
+
+Define the scoring system more strategically. The score should be based on several factors combined: the strategic importance of the topic, the potential impact on markets or organizations, the level of innovation or disruption, the geopolitical or economic relevance, and the authority of the source. The system must also consider whether the information represents a primary signal, such as a direct statement from a company, CEO, or policymaker, versus a secondary report.
+
+The system must prioritize same-day information only. All scraped data must be from the last 24 hours, and older content should automatically receive a lower score or be excluded from the main feed.
+
+The scoring system must be used to rank the Top Stories of the day. The “Top Stories Today” section must always display the most relevant and highest-scoring items. This ranking must feel intentional and accurate, not random.
+
+The system must also generate multiple article drafts per day based on the most important developments. It should generate several strong candidates, but the goal is to publish only one or two high-quality articles per day. The user must be able to review, accept, or reject each generated article easily.
+
+The AI-generated articles must also receive a relevancy score, and this score should reflect how well the article captures important developments and provides meaningful insight from the RGI perspective.
+
+Improve the RGI Take section so that it is clearly an opinion, not a summary. The RGI Take must explain why the topic matters, what it means in a broader context, and how it connects to leadership, strategy, and long-term developments. It should reflect a clear point of view and not sound neutral or generic.
+
+Ensure that every article always includes a link to the original sources used. The system must remain transparent and grounded in real information.
+
+Add a “Today’s Top Picks” section that highlights the strongest article candidates of the day. This section should help the user quickly identify which articles are worth publishing.
+
+The overall goal is to make the system feel like a high-quality intelligence filter. The user should trust that the highest-ranked items are truly the most important and that the generated articles are worth reviewing and potentially publishing.

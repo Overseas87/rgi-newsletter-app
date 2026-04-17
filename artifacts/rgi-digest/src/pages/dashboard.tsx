@@ -37,7 +37,7 @@ const DISCIPLINE_COLORS: Record<string, string> = {
 
 function ImportanceBar({ score }: { score: number }) {
   const pct = Math.min(100, (score / 10) * 100);
-  const color = score >= 8 ? "bg-red-500" : score >= 6.5 ? "bg-amber-500" : "bg-primary";
+  const color = score >= 8 ? "bg-amber-500" : score >= 6.5 ? "bg-primary" : "bg-slate-500";
   return (
     <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
       <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
@@ -110,7 +110,7 @@ function TopStoryModal({ article, open, onClose }: { article: TopArticle | null;
             {article.publishedAt && (
               <span>{formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}</span>
             )}
-            <div className={`ml-auto flex items-center gap-1 text-xs font-bold ${article.relevancyScore >= 8 ? "text-red-400" : article.relevancyScore >= 6.5 ? "text-amber-400" : "text-primary"}`}>
+            <div className={`ml-auto flex items-center gap-1 text-xs font-bold ${article.relevancyScore >= 8 ? "text-amber-400" : article.relevancyScore >= 6.5 ? "text-primary" : "text-slate-400"}`}>
               RGI Score: {article.relevancyScore.toFixed(1)}
             </div>
           </div>
@@ -266,7 +266,7 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
                       </div>
 
                       {/* Score ring */}
-                      <div className={`shrink-0 w-9 h-9 rounded-full border-2 flex items-center justify-center text-[11px] font-bold tabular-nums mt-0.5 ${isHigh ? "text-red-400 border-red-500/40" : isMid ? "text-amber-400 border-amber-500/40" : "text-primary/60 border-primary/20"}`}>
+                      <div className={`shrink-0 w-9 h-9 rounded-full border-2 flex items-center justify-center text-[11px] font-bold tabular-nums mt-0.5 ${isHigh ? "text-amber-400 border-amber-500/40" : isMid ? "text-primary border-primary/40" : "text-slate-400 border-slate-500/20"}`}>
                         {article.relevancyScore.toFixed(1)}
                       </div>
                     </div>

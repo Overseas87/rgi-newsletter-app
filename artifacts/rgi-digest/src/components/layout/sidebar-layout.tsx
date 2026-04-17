@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Menu,
   Wand2,
+  Info,
 } from "lucide-react";
 import { useGetScrapeStatus, useTriggerScrape, getGetScrapeStatusQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { path: "/rejected", label: "Rejected", icon: XCircle },
   { path: "/sources", label: "Sources", icon: Database },
   { path: "/settings", label: "Settings", icon: SettingsIcon },
+  { path: "/about", label: "About RGI", icon: Info },
 ];
 
 function RGILogoImg({ className }: { className?: string }) {
