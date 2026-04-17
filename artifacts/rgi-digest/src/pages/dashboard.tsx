@@ -119,7 +119,11 @@ function TopStoryModal({ article, open, onClose }: { article: TopArticle | null;
             <span className="font-semibold text-foreground">{article.sourceName}</span>
             {article.author && <span>by {article.author}</span>}
             {article.publishedAt && (
-              <span>{formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}</span>
+              <span>
+                {format(new Date(article.publishedAt), "MMM d 'at' h:mm a")}
+                <span className="text-muted-foreground/50"> · </span>
+                {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
+              </span>
             )}
             <div className={`ml-auto flex items-center gap-1 text-xs font-bold ${article.relevancyScore >= 8 ? "text-amber-400" : article.relevancyScore >= 6.5 ? "text-primary" : "text-slate-400"}`}>
               RGI Score: {article.relevancyScore.toFixed(1)}
@@ -262,8 +266,10 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
                           <span className="font-medium text-foreground/70">{article.sourceName}</span>
                           {article.author && <span>· {article.author}</span>}
                           {article.publishedAt && (
-                            <span title={format(new Date(article.publishedAt), "MMMM d, yyyy 'at' h:mm a")}>
-                              · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
+                            <span>
+                              · {format(new Date(article.publishedAt), "h:mm a")}
+                              <span className="text-muted-foreground/40"> · </span>
+                              {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
                             </span>
                           )}
                           {/* RGI Analysis button */}
@@ -392,7 +398,11 @@ function TopicArticlesModal({
                     <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground flex-wrap">
                       <span className="font-medium text-foreground/60">{article.sourceName}</span>
                       {pubDate && (
-                        <span>· {formatDistanceToNow(pubDate, { addSuffix: true })}</span>
+                        <span>
+                          · {format(pubDate, "h:mm a")}
+                          <span className="text-muted-foreground/40"> · </span>
+                          {formatDistanceToNow(pubDate, { addSuffix: true })}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -499,7 +509,11 @@ function TopPicksSection({
               <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
                 <span className="font-medium text-foreground/60">{article.sourceName}</span>
                 {article.publishedAt && (
-                  <span>· {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}</span>
+                  <span>
+                    · {format(new Date(article.publishedAt), "h:mm a")}
+                    <span className="text-muted-foreground/40"> · </span>
+                    {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
+                  </span>
                 )}
                 <a
                   href={article.url}

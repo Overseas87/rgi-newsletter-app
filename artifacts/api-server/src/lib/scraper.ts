@@ -64,7 +64,7 @@ MULTI-FACTOR SCORING — evaluate each factor and combine:
 
 PRIMARY SIGNAL BONUS: If a high-authority figure (Fortune 500 CEO, head of state, central bank governor, major institution) directly communicates something significant — add up to +2 points on top of the base multi-factor score. Primary signals that arrive before press coverage deserve the highest possible scores.
 
-RECENCY: This system prioritizes same-day intelligence. Content older than 24 hours that covers events already widely reported should be scored 1-2 points lower than fresher identical content. Breaking news and developments published in the last 6 hours deserve slight recency boosts.
+RECENCY RULE: Do NOT adjust the score based on how recently an article was published. Score every article purely on its strategic merit — importance, impact, authority, and disruption level. Recency is handled separately by the system and must NOT influence your score. An article from 20 hours ago with major strategic importance must receive a higher score than a low-impact article from 20 minutes ago.
 
 Analyze the following article and return a JSON object with these exact fields:
 - relevancyScore: number 1-10 — be decisive. Most articles should score 4-6. Fewer than 10% deserve 8+. Articles outside RGI's scope score 1-3.
@@ -389,7 +389,18 @@ export async function runScrape(): Promise<{
           source.authorityLevel ?? 3
         );
 
-        const isSignal = detectEmergingSignal(item.headline, scored.relevancyScore);
+        // Apply a small programmatic recency bonus (max +0.2) based on publish time.
+        // This ensures recency is a secondary tiebreaker only — never a primary driver.
+        // A 9.2 article from 20 hours ago always beats a 5.5 article from 1 minute ago.
+        const hoursOld = item.publishedAt
+          ? (Date.now() - item.publishedAt.getTime()) / (1000 * 60 * 60)
+          : 12;
+        const recencyBonus = hoursOld <= 12
+          ? Math.round(0.2 * (1 - hoursOld / 12) * 10) / 10
+          : 0;
+        const finalScore = Math.min(10, Math.round((scored.relevancyScore + recencyBonus) * 10) / 10);
+
+        const isSignal = detectEmergingSignal(item.headline, finalScore);
 
         return {
           headline: item.headline,
@@ -401,7 +412,7 @@ export async function runScrape(): Promise<{
           platform: item.platform || "news" as const,
           isEmergingSignal: isSignal,
           isPrimarySignal: scored.isPrimarySignal ?? false,
-          relevancyScore: scored.relevancyScore,
+          relevancyScore: finalScore,
           topicTags: scored.topicTags,
           teaserSummary: scored.teaserSummary,
           publishedAt: item.publishedAt,
