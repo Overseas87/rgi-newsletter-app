@@ -10,12 +10,18 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@types/cheerio": "^1.0.0",
+    "@types/node-cron": "^3.0.11",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
+    "@workspace/integrations-anthropic-ai": "workspace:*",
+    "axios": "^1.15.0",
+    "cheerio": "^1.2.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "catalog:",
     "express": "^5",
+    "node-cron": "^4.2.1",
     "pino": "^9",
     "pino-http": "^10"
   },

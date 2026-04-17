@@ -1,0 +1,124 @@
+REPLIT PROMPT: RGI Daily Intelligence Digest Tool
+Project Overview
+Build a full-stack internal web application for the Rick Goings Institute (RGI) at Rollins College. This tool automatically scrapes the internet daily for the most relevant and important news articles and social media posts, ranks them by relevance to RGI's mission, rewrites them with RGI's editorial voice and perspective, and presents them to an internal RGI editor for approval or rejection before publishing as a newsletter article. This is an internal tool only — no user-facing subscription model.
+
+Tech Stack (Recommended)
+
+Frontend: React + Tailwind CSS
+Backend: Node.js or Python (Flask/FastAPI)
+Database: PostgreSQL or Supabase (to store scraped articles, scores, drafts, and approval history)
+AI: Anthropic Claude API (claude-sonnet-4-20250514) for summarization and RGI perspective writing
+Scraping: Firecrawl or similar tool for web scraping; Twitter/X API and LinkedIn API where available, else scrape public posts
+Scheduling: Cron job that auto-scrapes every day at a set time (e.g. 6:00 AM EST)
+
+
+Core Features
+1. Data Sourcing & Scraping Engine
+
+The tool scrapes from a configurable list of sources that the editor can add to, remove from, or toggle on/off at any time
+Default sources should include major news outlets: New York Times, Wall Street Journal, Financial Times, Reuters, Bloomberg, The Economist, Politico, MIT Technology Review, Harvard Business Review, and others
+Also scrapes Twitter/X and LinkedIn public posts from a configurable list of influential thought leaders and public figures (e.g. world leaders, CEOs, academics, policy makers)
+Scraping runs automatically every day (cron job) and can also be manually triggered at any time by the editor via a "Scrape Now" button
+The dashboard always displays the last scrape date and time clearly
+Clicking "Scrape Now" always pulls same-day, up-to-date stories — nothing older than 24 hours
+
+
+2. Relevancy Scoring System
+Every scraped article or post is automatically scored on a 1–10 relevancy scale based on its alignment with RGI's three core disciplines:
+
+Strategic Foresight — AI acceleration, geopolitical volatility, market transitions, weak signals, pattern recognition
+System Vitality — organizational culture, leadership, human energy, trust, institutional health
+Civic Stewardship — corporate responsibility, civic institutions, community impact, legitimacy of firms in society
+
+The scoring should also factor in:
+
+Topic tags assigned to each article (AI, Leadership, Geopolitics, Finance, Environmental Health, Central Florida, etc.)
+Source credibility weight (tier 1 sources like NYT/WSJ score higher than tier 3 blogs)
+Recency (same-day articles score higher)
+
+Only articles scoring above a configurable threshold (default: 7/10) are surfaced to the editor. The rest are filtered out automatically.
+
+3. Today's Topics Dashboard
+The main editor dashboard should have:
+
+A "Today's Topics" section showing the top scraped stories of the day, organized by topic tag, each displaying:
+
+Headline
+Source name and link to original article
+Relevancy score (shown as a badge, e.g. 🔴 9.2 / 10)
+Topic tags
+A one-sentence teaser summary
+Date and time of publication at original source
+
+
+A filter/sort bar so the editor can filter by topic, source, or minimum relevancy score
+A clear visual indicator of when the last scrape occurred
+
+
+4. AI-Powered Article Generation (With RGI Perspective)
+When the editor selects a story (or a cluster of related stories) to turn into an RGI newsletter article, the AI does the following:
+
+Summarizes the core news story accurately and concisely
+Rewrites it in RGI's editorial voice — not just a neutral summary, but with RGI's perspective, opinion, and framing woven in, connecting the story to one or more of RGI's three disciplines (Strategic Foresight, System Vitality, Civic Stewardship)
+Structures the output as a short newsletter article with:
+
+A strong headline
+2–4 paragraph body written in RGI's tone (pragmatic, rigorous, leadership-focused, not sensationalist)
+An "RGI Take" section — a short 2–3 sentence paragraph explicitly stating RGI's perspective or insight on why this story matters to leaders
+Topic tags
+A clearly visible link to the original source
+Relevancy score displayed
+
+
+The article length should be newsletter-style — readable in 2–3 minutes
+
+RGI Voice and Values to embed in the system prompt for the AI:
+
+RGI equips leaders to build organizations that last, contribute, and stay vital in demanding times. RGI's perspective connects news to three disciplines: Strategic Foresight (how today's choices shape tomorrow), System Vitality (organizations as living systems driven by human energy and trust), and Civic Stewardship (firms as citizens with responsibility to the environments that grant them legitimacy). RGI's tone is rigorous, pragmatic, and grounded in liberal arts and advanced management scholarship. It does not sensationalize. It connects events to enduring leadership principles.
+
+
+5. Editorial Approval Workflow (Human-in-the-Loop)
+The editor sees each AI-generated article draft in a clean review interface with the following options:
+
+✅ Approve & Publish — marks the article as published, saves it to the published archive
+✏️ Edit then Approve — opens an inline text editor so the editor can tweak the article before approving
+🔄 Regenerate — sends the story back to the AI with a prompt to rewrite it (optionally with editor notes/instructions)
+❌ Reject — dismisses the article; it moves to a "Rejected" archive with a timestamp
+
+The dashboard should show separate tabs or sections for: Pending Review, Approved/Published, Rejected, and Regenerating.
+
+6. Source Management Panel
+A dedicated settings/admin page where the editor can:
+
+View the full list of active scraping sources
+Add new sources (paste a URL or handle)
+Remove or temporarily disable sources
+Assign a credibility tier to each source (Tier 1 / Tier 2 / Tier 3)
+Add influential Twitter/LinkedIn accounts to monitor
+Set the relevancy score threshold for what gets surfaced
+
+
+7. Publishing & Email-Ready Output
+
+All approved articles are saved in a published archive on the dashboard, organized by date and topic
+Each published article should be email-friendly formatted so it can be copied and sent via email newsletter tool (Mailchimp, etc.) if needed
+Include a "Copy for Email" button that formats the article cleanly for email
+Always include the link to the original source in every output format
+
+
+UI/UX Design Direction
+
+Clean, modern, professional design — think Morning Brew meets Harvard Business Review
+Dark navy / white / gold color palette to align with Rollins College / RGI branding
+Mobile-responsive
+Left sidebar navigation with sections: Dashboard, Today's Topics, Pending Review, Published, Rejected, Sources, Settings
+The "Scrape Now" button and "Last Scraped: [date/time]" indicator should always be visible at the top of the dashboard
+
+
+Key Constraints & Notes
+
+Internal use only — no login/auth complexity needed beyond a simple password or single admin user
+All scraped content must be same-day — nothing older than 24 hours surfaces in the main feed
+Always display a link to the original source on every article, both in draft and published form
+The AI must never fabricate facts — it must only work from the scraped source material
+Target: 1–2 published articles per day, though the scraping engine surfaces more candidates for the editor to choose from

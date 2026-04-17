@@ -3,13 +3,23 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API specification for RGI Daily Intelligence Digest
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: articles
+    description: Scraped article operations
+  - name: sources
+    description: Source management
+  - name: digest
+    description: AI-generated digest articles
+  - name: dashboard
+    description: Dashboard summary operations
+  - name: scrape
+    description: Scraping operations
 paths:
   /healthz:
     get:
@@ -24,6 +34,402 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /scrape/trigger:
+    post:
+      operationId: triggerScrape
+      tags: [scrape]
+      summary: Manually trigger a scrape
+      description: Triggers an immediate scrape of all active sources
+      responses:
+        "200":
+          description: Scrape triggered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScrapeResult"
+
+  /scrape/status:
+    get:
+      operationId: getScrapeStatus
+      tags: [scrape]
+      summary: Get last scrape status
+      responses:
+        "200":
+          description: Scrape status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScrapeStatus"
+
+  /articles:
+    get:
+      operationId: listArticles
+      tags: [articles]
+      summary: List scraped articles
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected, generating]
+        - name: minScore
+          in: query
+          schema:
+            type: number
+        - name: topicTag
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of articles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Article"
+
+  /articles/{id}:
+    get:
+      operationId: getArticle
+      tags: [articles]
+      summary: Get a single article
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Article details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteArticle
+      tags: [articles]
+      summary: Delete a scraped article
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /digest:
+    get:
+      operationId: listDigestArticles
+      tags: [digest]
+      summary: List digest articles (generated, pending review, approved, rejected)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, pending_review, approved, rejected, regenerating]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of digest articles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DigestArticle"
+
+  /digest/generate:
+    post:
+      operationId: generateDigestArticle
+      tags: [digest]
+      summary: Generate an AI digest article from one or more scraped articles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateDigestBody"
+      responses:
+        "201":
+          description: Generated digest article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DigestArticle"
+
+  /digest/{id}:
+    get:
+      operationId: getDigestArticle
+      tags: [digest]
+      summary: Get a single digest article
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Digest article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DigestArticle"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateDigestArticle
+      tags: [digest]
+      summary: Update a digest article (edit content, status)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDigestArticleBody"
+      responses:
+        "200":
+          description: Updated digest article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DigestArticle"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteDigestArticle
+      tags: [digest]
+      summary: Delete a digest article
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /digest/{id}/approve:
+    post:
+      operationId: approveDigestArticle
+      tags: [digest]
+      summary: Approve and publish a digest article
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Approved digest article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DigestArticle"
+
+  /digest/{id}/reject:
+    post:
+      operationId: rejectDigestArticle
+      tags: [digest]
+      summary: Reject a digest article
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectDigestBody"
+      responses:
+        "200":
+          description: Rejected digest article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DigestArticle"
+
+  /digest/{id}/regenerate:
+    post:
+      operationId: regenerateDigestArticle
+      tags: [digest]
+      summary: Regenerate a digest article with optional editor notes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegenerateDigestBody"
+      responses:
+        "200":
+          description: Regenerated digest article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DigestArticle"
+
+  /sources:
+    get:
+      operationId: listSources
+      tags: [sources]
+      summary: List all sources
+      responses:
+        "200":
+          description: List of sources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Source"
+    post:
+      operationId: createSource
+      tags: [sources]
+      summary: Add a new source
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSourceBody"
+      responses:
+        "201":
+          description: Created source
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Source"
+
+  /sources/{id}:
+    patch:
+      operationId: updateSource
+      tags: [sources]
+      summary: Update a source (enable/disable, change tier)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSourceBody"
+      responses:
+        "200":
+          description: Updated source
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Source"
+    delete:
+      operationId: deleteSource
+      tags: [sources]
+      summary: Remove a source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/settings:
+    get:
+      operationId: getSettings
+      tags: [dashboard]
+      summary: Get application settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    patch:
+      operationId: updateSettings
+      tags: [dashboard]
+      summary: Update application settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +440,301 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    ScrapeResult:
+      type: object
+      properties:
+        message:
+          type: string
+        articlesFound:
+          type: integer
+        articlesAdded:
+          type: integer
+      required:
+        - message
+        - articlesFound
+        - articlesAdded
+
+    ScrapeStatus:
+      type: object
+      properties:
+        lastScrapeAt:
+          type: ["string", "null"]
+        lastScrapeArticlesFound:
+          type: ["integer", "null"]
+        isRunning:
+          type: boolean
+      required:
+        - isRunning
+
+    Article:
+      type: object
+      properties:
+        id:
+          type: integer
+        headline:
+          type: string
+        url:
+          type: string
+        sourceName:
+          type: string
+        sourceUrl:
+          type: ["string", "null"]
+        relevancyScore:
+          type: number
+        topicTags:
+          type: array
+          items:
+            type: string
+        teaserSummary:
+          type: ["string", "null"]
+        publishedAt:
+          type: ["string", "null"]
+        scrapedAt:
+          type: string
+        content:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, selected, dismissed]
+        disciplineAlignment:
+          type: ["string", "null"]
+      required:
+        - id
+        - headline
+        - url
+        - sourceName
+        - relevancyScore
+        - topicTags
+        - scrapedAt
+        - status
+
+    DigestArticle:
+      type: object
+      properties:
+        id:
+          type: integer
+        headline:
+          type: string
+        body:
+          type: string
+        rgiTake:
+          type: string
+        topicTags:
+          type: array
+          items:
+            type: string
+        sourceArticleIds:
+          type: array
+          items:
+            type: integer
+        sourceArticles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Article"
+        relevancyScore:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [draft, pending_review, approved, rejected, regenerating]
+        editorNotes:
+          type: ["string", "null"]
+        publishedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        discipline:
+          type: ["string", "null"]
+      required:
+        - id
+        - headline
+        - body
+        - rgiTake
+        - topicTags
+        - sourceArticleIds
+        - status
+        - createdAt
+        - updatedAt
+
+    GenerateDigestBody:
+      type: object
+      properties:
+        articleIds:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+        editorNotes:
+          type: ["string", "null"]
+      required:
+        - articleIds
+
+    UpdateDigestArticleBody:
+      type: object
+      properties:
+        headline:
+          type: string
+        body:
+          type: string
+        rgiTake:
+          type: string
+        topicTags:
+          type: array
+          items:
+            type: string
+        editorNotes:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, pending_review, approved, rejected, regenerating]
+
+    RejectDigestBody:
+      type: object
+      properties:
+        reason:
+          type: ["string", "null"]
+
+    RegenerateDigestBody:
+      type: object
+      properties:
+        editorNotes:
+          type: ["string", "null"]
+
+    Source:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        url:
+          type: string
+        type:
+          type: string
+          enum: [rss, website, twitter, linkedin]
+        tier:
+          type: integer
+          enum: [1, 2, 3]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - url
+        - type
+        - tier
+        - isActive
+        - createdAt
+
+    CreateSourceBody:
+      type: object
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+        type:
+          type: string
+          enum: [rss, website, twitter, linkedin]
+        tier:
+          type: integer
+          enum: [1, 2, 3]
+      required:
+        - name
+        - url
+        - type
+        - tier
+
+    UpdateSourceBody:
+      type: object
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+        tier:
+          type: integer
+          enum: [1, 2, 3]
+        isActive:
+          type: boolean
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalArticlesToday:
+          type: integer
+        pendingReview:
+          type: integer
+        approvedToday:
+          type: integer
+        rejectedToday:
+          type: integer
+        topArticles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Article"
+        lastScrapeAt:
+          type: ["string", "null"]
+        articlesByTag:
+          type: array
+          items:
+            $ref: "#/components/schemas/TagCount"
+        totalSources:
+          type: integer
+        activeSources:
+          type: integer
+      required:
+        - totalArticlesToday
+        - pendingReview
+        - approvedToday
+        - rejectedToday
+        - topArticles
+        - articlesByTag
+        - totalSources
+        - activeSources
+
+    TagCount:
+      type: object
+      properties:
+        tag:
+          type: string
+        count:
+          type: integer
+      required:
+        - tag
+        - count
+
+    Settings:
+      type: object
+      properties:
+        relevancyThreshold:
+          type: number
+        scrapeIntervalHours:
+          type: integer
+        scrapeTimeUtc:
+          type: string
+      required:
+        - relevancyThreshold
+        - scrapeIntervalHours
+        - scrapeTimeUtc
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        relevancyThreshold:
+          type: number
+        scrapeIntervalHours:
+          type: integer
+        scrapeTimeUtc:
+          type: string

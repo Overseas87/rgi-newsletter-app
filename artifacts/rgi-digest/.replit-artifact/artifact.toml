@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "RGI Daily Intelligence Digest"
+version = "1.0.0"
+id = "artifacts/rgi-digest"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21405
+
+[services.development]
+run = "pnpm --filter @workspace/rgi-digest run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/rgi-digest", "run", "build" ]
+publicDir = "artifacts/rgi-digest/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21405"
+BASE_PATH = "/"

@@ -3,8 +3,12 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { startScheduler } from "./lib/scheduler";
 
 const app: Express = express();
+
+// Start cron scheduler for daily scrapes
+startScheduler();
 
 app.use(
   pinoHttp({
