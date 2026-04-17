@@ -1,0 +1,19 @@
+Improve the intelligence system so that it does not treat all sources as neutral or equally valid, but instead evaluates both credibility and viewpoint, and clearly expresses an RGI perspective.
+
+First, introduce an “Authenticity Score” for every source and article. This score should reflect how trustworthy and credible the source is. It should be based on factors such as the reputation of the publication, the authority of the author, whether the content is a primary signal or a secondary report, and whether the information is supported by multiple sources. The authenticity score must be displayed alongside the relevancy score.
+
+Second, the system must recognize that every article or source may contain a certain viewpoint or bias. The AI must analyze the tone and claims of the source and understand what position the article is taking.
+
+Third, improve the RGI Take so that it becomes a real opinion and not just a summary. The RGI Take must actively evaluate the claims made in the source material. It should clearly state whether RGI agrees, partially agrees, or disagrees with the perspective of the article, and explain why.
+
+For example, if an article claims that the dollar is weakening, the RGI Take should not just repeat that statement. It should evaluate the claim and either support it with reasoning or argue against it with a different interpretation based on economic logic and broader context.
+
+Fourth, the RGI perspective must be consistent and grounded in a defined set of principles. The system should prioritize long-term thinking, strategic foresight, economic and geopolitical awareness, and leadership relevance. It should not follow short-term media narratives blindly.
+
+Fifth, when generating articles, the system must combine multiple sources and viewpoints. If different sources present conflicting perspectives, the AI should recognize this and address the disagreement explicitly, rather than presenting only one side.
+
+Sixth, the system must avoid simply echoing the most common narrative. It should identify when narratives may be misleading, incomplete, or exaggerated, and provide a more balanced or forward-looking interpretation.
+
+Seventh, ensure that both the relevancy score and the authenticity score influence what gets surfaced as Top Stories. Highly relevant but low-credibility sources should not dominate the feed. The system must balance importance with trustworthiness.
+
+The overall goal is to transform the system from a content aggregator into an analytical tool that evaluates information, challenges assumptions when necessary, and provides a clear and thoughtful RGI perspective.
