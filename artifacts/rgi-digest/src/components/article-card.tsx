@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Article } from "@workspace/api-client-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { ExternalLink, Zap, Twitter, Linkedin, Newspaper, BookOpen, Building2, TrendingUp, Globe, ChevronDown, ChevronUp, Compass, Shield, Cpu, Loader2, Radio } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -191,8 +191,12 @@ export function ArticleCard({ article, selectable, selected, onSelect, onTopicCl
                 </>
               )}
               <span className="text-muted-foreground/40 text-xs">·</span>
-              <span className="text-xs text-muted-foreground">
-                {format(new Date(publishTime), "MMM d, h:mm a")}
+              <span className="text-xs text-muted-foreground" title={format(new Date(publishTime), "MMMM d, yyyy 'at' h:mm a")}>
+                {format(new Date(publishTime), "MMM d, yyyy")}
+                <span className="text-muted-foreground/50"> — </span>
+                {format(new Date(publishTime), "h:mm a")}
+                <span className="text-muted-foreground/50"> · </span>
+                {formatDistanceToNow(new Date(publishTime), { addSuffix: true })}
               </span>
               <div className="ml-auto flex items-center gap-1.5">
                 {article.isPrimarySignal && (
@@ -205,8 +209,8 @@ export function ArticleCard({ article, selectable, selected, onSelect, onTopicCl
                     <Zap className="h-2.5 w-2.5" />Signal
                   </span>
                 )}
-                <Badge variant="outline" className={`text-xs font-bold ${getScoreColor(article.relevancyScore)}`}>
-                  {article.relevancyScore.toFixed(1)}
+                <Badge variant="outline" className={`text-xs font-bold tabular-nums ${getScoreColor(article.relevancyScore)}`}>
+                  {article.relevancyScore.toFixed(1)}<span className="font-normal opacity-60"> / 10</span>
                 </Badge>
               </div>
             </div>

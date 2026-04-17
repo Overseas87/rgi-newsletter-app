@@ -54,7 +54,7 @@ Requirements:
 Return ONLY a valid JSON object with these exact fields:
 - headline: string (strong, direct, analytical — not clickbait; no colons splitting into two halves; written as a senior editor would headline a Foreign Affairs piece)
 - body: string (the complete synthesized brief as described above, 700-900 words, clean prose only — no markdown, no headers, no bullets)
-- rgiTake: string (3-5 sentences articulating RGI's specific perspective — which discipline(s) this engages, and what it means for the leaders RGI serves. This is the pull-quote-worthy distillation of the piece's significance.)
+- rgiTake: string (3-5 sentences of INTERPRETATION, not description. Name the RGI discipline(s) explicitly. State a clear point of view — what RGI actually thinks about this, why it matters NOW, and what it demands of leaders. This must read as an editorial opinion from a senior RGI fellow, not a neutral summary. Use active voice: "This signals...", "Leaders who ignore this...", "The strategic imperative here is..." — never "This article discusses...")
 - topicTags: string array (choose only from: ["AI", "Leadership", "Geopolitics", "Finance", "Environmental Health", "Central Florida", "Strategy", "Culture", "Technology", "Policy", "Education", "Economy", "Innovation", "Governance", "Health", "Democracy", "Future of Work", "Sustainability"])
 - discipline: string (exactly one of: "Strategic Foresight", "System Vitality", "Civic Stewardship", or "Multiple")
 - relevancyScore: number 1-10 (how strategically significant this is for senior leaders at the intersection of business, policy, and society)
@@ -92,7 +92,7 @@ Return ONLY a valid JSON object with these fields:
 - headline: string (the day's single most important strategic development, one declarative sentence)
 - executiveSummary: string array (exactly 6 bullet strings, each one tight sentence)
 - body: string (the full 900-1200 word prose brief as described above — no markdown, no headers, no bullets in the body)
-- rgiTake: string (3-5 sentences: which RGI discipline(s) today's events most illuminate and what it means for the leaders RGI serves)
+- rgiTake: string (3-5 sentences of sharp editorial OPINION, not description. Name the RGI discipline(s) explicitly. State what today's events mean — not what happened, but what RGI concludes from it. Use active, opinionated voice: "Today's convergence signals...", "The strategic imperative for leaders is...", "Organizations that fail to act on this..." — never summarize or describe. This is the pull-quote that captures RGI's distinctive analytical perspective on the day.)
 - topicTags: string array (from: ["AI", "Leadership", "Geopolitics", "Finance", "Environmental Health", "Central Florida", "Strategy", "Culture", "Technology", "Policy", "Education", "Economy", "Innovation", "Governance", "Health", "Democracy", "Future of Work", "Sustainability"])
 - discipline: string (one of: "Strategic Foresight", "System Vitality", "Civic Stewardship", "Multiple")
 - relevancyScore: number 1-10

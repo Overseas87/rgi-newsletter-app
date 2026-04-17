@@ -245,7 +245,13 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
                           <span className="font-medium text-foreground/70">{article.sourceName}</span>
                           {article.author && <span>· {article.author}</span>}
                           {article.publishedAt && (
-                            <span>· {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}</span>
+                            <span title={format(new Date(article.publishedAt), "MMMM d, yyyy 'at' h:mm a")}>
+                              · {format(new Date(article.publishedAt), "MMM d, yyyy")}
+                              <span className="text-muted-foreground/50"> — </span>
+                              {format(new Date(article.publishedAt), "h:mm a")}
+                              <span className="text-muted-foreground/50"> · </span>
+                              {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
+                            </span>
                           )}
                           <a
                             href={article.url}
