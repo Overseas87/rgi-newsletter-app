@@ -17,6 +17,8 @@ export const digestArticlesTable = pgTable("digest_articles", {
   editorNotes: text("editor_notes"),
   publishedAt: timestamp("published_at", { withTimezone: true }),
   discipline: text("discipline"),
+  newsletterSentAt: timestamp("newsletter_sent_at", { withTimezone: true }),
+  newsletterSentCount: integer("newsletter_sent_count").default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

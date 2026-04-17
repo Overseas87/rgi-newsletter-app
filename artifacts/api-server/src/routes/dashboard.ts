@@ -108,7 +108,17 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
 
   const allArticlesToday = allArticlesWindow;
 
-  // Tag counts and scores for trending topics
+  // Build a set of tags that appear in Top Stories for weighted ranking
+  const topStoryTagCounts: Record<string, number> = {};
+  for (const article of topArticles) {
+    for (const tag of article.topicTags) {
+      topStoryTagCounts[tag] = (topStoryTagCounts[tag] ?? 0) + 1;
+    }
+  }
+
+  // Tag counts and scores for trending topics — only count articles scoring >= 6.5
+  // to ensure topics reflect genuinely relevant intelligence (not noise)
+  const MIN_TOPIC_SCORE = 6.5;
   const tagData: Record<string, { count: number; totalScore: number; hasEmergingSignal: boolean }> = {};
   let socialSignalsCount = 0;
   let emergingSignalsCount = 0;
@@ -120,6 +130,8 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
     if (article.isEmergingSignal) {
       emergingSignalsCount++;
     }
+    // Only count high-relevance articles for topic intelligence
+    if (article.relevancyScore < MIN_TOPIC_SCORE) continue;
     for (const tag of article.topicTags) {
       if (!tagData[tag]) tagData[tag] = { count: 0, totalScore: 0, hasEmergingSignal: false };
       tagData[tag].count++;
@@ -132,12 +144,20 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
     .sort((a, b) => b[1].count - a[1].count)
     .map(([tag, data]) => ({ tag, count: data.count }));
 
-  // Topic Intelligence: top topics ranked by weighted importance
+  // Topic Intelligence: ranked by composite score that weights Top Stories membership.
+  // A topic that dominates Top Stories must rank above topics with many lower-quality articles.
+  //   base      = avgScore * volume_bonus (log scale)
+  //   topBoost  = 0.6 per Top Story appearance in this topic (uncapped — important topics float up)
+  // Topics with fewer than 2 high-relevance articles are filtered out to avoid single-source noise.
   const topicIntelligence = Object.entries(tagData)
+    .filter(([, data]) => data.count >= 2)
     .map(([topic, data]) => {
       const avgScore = data.count > 0 ? data.totalScore / data.count : 0;
-      // Weighted importance: avg score * log(count+1) for diversity bonus
-      const importanceScore = Math.min(10, avgScore * (1 + Math.log(data.count + 1) * 0.15));
+      const volumeBonus = 1 + Math.log(data.count + 1) * 0.12;
+      const base = avgScore * volumeBonus;
+      const topStoriesAppearances = topStoryTagCounts[topic] ?? 0;
+      const topBoost = topStoriesAppearances * 0.6;
+      const importanceScore = Math.min(10, base + topBoost);
       return {
         topic,
         articleCount: data.count,

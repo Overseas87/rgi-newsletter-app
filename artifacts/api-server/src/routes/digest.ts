@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, digestArticlesTable, articlesTable } from "@workspace/db";
+import { db, digestArticlesTable, articlesTable, newsletterSubscribersTable } from "@workspace/db";
 import { eq, inArray, desc, and, gte } from "drizzle-orm";
 import {
   ListDigestArticlesQueryParams,
@@ -449,6 +449,160 @@ router.post("/digest/:id/regenerate", async (req, res): Promise<void> => {
     logger.error({ err }, "Regeneration failed");
     res.status(500).json({ error: "Failed to regenerate article" });
   }
+});
+
+router.post("/digest/:id/send-newsletter", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid article ID" });
+    return;
+  }
+
+  const [article] = await db
+    .select()
+    .from(digestArticlesTable)
+    .where(eq(digestArticlesTable.id, id));
+
+  if (!article) {
+    res.status(404).json({ error: "Digest article not found" });
+    return;
+  }
+
+  if (article.status !== "approved") {
+    res.status(422).json({ error: "Only approved articles can be sent as newsletters" });
+    return;
+  }
+
+  const subscribers = await db
+    .select()
+    .from(newsletterSubscribersTable)
+    .where(eq(newsletterSubscribersTable.isActive, true));
+
+  if (subscribers.length === 0) {
+    res.status(422).json({ error: "No active subscribers found. Add subscribers via the newsletter settings first." });
+    return;
+  }
+
+  // Format HTML email
+  const bulletList = (items: string[]) =>
+    items.map((b) => `<li style="margin-bottom:8px;">${b}</li>`).join("");
+
+  const emailHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${article.headline}</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0;">
+    <tr><td align="center">
+      <table width="620" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:4px;overflow:hidden;border:1px solid #e4e4e7;">
+        <!-- Header -->
+        <tr><td style="background:#1a365d;padding:28px 40px;">
+          <p style="margin:0;color:#93c5fd;font-family:Arial,sans-serif;font-size:10px;letter-spacing:3px;text-transform:uppercase;font-weight:700;">The Rick Goings Institute · Strategic Intelligence</p>
+          <h1 style="margin:12px 0 0;color:#ffffff;font-size:22px;font-weight:700;line-height:1.3;">${article.headline}</h1>
+        </td></tr>
+        <!-- Meta -->
+        <tr><td style="background:#f8fafc;padding:14px 40px;border-bottom:1px solid #e4e4e7;">
+          <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;">
+            ${article.articleType === "daily_brief" ? "Daily Intelligence Brief" : "Topic Analysis"} &nbsp;·&nbsp; ${article.discipline ?? "Strategic Intelligence"} &nbsp;·&nbsp; ${new Date(article.publishedAt ?? article.updatedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+          </p>
+        </td></tr>
+        <!-- Executive Summary -->
+        ${article.executiveSummary && article.executiveSummary.length > 0 ? `
+        <tr><td style="padding:32px 40px 0;">
+          <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a365d;">Executive Summary</p>
+          <ul style="margin:0;padding-left:20px;color:#374151;font-size:15px;line-height:1.7;">${bulletList(article.executiveSummary)}</ul>
+        </td></tr>` : ""}
+        <!-- Body -->
+        <tr><td style="padding:28px 40px 0;">
+          ${article.body.split("\n\n").filter(Boolean).map((p) => `<p style="margin:0 0 18px;color:#1f2937;font-size:16px;line-height:1.75;">${p.replace(/\*\*/g, "").replace(/\*/g, "").trim()}</p>`).join("")}
+        </td></tr>
+        <!-- RGI Take -->
+        ${article.rgiTake ? `
+        <tr><td style="padding:0 40px 28px;">
+          <div style="border-left:4px solid #1a365d;padding:16px 20px;background:#eff6ff;margin-top:8px;">
+            <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a365d;">RGI Take</p>
+            <p style="margin:0;color:#1e40af;font-size:15px;font-style:italic;line-height:1.7;">${article.rgiTake}</p>
+          </div>
+        </td></tr>` : ""}
+        <!-- Key Takeaways -->
+        ${article.keyTakeaways && article.keyTakeaways.length > 0 ? `
+        <tr><td style="padding:0 40px 32px;">
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:20px;">
+            <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#374151;">Key Takeaways</p>
+            <ol style="margin:0;padding-left:20px;color:#374151;font-size:14px;line-height:1.7;">${bulletList(article.keyTakeaways)}</ol>
+          </div>
+        </td></tr>` : ""}
+        <!-- Footer -->
+        <tr><td style="background:#f8fafc;border-top:1px solid #e4e4e7;padding:20px 40px;">
+          <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#94a3b8;text-align:center;">Rick Goings Institute for Leadership &amp; Global Affairs · Rollins College</p>
+          <p style="margin:6px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#94a3b8;text-align:center;">You are receiving this because you subscribed to RGI Strategic Intelligence.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  const emailSubject = `RGI Intelligence: ${article.headline}`;
+  let sent = false;
+  let sendError: string | null = null;
+
+  // Attempt real delivery if SMTP is configured
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const smtpFrom = process.env.SMTP_FROM || smtpUser || "noreply@rollins.edu";
+
+  if (smtpHost && smtpUser && smtpPass) {
+    try {
+      const nodemailer = await import("nodemailer");
+      const transporter = nodemailer.default.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: { user: smtpUser, pass: smtpPass },
+      });
+
+      await Promise.all(
+        subscribers.map((sub) =>
+          transporter.sendMail({
+            from: `"Rick Goings Institute" <${smtpFrom}>`,
+            to: sub.email,
+            subject: emailSubject,
+            html: emailHtml,
+          })
+        )
+      );
+      sent = true;
+    } catch (err) {
+      req.log.error({ err }, "SMTP send failed");
+      sendError = err instanceof Error ? err.message : "SMTP delivery failed";
+    }
+  }
+
+  // Record the distribution regardless (preview mode if no SMTP)
+  const [updated] = await db
+    .update(digestArticlesTable)
+    .set({
+      newsletterSentAt: new Date(),
+      newsletterSentCount: subscribers.length,
+    })
+    .where(eq(digestArticlesTable.id, id))
+    .returning();
+
+  res.json({
+    success: true,
+    sent,
+    emailPreview: !sent,
+    subscriberCount: subscribers.length,
+    subject: emailSubject,
+    htmlPreview: emailHtml,
+    article: updated,
+    ...(sendError ? { warning: sendError } : {}),
+  });
 });
 
 export default router;
