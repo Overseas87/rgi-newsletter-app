@@ -38,6 +38,9 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Adaptive lookback: start with today, expand to 48h if content is sparse
+  const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
   const [totalArticlesResult, pendingReviewResult, approvedTodayResult, rejectedTodayResult] =
     await Promise.all([
       db.select({ count: count() }).from(articlesTable).where(gte(articlesTable.scrapedAt, today)),
@@ -65,21 +68,27 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
         ),
     ]);
 
-  const [topArticles, topPicks, allArticlesToday, sourcesResult, activeSourcesResult] = await Promise.all([
+  const todayCount = totalArticlesResult[0]?.count ?? 0;
+
+  // If today has fewer than 5 articles, expand the window to 48 hours so the
+  // dashboard is never empty — editors always see content immediately on load.
+  const contentWindow = todayCount >= 5 ? today : fortyEightHoursAgo;
+
+  const [topArticles, topPicks, allArticlesWindow, sourcesResult, activeSourcesResult] = await Promise.all([
     // Top Stories: ranked by composite score — 65% relevancy + 35% authenticity
     // This ensures high-relevance but low-credibility sources don't dominate
     db
       .select()
       .from(articlesTable)
-      .where(gte(articlesTable.scrapedAt, today))
+      .where(gte(articlesTable.scrapedAt, contentWindow))
       .orderBy(desc(sql`${articlesTable.relevancyScore} * 0.65 + COALESCE(${articlesTable.authenticityScore}, 5.0) * 0.35`))
       .limit(10),
-    // Top Picks: today's highest-scoring articles NOT yet selected for generation
+    // Top Picks: highest-scoring articles in the window NOT yet selected for generation
     db
       .select()
       .from(articlesTable)
       .where(and(
-        gte(articlesTable.scrapedAt, today),
+        gte(articlesTable.scrapedAt, contentWindow),
         ne(articlesTable.status, "selected")
       ))
       .orderBy(desc(sql`${articlesTable.relevancyScore} * 0.65 + COALESCE(${articlesTable.authenticityScore}, 5.0) * 0.35`))
@@ -92,10 +101,12 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
         isEmergingSignal: articlesTable.isEmergingSignal,
       })
       .from(articlesTable)
-      .where(gte(articlesTable.scrapedAt, today)),
+      .where(gte(articlesTable.scrapedAt, contentWindow)),
     db.select({ count: count() }).from(sourcesTable),
     db.select({ count: count() }).from(sourcesTable).where(eq(sourcesTable.isActive, true)),
   ]);
+
+  const allArticlesToday = allArticlesWindow;
 
   // Tag counts and scores for trending topics
   const tagData: Record<string, { count: number; totalScore: number; hasEmergingSignal: boolean }> = {};

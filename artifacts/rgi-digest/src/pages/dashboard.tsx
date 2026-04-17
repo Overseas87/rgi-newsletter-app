@@ -32,19 +32,19 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 
 const DISCIPLINE_COLORS: Record<string, string> = {
-  "Strategic Foresight": "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  "System Vitality": "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  "Civic Stewardship": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  "Strategic Foresight": "bg-blue-50 text-blue-700 border-blue-200",
+  "System Vitality": "bg-amber-50 text-amber-700 border-amber-200",
+  "Civic Stewardship": "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
 
 function ScoreBadge({ score, size = "md" }: { score: number; size?: "sm" | "md" }) {
   const isHigh = score >= 8;
   const isMid = score >= 6.5;
   const colorClass = isHigh
-    ? "bg-amber-500/15 text-amber-400 border-amber-500/25"
+    ? "bg-amber-50 text-amber-700 border-amber-300"
     : isMid
-    ? "bg-blue-500/15 text-blue-400 border-blue-500/25"
-    : "bg-slate-500/10 text-slate-400 border-slate-500/15";
+    ? "bg-blue-50 text-blue-700 border-blue-200"
+    : "bg-slate-100 text-slate-600 border-slate-300";
   const sizeClass = size === "sm"
     ? "text-[10px] px-1.5 py-0.5 min-w-[2.6rem]"
     : "text-xs px-2 py-1 min-w-[3rem]";
@@ -138,11 +138,11 @@ function TopStoryModal({ article, open, onClose }: { article: TopArticle | null;
             )}
             <div className="ml-auto flex items-center gap-2">
               {article.authenticityScore != null && (
-                <span className={`text-xs font-semibold ${article.authenticityScore >= 8 ? "text-emerald-400" : article.authenticityScore >= 5.5 ? "text-slate-400" : "text-orange-400"}`}>
+                <span className={`text-xs font-semibold ${article.authenticityScore >= 8 ? "text-emerald-700" : article.authenticityScore >= 5.5 ? "text-slate-600" : "text-orange-700"}`}>
                   Auth {article.authenticityScore.toFixed(1)}
                 </span>
               )}
-              <div className={`text-xs font-bold ${article.relevancyScore >= 8 ? "text-amber-400" : article.relevancyScore >= 6.5 ? "text-primary" : "text-slate-400"}`}>
+              <div className={`text-xs font-bold ${article.relevancyScore >= 8 ? "text-amber-700" : article.relevancyScore >= 6.5 ? "text-primary" : "text-slate-600"}`}>
                 Rel {article.relevancyScore.toFixed(1)}
               </div>
             </div>
@@ -264,7 +264,7 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
                       <div className="flex-1 min-w-0 space-y-1.5">
                         <div className="flex items-start gap-2 flex-wrap">
                           {article.isEmergingSignal && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-wide shrink-0">
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-300 uppercase tracking-wide shrink-0">
                               <Zap className="h-2.5 w-2.5" />Signal
                             </span>
                           )}
@@ -495,7 +495,7 @@ function TopPicksSection({
     <div className="space-y-3">
       <div className="flex items-center justify-between px-0.5">
         <div className="flex items-center gap-2">
-          <Star className="h-4 w-4 text-amber-400 fill-amber-400/30" />
+          <Star className="h-4 w-4 text-amber-600 fill-amber-100" />
           <h2 className="text-sm font-semibold tracking-wide uppercase text-foreground/80">Today's Top Picks</h2>
           <span className="text-[10px] text-muted-foreground ml-1">Best candidates for publication</span>
         </div>
@@ -694,7 +694,7 @@ export default function Dashboard() {
             disabled={!hasArticles}
             variant="outline"
             size="sm"
-            className="gap-1.5 text-xs h-8 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+            className="gap-1.5 text-xs h-8 border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
             data-testid="btn-generate-topic-article"
           >
             <Tag className="h-3.5 w-3.5" />
@@ -746,7 +746,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-1.5">
                         <span className="font-medium text-[13px] leading-snug group-hover:text-primary transition-colors truncate">{ti.topic}</span>
                         {ti.hasEmergingSignal && (
-                          <Zap className="h-2.5 w-2.5 text-amber-400 shrink-0" />
+                          <Zap className="h-2.5 w-2.5 text-amber-600 shrink-0" />
                         )}
                       </div>
                       <p className="text-[10px] text-muted-foreground/60 mt-0.5">{ti.articleCount} {ti.articleCount === 1 ? "source" : "sources"}</p>

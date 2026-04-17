@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Article } from "@workspace/api-client-react";
 import { format, formatDistanceToNow } from "date-fns";
-import { ExternalLink, Zap, Twitter, Linkedin, Newspaper, BookOpen, Building2, TrendingUp, Globe, ChevronDown, ChevronUp, Compass, Shield, Cpu, Loader2, Radio, ShieldCheck, ShieldAlert, ShieldQuestion, MessageSquareQuote } from "lucide-react";
+import { ExternalLink, Zap, Twitter, Linkedin, Newspaper, BookOpen, Building2, TrendingUp, Globe, ChevronDown, ChevronUp, Compass, Shield, Cpu, Loader2, Radio, ShieldCheck, ShieldAlert, ShieldQuestion } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface ArticleCardProps {
@@ -16,9 +16,9 @@ interface ArticleCardProps {
 }
 
 export function getScoreColor(score: number) {
-  if (score >= 9) return "bg-amber-500/15 text-amber-400 border-amber-500/30";
-  if (score >= 7.5) return "bg-primary/10 text-primary border-primary/30";
-  if (score >= 6) return "bg-slate-500/10 text-slate-400 border-slate-500/20";
+  if (score >= 9) return "bg-amber-50 text-amber-700 border-amber-300";
+  if (score >= 7.5) return "bg-blue-50 text-blue-700 border-blue-200";
+  if (score >= 6) return "bg-slate-100 text-slate-600 border-slate-300";
   return "bg-muted text-muted-foreground border-border";
 }
 
@@ -29,15 +29,15 @@ function AuthenticityBadge({ score }: { score?: number | null }) {
   let label: string;
   if (score >= 8) {
     icon = <ShieldCheck className="h-2.5 w-2.5" />;
-    cls = "bg-emerald-500/10 text-emerald-400 border-emerald-500/25";
+    cls = "bg-emerald-50 text-emerald-700 border-emerald-200";
     label = `Auth ${score.toFixed(1)}`;
   } else if (score >= 5.5) {
     icon = <ShieldQuestion className="h-2.5 w-2.5" />;
-    cls = "bg-slate-500/10 text-slate-400 border-slate-500/20";
+    cls = "bg-slate-100 text-slate-600 border-slate-300";
     label = `Auth ${score.toFixed(1)}`;
   } else {
     icon = <ShieldAlert className="h-2.5 w-2.5" />;
-    cls = "bg-orange-500/10 text-orange-400 border-orange-500/25";
+    cls = "bg-orange-50 text-orange-700 border-orange-200";
     label = `Auth ${score.toFixed(1)}`;
   }
   return (
@@ -48,10 +48,10 @@ function AuthenticityBadge({ score }: { score?: number | null }) {
 }
 
 const DISCIPLINE_COLORS: Record<string, string> = {
-  "Strategic Foresight": "text-blue-400",
-  "System Vitality": "text-amber-400",
-  "Civic Stewardship": "text-emerald-400",
-  "Multiple": "text-violet-400",
+  "Strategic Foresight": "text-blue-700",
+  "System Vitality": "text-amber-700",
+  "Civic Stewardship": "text-emerald-700",
+  "Multiple": "text-violet-700",
 };
 
 function DisciplineIcon({ discipline }: { discipline?: string | null }) {
@@ -225,12 +225,12 @@ export function ArticleCard({ article, selectable, selected, onSelect, onTopicCl
               </span>
               <div className="ml-auto flex items-center gap-1.5 flex-wrap justify-end">
                 {article.isPrimarySignal && (
-                  <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300 border border-violet-500/30 uppercase tracking-wide">
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-200 uppercase tracking-wide">
                     <Radio className="h-2.5 w-2.5" />Primary Signal
                   </span>
                 )}
                 {article.isEmergingSignal && (
-                  <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-wide">
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-300 uppercase tracking-wide">
                     <Zap className="h-2.5 w-2.5" />Signal
                   </span>
                 )}
@@ -266,10 +266,9 @@ export function ArticleCard({ article, selectable, selected, onSelect, onTopicCl
             </p>
           )}
           {article.viewpoint && (
-            <p className="ml-7 flex items-start gap-1.5 text-[11px] text-muted-foreground/70 italic leading-snug">
-              <MessageSquareQuote className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground/40" />
-              <span>{article.viewpoint}</span>
-            </p>
+            <div className="ml-7 flex items-start gap-1.5 text-[11px] leading-snug border-l-2 border-primary/25 pl-2.5 py-0.5">
+              <span className="text-foreground/75 leading-relaxed">{article.viewpoint}</span>
+            </div>
           )}
         </CardContent>
       )}

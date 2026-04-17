@@ -191,7 +191,8 @@ export default function Feed() {
           <p className="text-sm text-muted-foreground mt-0.5">
             {articles.length} signals across all sources
             {emergingSignals.length > 0 && (
-              <> · <span className="text-amber-400 font-medium">{emergingSignals.length} emerging signal{emergingSignals.length !== 1 ? "s" : ""}</span></>
+              <> · <span className="text-amber-700 font-medium">{emergingSignals.length} emerging signal{emergingSignals.length !== 1 ? "s" : ""}</span></>
+
             )}
           </p>
         </div>
@@ -317,10 +318,10 @@ export default function Feed() {
 
       {/* Emerging Signals Banner */}
       {emergingSignals.length > 0 && sourceFilter === "all" && !search && (
-        <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 flex items-start gap-3">
-          <Zap className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+        <div className="p-4 rounded-xl border border-amber-300 bg-amber-50 flex items-start gap-3">
+          <Zap className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-amber-400 mb-0.5">
+            <p className="text-sm font-semibold text-amber-700 mb-0.5">
               {emergingSignals.length} Emerging Signal{emergingSignals.length !== 1 ? "s" : ""} Detected
             </p>
             <p className="text-xs text-muted-foreground">

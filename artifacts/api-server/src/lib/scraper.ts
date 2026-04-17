@@ -74,13 +74,11 @@ Score how credible and trustworthy this source/article is:
 - 3-4: Unnamed sources, speculative analysis, secondary aggregation without original reporting, partisan outlet
 - 1-2: Anonymous blog, unverifiable claim, highly speculative, known low-credibility source, sensationalist content
 
-VIEWPOINT DETECTION — identify the perspective the article takes:
-Write exactly 1 sentence (max 120 chars) naming the article's core argument or position. Be precise and neutral in your description — do not evaluate the claim, just name it clearly. Examples:
-- "Argues that AI regulation will suppress innovation and slow U.S. competitiveness."
-- "Claims central bank rate cuts are premature given persistent inflation signals."
-- "Presents a skeptical view of corporate ESG commitments as primarily performative."
-- "Asserts that remote work productivity is overstated relative to in-office collaboration."
-If the article is purely informational (no clear argument), write: "Reports on [key event] without taking an editorial position."
+RGI TAKE — write an evaluative 2-sentence RGI position on this article:
+Sentence 1: State whether RGI agrees, partially agrees, or disagrees with the article's central claim — and name the specific reason. Be direct.
+Sentence 2: State one concrete forward-looking implication for senior leaders. Use declarative language, not hedging. Max 220 chars total.
+Format: "RGI [agrees/partially agrees/disagrees]: [reason]. [Forward implication for leaders]."
+If the article is low-relevance (score 1-4), write: "RGI notes this item falls outside the core strategic lens — limited implications for senior leadership."
 
 TOPIC TAGS — choose only from this list:
 - "AI", "Technology", "Innovation", "Geopolitics", "Leadership", "Strategy", "Culture", "Future of Work"
@@ -421,9 +419,13 @@ export async function runScrape(): Promise<{
       })
     );
 
-    // Insert new articles
+    // Insert new articles — skip low-relevance content (score < 4.5 is noise, not signal)
     for (const result of scoringResults) {
       if (result.status === "fulfilled" && result.value !== null) {
+        if (result.value.relevancyScore < 4.5) {
+          logger.debug({ headline: result.value.headline, score: result.value.relevancyScore }, "Skipping low-relevance article");
+          continue;
+        }
         try {
           await db.insert(articlesTable).values(result.value);
           articlesAdded++;

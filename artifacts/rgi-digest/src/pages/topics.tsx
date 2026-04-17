@@ -49,17 +49,17 @@ const DISC_ICON: Record<string, React.ElementType> = {
 };
 
 const DISC_COLOR: Record<string, string> = {
-  "Strategic Foresight": "text-blue-400 border-blue-500/20 bg-blue-500/5",
-  "System Vitality": "text-amber-400 border-amber-500/20 bg-amber-500/5",
-  "Civic Stewardship": "text-emerald-400 border-emerald-500/20 bg-emerald-500/5",
-  "Multiple": "text-violet-400 border-violet-500/20 bg-violet-500/5",
+  "Strategic Foresight": "text-blue-700 border-blue-200 bg-blue-50",
+  "System Vitality": "text-amber-700 border-amber-200 bg-amber-50",
+  "Civic Stewardship": "text-emerald-700 border-emerald-200 bg-emerald-50",
+  "Multiple": "text-violet-700 border-violet-200 bg-violet-50",
 };
 
 const DISC_BADGE: Record<string, string> = {
-  "Strategic Foresight": "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  "System Vitality": "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  "Civic Stewardship": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  "Multiple": "bg-violet-500/10 text-violet-400 border-violet-500/20",
+  "Strategic Foresight": "bg-blue-50 text-blue-700 border-blue-200",
+  "System Vitality": "bg-amber-50 text-amber-700 border-amber-200",
+  "Civic Stewardship": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Multiple": "bg-violet-50 text-violet-700 border-violet-200",
 };
 
 // ─── Sort types ────────────────────────────────────────────────────────────────
