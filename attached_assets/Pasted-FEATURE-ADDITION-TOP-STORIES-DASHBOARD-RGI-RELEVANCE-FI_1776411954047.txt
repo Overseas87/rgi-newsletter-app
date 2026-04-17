@@ -1,0 +1,138 @@
+FEATURE ADDITION: TOP STORIES DASHBOARD + RGI RELEVANCE FILTERING
+Objective
+
+Transform the main dashboard into a clear intelligence overview that shows:
+
+👉 the most important developments of the day
+👉 filtered strictly through the RGI lens
+
+🧠 1. TOP STORIES SECTION (MAIN FEATURE)
+
+At the top of the homepage, create:
+
+👉 “Top 5 Stories Today”
+
+Requirements:
+
+Display ONLY:
+
+the 5 most relevant and important stories of the day
+optionally expandable to top 10
+Each story must include:
+headline
+source name (e.g. Bloomberg, Reuters)
+author (if available)
+publish time
+topic
+short description (1–2 sentences)
+relevance score
+direct link to original article
+UI:
+clean card layout
+ranked (#1 to #5)
+visually prominent
+⚖️ 2. STRICT RGI RELEVANCE FILTER (CRITICAL FIX)
+
+The system must filter OUT irrelevant content.
+
+REMOVE articles about:
+local school issues
+entertainment
+low-impact lifestyle topics
+anything not relevant to:
+business
+markets
+AI
+geopolitics
+leadership
+economic systems
+New rule:
+
+An article must answer:
+👉 “Does this matter for leaders, organizations, or systems?”
+
+If NO → do NOT include it
+
+🧠 3. IMPROVED RELEVANCE SCORING MODEL
+
+Update scoring to prioritize:
+
+strategic impact
+economic relevance
+technological significance
+geopolitical importance
+leadership implications
+De-prioritize:
+human-interest stories
+local issues
+non-systemic topics
+🧩 4. TOPIC SYSTEM IMPROVEMENT
+
+Fix topic classification.
+
+Replace weak structure (e.g. “General”) with:
+AI & Technology
+Geopolitics
+Finance & Markets
+Leadership & Organizations
+Economic Systems
+Climate & Energy
+Rules:
+every article must belong to at least one meaningful topic
+avoid “General” as a default bucket
+allow multi-topic classification
+📊 5. “WHAT MATTERS TODAY” SECTION
+
+Below Top Stories, add:
+
+👉 “What Matters Today”
+
+Display:
+top topics ranked by importance
+number of relevant articles
+short explanation
+Example:
+
+AI & Technology — 12 articles
+→ “Rapid acceleration in enterprise AI adoption and regulatory pressure signals major transition phase”
+
+🔍 6. CLICK → FULL ACCESS
+
+Clicking a top story must:
+
+open full view
+show:
+full article preview
+RGI relevance explanation
+source link
+⚡ 7. REMOVE NOISE FROM MAIN VIEW
+
+The homepage must NOT show:
+
+long lists of random articles
+low-quality content
+Instead:
+
+Focus on:
+
+top 5 stories
+top topics
+clear intelligence
+🎯 8. FINAL USER EXPERIENCE
+
+When opening the app:
+
+👉 I instantly see:
+
+the 5 most important developments
+what topics dominate the day
+only relevant content
+⚠️ FINAL RULE
+
+The system must behave like:
+
+👉 a filter for importance
+
+NOT:
+
+👉 a collection of articles

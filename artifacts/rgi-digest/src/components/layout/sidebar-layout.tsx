@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
   Rss,
+  Tag,
   CheckCircle,
   Archive,
   XCircle,
@@ -22,6 +23,7 @@ import { GenerateModal } from "@/components/generate-modal";
 const NAV_ITEMS = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
   { path: "/feed", label: "Intelligence Feed", icon: Rss },
+  { path: "/topics", label: "Today's Topics", icon: Tag },
   { path: "/review", label: "Pending Review", icon: CheckCircle },
   { path: "/published", label: "Published", icon: Archive },
   { path: "/rejected", label: "Rejected", icon: XCircle },
@@ -77,7 +79,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       </button>
 
       {NAV_ITEMS.map((item) => {
-        const isActive = location === item.path || (item.path === "/feed" && location === "/topics");
+        const isActive = location === item.path;
         return (
           <Link
             key={item.path}

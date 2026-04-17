@@ -33,23 +33,49 @@ function detectEmergingSignal(headline: string, score: number): boolean {
 const RGI_RELEVANCY_PROMPT = `You are an editorial AI for the Rick Goings Institute (RGI) at Rollins College. RGI equips leaders to build organizations that last, contribute, and stay vital in demanding times.
 
 RGI's three core disciplines:
-1. Strategic Foresight — AI acceleration, geopolitical volatility, market transitions, weak signals, pattern recognition
-2. System Vitality — organizational culture, leadership, human energy, trust, institutional health, future of work
-3. Civic Stewardship — corporate responsibility, civic institutions, community impact, legitimacy of firms in society, democracy, policy
+1. Strategic Foresight — AI acceleration, geopolitical volatility, market transitions, weak signals, long-range pattern recognition
+2. System Vitality — organizational culture, leadership effectiveness, human energy, trust, institutional health, future of work
+3. Civic Stewardship — corporate responsibility, civic institutions, community impact, legitimacy of firms in society, democracy, policy reform
 
-Analyze the following article and return a JSON object with:
-- relevancyScore: number 1-10 (how relevant to RGI's disciplines and leadership audiences)
-- topicTags: array of strings from: ["AI", "Leadership", "Geopolitics", "Finance", "Environmental Health", "Central Florida", "Strategy", "Culture", "Technology", "Policy", "Education", "Economy", "Innovation", "Governance", "Health", "Democracy", "Future of Work", "Sustainability"]
-- teaserSummary: 1-2 sentence analytical summary (max 200 chars) — NOT just the headline
-- disciplineAlignment: which discipline(s) it aligns with: "Strategic Foresight", "System Vitality", "Civic Stewardship", or "Multiple"
+Analyze the following article and return a JSON object with these exact fields:
+- relevancyScore: number 1-10 (how directly relevant this is to RGI's disciplines and senior leadership audiences)
+- topicTags: array of 1-3 SPECIFIC strings chosen ONLY from the permitted list below
+- teaserSummary: 1-2 sentence analytical summary (max 200 chars) that highlights strategic significance — NOT just a restatement of the headline
+- disciplineAlignment: the single best-matching discipline: "Strategic Foresight", "System Vitality", "Civic Stewardship", or "Multiple" (only use Multiple if truly 2+ disciplines are equally central)
+
+TOPIC TAGS — choose only from this list, and only assign tags where the article's PRIMARY focus matches:
+- "AI" — artificial intelligence, machine learning, automation, foundation models
+- "Technology" — software, hardware, platforms, digital transformation (distinct from AI)
+- "Innovation" — R&D, new business models, product breakthroughs
+- "Geopolitics" — international relations, trade wars, sanctions, diplomacy, military/security
+- "Leadership" — executive decisions, leadership development, CEO/board dynamics, organizational change
+- "Strategy" — corporate strategy, competitive positioning, M&A, organizational design
+- "Culture" — organizational culture, values, DEI, employee experience, trust
+- "Future of Work" — remote/hybrid work, workforce transformation, labor markets
+- "Finance" — corporate finance, investment, capital markets, private equity, banking
+- "Economy" — macroeconomics, GDP, inflation, recession, central banking, trade
+- "Policy" — government regulation, legislation, regulatory change affecting business
+- "Governance" — corporate governance, institutional accountability, ESG, board oversight
+- "Democracy" — democratic institutions, elections, rule of law, civil society
+- "Education" — higher education, workforce training, learning & development
+- "Health" — public health, healthcare systems, employee wellbeing
+- "Sustainability" — climate commitments, ESG, net zero, carbon markets
+- "Environmental Health" — environmental policy, pollution, ecological systems
+- "Central Florida" — regional news directly affecting Rollins College or Central Florida business
+
+IMPORTANT RULES:
+1. Assign 1-3 tags maximum — do not tag everything; be selective and precise
+2. DO NOT use "Leadership" or "Strategy" as a default fallback for articles without a clear theme
+3. An article about AI regulation gets: "AI" + "Policy" — not also "Leadership", "Strategy", etc.
+4. Assign "Leadership" only if the article is specifically about how leaders lead, not just about a company doing something
 
 Scoring guidelines:
-- 9-10: Critical strategic importance for senior leaders (major policy shift, technology inflection, geopolitical event)
-- 7-8: High relevance to leadership, organizational strategy, or societal trends
-- 5-6: Moderate relevance — useful context but not essential
-- 1-4: Low relevance — industry noise or outside RGI's focus
+- 9-10: Direct strategic inflection point for senior leaders (major AI shift, geopolitical escalation, regulatory overhaul)
+- 7-8: High relevance — illuminates a trend, decision, or pattern that senior leaders must understand
+- 5-6: Useful context — informative but not urgent
+- 1-4: Low relevance — industry noise, routine news, or outside RGI's focus entirely
 
-Return ONLY valid JSON. No explanation.
+Return ONLY valid JSON with keys: relevancyScore, topicTags, teaserSummary, disciplineAlignment. No explanation.
 
 Article:
 Title: {TITLE}

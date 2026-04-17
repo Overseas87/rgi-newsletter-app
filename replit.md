@@ -76,11 +76,27 @@ Dark navy/white/gold palette. No emojis. HBR/Foreign Affairs aesthetic. Serif he
 - Optional: editor can pass specific article IDs via POST /api/digest/daily-brief body
 
 ### Intelligence Feed (Layer 3c)
-- Filter by platform: All / News / X (Twitter) / LinkedIn
+- Shows ALL articles (no status filter) — 334+ signals from all sources
+- Filter by source type: All / News / X (Twitter) / LinkedIn / Institutional / Corporate / Market
 - Sort by: Relevance / Time / Source
+- Min relevancy score filter (All, 5+, 6+, 7+, 8+)
 - Search by keyword, source name, or author
+- Refresh button, proper loading/error/empty states
 - Emerging signal banner when high-priority items detected
 - Multi-select with optional editor notes → Generate Brief
+
+### Today's Topics (Layer 5)
+- Full topic drill-down: click any topic to see all articles for that topic
+- Topic overview grid with discipline colors (Strategic Foresight=blue, System Vitality=amber, Civic Stewardship=green)
+- Within topic view: sort by Relevance, Newest, Source; filter by min score and source type
+- Multi-select articles within topic → Generate Brief
+- Route: /topics
+
+### Why This Matters to RGI (Layer 5)
+- Every article card (score ≥ 6.5) shows "Why this matters to RGI" toggle
+- On click: calls GET /api/articles/:id/explain via Claude Haiku
+- Returns 4-6 sentence explanation specific to the article, named discipline, and strategic significance
+- Expandable panel inline in the article card
 
 ### Dashboard Topic Intelligence
 - "What Matters Today" section ranks top 8 topics by weighted importance score
@@ -94,6 +110,7 @@ Dark navy/white/gold palette. No emojis. HBR/Foreign Affairs aesthetic. Serif he
 |--------|------|-------------|
 | GET | /api/articles | List articles (filters: status, minScore, topicTag, source, platform, sortBy) |
 | GET | /api/articles/:id | Get single article |
+| GET | /api/articles/:id/explain | Generate RGI relevance explanation via Claude Haiku |
 | DELETE | /api/articles/:id | Delete article |
 | GET | /api/dashboard/summary | Full dashboard stats including topic intelligence |
 | GET | /api/dashboard/settings | Get settings |

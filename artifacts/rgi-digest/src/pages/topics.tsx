@@ -1,228 +1,299 @@
-import { useState } from "react";
-import { useListArticles, useGenerateDigestArticle, useGetDashboardSummary } from "@workspace/api-client-react";
+import { useState, useMemo } from "react";
+import {
+  useListArticles,
+  useGetDashboardSummary,
+  useGenerateDigestArticle,
+  Article,
+} from "@workspace/api-client-react";
 import { ArticleCard } from "@/components/article-card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { CheckSquare, Square, Search, TrendingUp, Zap, Shield, Compass } from "lucide-react";
+import {
+  ArrowLeft,
+  Compass,
+  Zap,
+  Shield,
+  Search,
+  BarChart2,
+  Clock,
+  AlignLeft,
+  TrendingUp,
+  Cpu,
+} from "lucide-react";
 
-const DISCIPLINES = ["All", "Strategic Foresight", "System Vitality", "Civic Stewardship"];
-
-const DISCIPLINE_ICONS: Record<string, React.ReactNode> = {
-  "Strategic Foresight": <Compass className="h-4 w-4 text-blue-400" />,
-  "System Vitality": <Zap className="h-4 w-4 text-amber-400" />,
-  "Civic Stewardship": <Shield className="h-4 w-4 text-emerald-400" />,
+// ─── Discipline mapping ────────────────────────────────────────────────────────
+const DISCIPLINE_KEYWORDS: Record<string, string[]> = {
+  "Strategic Foresight": ["AI", "Technology", "Geopolitics", "Innovation", "Strategy", "Future of Work", "Policy", "Economy", "Finance"],
+  "System Vitality": ["Leadership", "Culture", "Health", "Education", "Future of Work"],
+  "Civic Stewardship": ["Governance", "Democracy", "Sustainability", "Environmental Health", "Central Florida"],
 };
 
-const DISCIPLINE_COLORS: Record<string, string> = {
-  "Strategic Foresight": "border-blue-500/20 bg-blue-500/5",
-  "System Vitality": "border-amber-500/20 bg-amber-500/5",
-  "Civic Stewardship": "border-emerald-500/20 bg-emerald-500/5",
-};
-
-const DISCIPLINE_BADGE: Record<string, string> = {
-  "Strategic Foresight": "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  "System Vitality": "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  "Civic Stewardship": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-};
-
-// Map topics to the most relevant RGI discipline
 function inferDiscipline(tag: string): string {
-  const sf = ["AI", "Technology", "Innovation", "Geopolitics", "Strategy", "Future of Work", "Economy", "Finance"];
-  const sv = ["Leadership", "Culture", "Health", "Education", "Governance", "Sustainability"];
-  const cs = ["Policy", "Democracy", "Environment", "Environmental Health", "Central Florida", "Governance", "Civic"];
-  if (sf.some(t => tag.toLowerCase().includes(t.toLowerCase()))) return "Strategic Foresight";
-  if (sv.some(t => tag.toLowerCase().includes(t.toLowerCase()))) return "System Vitality";
-  if (cs.some(t => tag.toLowerCase().includes(t.toLowerCase()))) return "Civic Stewardship";
+  for (const [disc, keywords] of Object.entries(DISCIPLINE_KEYWORDS)) {
+    if (keywords.some((k) => tag.toLowerCase() === k.toLowerCase())) return disc;
+  }
   return "Strategic Foresight";
 }
 
-function TopicRankingSection() {
-  const { data: summary } = useGetDashboardSummary();
+const DISC_ICON: Record<string, React.ElementType> = {
+  "Strategic Foresight": Compass,
+  "System Vitality": Zap,
+  "Civic Stewardship": Shield,
+  "Multiple": Cpu,
+};
 
-  if (!summary?.articlesByTag || summary.articlesByTag.length === 0) return null;
+const DISC_COLOR: Record<string, string> = {
+  "Strategic Foresight": "text-blue-400 border-blue-500/20 bg-blue-500/5",
+  "System Vitality": "text-amber-400 border-amber-500/20 bg-amber-500/5",
+  "Civic Stewardship": "text-emerald-400 border-emerald-500/20 bg-emerald-500/5",
+  "Multiple": "text-violet-400 border-violet-500/20 bg-violet-500/5",
+};
 
-  const topTopics = summary.articlesByTag.slice(0, 6);
+const DISC_BADGE: Record<string, string> = {
+  "Strategic Foresight": "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  "System Vitality": "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  "Civic Stewardship": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  "Multiple": "bg-violet-500/10 text-violet-400 border-violet-500/20",
+};
+
+// ─── Sort types ────────────────────────────────────────────────────────────────
+type SortMode = "relevance" | "newest" | "source";
+
+// ─── Topic Grid ───────────────────────────────────────────────────────────────
+interface TopicCardProps {
+  topic: string;
+  count: number;
+  importanceScore: number;
+  hasEmergingSignal: boolean;
+  discipline: string;
+  significance: string;
+  rank: number;
+  onClick: () => void;
+}
+
+function TopicCard({ topic, count, importanceScore, discipline, rank, onClick }: TopicCardProps) {
+  const disc = discipline in DISC_COLOR ? discipline : inferDiscipline(topic);
+  const colorClass = DISC_COLOR[disc] ?? DISC_COLOR["Strategic Foresight"];
+  const Icon = DISC_ICON[disc] ?? Compass;
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <TrendingUp className="h-5 w-5 text-primary" />
-        <h2 className="text-xl font-serif font-semibold">Today's Topic Rankings</h2>
+    <button
+      onClick={onClick}
+      className={`w-full text-left p-4 rounded-xl border transition-all hover:scale-[1.01] hover:shadow-md active:scale-[0.99] ${colorClass}`}
+      data-testid={`topic-card-${topic.replace(/\s+/g, "-")}`}
+    >
+      <div className="flex items-start gap-3">
+        <span className="text-2xl font-black opacity-20 leading-none w-7 shrink-0 text-right tabular-nums">
+          {rank}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="font-bold text-sm">{topic}</span>
+          </div>
+          <Badge variant="outline" className={`text-[10px] mb-2 ${DISC_BADGE[disc] ?? ""}`}>
+            {disc}
+          </Badge>
+          <div className="flex items-center gap-3 text-xs opacity-70 mt-1">
+            <span>{count} article{count !== 1 ? "s" : ""} today</span>
+            <span>·</span>
+            <span className="flex items-center gap-1">
+              <TrendingUp className="h-3 w-3" />
+              {importanceScore.toFixed(1)} importance
+            </span>
+          </div>
+        </div>
       </div>
-      <p className="text-sm text-muted-foreground">
-        The biggest stories today ranked by coverage across all sources, framed through RGI's disciplines.
-      </p>
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {topTopics.map((tagCount, i) => {
-          const discipline = inferDiscipline(tagCount.tag);
-          return (
-            <Card
-              key={tagCount.tag}
-              className={`border ${DISCIPLINE_COLORS[discipline] ?? ""}`}
-              data-testid={`topic-rank-${i}`}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <span className="text-3xl font-black text-muted-foreground/20 leading-none w-8 shrink-0 text-right">
-                    {i + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      {DISCIPLINE_ICONS[discipline]}
-                      <span className="text-sm font-bold">{tagCount.tag}</span>
-                    </div>
-                    <Badge variant="outline" className={`text-xs mb-2 ${DISCIPLINE_BADGE[discipline] ?? ""}`}>
-                      {discipline}
-                    </Badge>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {tagCount.count} article{tagCount.count !== 1 ? "s" : ""} published today across monitored sources.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
+    </button>
   );
 }
 
-export default function Topics() {
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [search, setSearch] = useState("");
-  const [discipline, setDiscipline] = useState("All");
+// ─── Article Drill-Down ───────────────────────────────────────────────────────
+interface TopicDrillDownProps {
+  topic: string;
+  onBack: () => void;
+}
 
-  const { data: articles = [], isLoading } = useListArticles({ status: "pending", limit: 200 });
+function TopicDrillDown({ topic, onBack }: TopicDrillDownProps) {
+  const [sort, setSort] = useState<SortMode>("relevance");
+  const [minScore, setMinScore] = useState("0");
+  const [sourceType, setSourceType] = useState("all");
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  const { data: articles = [], isLoading, isError, refetch } = useListArticles({
+    topicTag: topic,
+    limit: 200,
+  });
+
   const generate = useGenerateDigestArticle();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const filtered = (articles as any[]).filter((a) => {
-    const matchesDiscipline = discipline === "All" || a.disciplineAlignment === discipline;
-    const matchesSearch =
-      !search ||
-      a.headline.toLowerCase().includes(search.toLowerCase()) ||
-      (a.sourceName?.toLowerCase() ?? "").includes(search.toLowerCase());
-    return matchesDiscipline && matchesSearch;
-  });
+  const disc = inferDiscipline(topic);
+  const Icon = DISC_ICON[disc] ?? Compass;
+
+  const filtered = useMemo(() => {
+    let items = articles as Article[];
+    const minS = parseFloat(minScore) || 0;
+    if (minS > 0) items = items.filter((a) => a.relevancyScore >= minS);
+    if (sourceType !== "all") items = items.filter((a) => (a.platform ?? "news") === sourceType);
+
+    if (sort === "newest") {
+      items = [...items].sort((a, b) => {
+        const ta = new Date(a.publishedAt ?? a.scrapedAt).getTime();
+        const tb = new Date(b.publishedAt ?? b.scrapedAt).getTime();
+        return tb - ta;
+      });
+    } else if (sort === "source") {
+      items = [...items].sort((a, b) => a.sourceName.localeCompare(b.sourceName));
+    } else {
+      items = [...items].sort((a, b) => b.relevancyScore - a.relevancyScore);
+    }
+
+    return items;
+  }, [articles, sort, minScore, sourceType]);
 
   const toggleSelect = (id: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
-  const toggleAll = () => {
-    if (selectedIds.length === filtered.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(filtered.map((a) => a.id));
-    }
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]);
   };
 
   const handleGenerate = () => {
-    if (selectedIds.length === 0) return;
+    if (selectedIds.length < 2) {
+      toast({ title: "Select at least 2 articles", description: "A brief requires multiple sources.", variant: "destructive" });
+      return;
+    }
     generate.mutate(
       { data: { articleIds: selectedIds } },
       {
         onSuccess: () => {
           setSelectedIds([]);
-          queryClient.invalidateQueries({ queryKey: ["listArticles"] });
-          queryClient.invalidateQueries({ queryKey: ["listDigestArticles"] });
-          queryClient.invalidateQueries({ queryKey: ["getDashboardSummary"] });
-          toast({ title: "Digest entry generated", description: "Claude has written a new entry. Review it in Pending Review." });
+          queryClient.invalidateQueries();
+          toast({ title: "Strategic Brief generated", description: "Now in Pending Review." });
         },
-        onError: () => {
-          toast({ title: "Generation failed", description: "Could not generate the digest entry. Please try again.", variant: "destructive" });
-        },
+        onError: () => toast({ title: "Generation failed", variant: "destructive" }),
       }
     );
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
+      {/* Back + Header */}
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="gap-2 text-muted-foreground">
+          <ArrowLeft className="h-4 w-4" />
+          All Topics
+        </Button>
+      </div>
+
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-serif tracking-tight text-foreground">Today's Topics</h1>
-          <p className="text-muted-foreground mt-1">
-            Review AI-scored articles and select items to generate digest entries.
-          </p>
+          <div className="flex items-center gap-2 mb-1">
+            <Icon className={`h-5 w-5 ${DISC_COLOR[disc]?.split(" ")[0] ?? "text-primary"}`} />
+            <h1 className="text-3xl font-serif tracking-tight">{topic}</h1>
+          </div>
+          <Badge variant="outline" className={`text-xs ${DISC_BADGE[disc] ?? ""}`}>{disc}</Badge>
+          {!isLoading && (
+            <p className="text-sm text-muted-foreground mt-2">
+              {filtered.length} article{filtered.length !== 1 ? "s" : ""} today
+              {selectedIds.length > 0 && <> · <span className="text-primary font-medium">{selectedIds.length} selected</span></>}
+            </p>
+          )}
         </div>
-        {selectedIds.length > 0 && (
-          <Button
-            onClick={handleGenerate}
-            disabled={generate.isPending}
-            size="lg"
-            data-testid="btn-generate-selected"
-          >
-            {generate.isPending ? (
-              <><span className="animate-pulse">Claude is writing...</span></>
-            ) : (
-              `Generate ${selectedIds.length} Digest ${selectedIds.length === 1 ? "Entry" : "Entries"}`
-            )}
+        {selectedIds.length >= 2 && (
+          <Button onClick={handleGenerate} disabled={generate.isPending} data-testid="btn-generate-topic-brief">
+            {generate.isPending ? "Generating..." : `Generate Brief (${selectedIds.length})`}
           </Button>
         )}
       </div>
 
-      {/* Topic Rankings */}
-      <TopicRankingSection />
-
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search headlines or sources..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-            data-testid="input-search"
-          />
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Sort */}
+        <div className="flex items-center gap-1 p-1 rounded-lg border border-border bg-card">
+          {([
+            { value: "relevance", icon: BarChart2, label: "Relevance" },
+            { value: "newest", icon: Clock, label: "Newest" },
+            { value: "source", icon: AlignLeft, label: "Source" },
+          ] as const).map(({ value, icon: Icon, label }) => (
+            <button
+              key={value}
+              onClick={() => setSort(value)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                sort === value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+              data-testid={`sort-${value}`}
+            >
+              <Icon className="h-3 w-3" />
+              {label}
+            </button>
+          ))}
         </div>
-        <Select value={discipline} onValueChange={setDiscipline}>
-          <SelectTrigger className="w-[220px]" data-testid="select-discipline">
-            <SelectValue />
+
+        {/* Min score */}
+        <Select value={minScore} onValueChange={setMinScore}>
+          <SelectTrigger className="w-[150px] h-9 text-xs" data-testid="select-min-score">
+            <SelectValue placeholder="Min score" />
           </SelectTrigger>
           <SelectContent>
-            {DISCIPLINES.map((d) => (
-              <SelectItem key={d} value={d}>{d}</SelectItem>
-            ))}
+            <SelectItem value="0">All scores</SelectItem>
+            <SelectItem value="5">Score 5+</SelectItem>
+            <SelectItem value="6">Score 6+</SelectItem>
+            <SelectItem value="7">Score 7+</SelectItem>
+            <SelectItem value="8">Score 8+</SelectItem>
+            <SelectItem value="9">Score 9+</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm" onClick={toggleAll} className="flex items-center gap-2" data-testid="btn-toggle-all">
-          {selectedIds.length === filtered.length && filtered.length > 0 ? (
-            <><CheckSquare className="h-4 w-4" /> Deselect All</>
-          ) : (
-            <><Square className="h-4 w-4" /> Select All</>
-          )}
+
+        {/* Source type */}
+        <Select value={sourceType} onValueChange={setSourceType}>
+          <SelectTrigger className="w-[160px] h-9 text-xs" data-testid="select-source-type">
+            <SelectValue placeholder="Source type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All sources</SelectItem>
+            <SelectItem value="news">News</SelectItem>
+            <SelectItem value="twitter">X / Twitter</SelectItem>
+            <SelectItem value="linkedin">LinkedIn</SelectItem>
+            <SelectItem value="institutional">Institutional</SelectItem>
+            <SelectItem value="corporate">Corporate</SelectItem>
+            <SelectItem value="market">Market</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Button variant="outline" size="sm" className="h-9 text-xs" onClick={() => refetch()}>
+          Refresh
         </Button>
       </div>
 
-      {/* Article List */}
+      {/* Article list */}
       {isLoading ? (
-        <div className="space-y-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+        </div>
+      ) : isError ? (
+        <div className="py-16 text-center text-muted-foreground">
+          <p className="font-medium mb-1">Failed to load articles</p>
+          <Button variant="ghost" size="sm" onClick={() => refetch()}>Try again</Button>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="py-24 text-center text-muted-foreground">
-          <p className="text-lg font-medium">No articles found</p>
-          <p className="text-sm mt-1">Trigger a scrape from the dashboard to fetch today's content.</p>
+        <div className="py-16 text-center text-muted-foreground">
+          <p className="text-base font-medium mb-1">No articles match your filters</p>
+          <p className="text-sm">
+            {(articles as Article[]).length === 0
+              ? "No articles tagged with this topic today. Run a scrape to fetch new content."
+              : "Try lowering the minimum score or changing the source filter."}
+          </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline">{filtered.length} articles</Badge>
-            {selectedIds.length > 0 && (
-              <Badge>{selectedIds.length} selected</Badge>
-            )}
-          </div>
+        <div className="space-y-3">
           {filtered.map((article) => (
             <ArticleCard
               key={article.id}
@@ -233,6 +304,147 @@ export default function Topics() {
             />
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Topic Overview Grid ──────────────────────────────────────────────────────
+function TopicOverview({ onSelectTopic }: { onSelectTopic: (topic: string) => void }) {
+  const { data: summary, isLoading, isError, refetch } = useGetDashboardSummary();
+
+  const topicIntelligence = summary?.topicIntelligence ?? [];
+  const articlesByTag = summary?.articlesByTag ?? [];
+
+  // Build display list: use topicIntelligence for ranked topics, fall back to articlesByTag
+  const displayTopics = topicIntelligence.length > 0
+    ? topicIntelligence
+    : articlesByTag.slice(0, 12).map((t, i) => ({
+        topic: t.tag,
+        articleCount: t.count,
+        importanceScore: t.count * 2,
+        discipline: inferDiscipline(t.tag),
+        significance: `${t.count} articles today`,
+        hasEmergingSignal: false,
+      }));
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="py-16 text-center text-muted-foreground">
+        <p className="font-medium mb-2">Failed to load topics</p>
+        <Button variant="ghost" size="sm" onClick={() => refetch()}>Try again</Button>
+      </div>
+    );
+  }
+
+  if (displayTopics.length === 0) {
+    return (
+      <div className="py-16 text-center text-muted-foreground">
+        <p className="text-base font-medium mb-1">No topic data yet</p>
+        <p className="text-sm">Run a scrape from the Dashboard to populate today's intelligence.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+      {displayTopics.map((t, i) => (
+        <TopicCard
+          key={t.topic}
+          topic={t.topic}
+          count={t.articleCount}
+          importanceScore={t.importanceScore}
+          hasEmergingSignal={t.hasEmergingSignal}
+          discipline={t.discipline}
+          significance={t.significance}
+          rank={i + 1}
+          onClick={() => onSelectTopic(t.topic)}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+export default function Topics() {
+  const [activeTopic, setActiveTopic] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const { data: summary } = useGetDashboardSummary();
+
+  if (activeTopic) {
+    return <TopicDrillDown topic={activeTopic} onBack={() => setActiveTopic(null)} />;
+  }
+
+  const topicIntelligence = summary?.topicIntelligence ?? [];
+  const totalArticles = topicIntelligence.reduce((sum, t) => sum + t.articleCount, 0);
+
+  const filtered = search.trim()
+    ? topicIntelligence.filter((t) => t.topic.toLowerCase().includes(search.toLowerCase()))
+    : topicIntelligence;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-serif tracking-tight text-foreground">Today's Topics</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {topicIntelligence.length} topic areas across {totalArticles} articles — click any topic to explore
+          </p>
+        </div>
+      </div>
+
+      {/* Discipline legend */}
+      <div className="flex flex-wrap gap-2">
+        {Object.entries(DISC_BADGE).map(([disc, cls]) => {
+          const Icon = DISC_ICON[disc] ?? Compass;
+          return (
+            <span key={disc} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium ${cls}`}>
+              <Icon className="h-3 w-3" />{disc}
+            </span>
+          );
+        })}
+      </div>
+
+      {/* Search */}
+      {topicIntelligence.length > 6 && (
+        <div className="relative max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Filter topics..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-9 text-sm"
+          />
+        </div>
+      )}
+
+      {/* Topic grid */}
+      {filtered.length > 0 ? (
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((t, i) => (
+            <TopicCard
+              key={t.topic}
+              topic={t.topic}
+              count={t.articleCount}
+              importanceScore={t.importanceScore}
+              hasEmergingSignal={t.hasEmergingSignal}
+              discipline={t.discipline}
+              significance={t.significance}
+              rank={i + 1}
+              onClick={() => setActiveTopic(t.topic)}
+            />
+          ))}
+        </div>
+      ) : (
+        <TopicOverview onSelectTopic={setActiveTopic} />
       )}
     </div>
   );

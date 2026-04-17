@@ -6,6 +6,7 @@ import { SidebarLayout } from "@/components/layout/sidebar-layout";
 
 import Dashboard from "@/pages/dashboard";
 import Feed from "@/pages/feed";
+import Topics from "@/pages/topics";
 import Review from "@/pages/review";
 import Published from "@/pages/published";
 import Rejected from "@/pages/rejected";
@@ -21,8 +22,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/feed" component={Feed} />
-        {/* Legacy redirect: topics → feed */}
-        <Route path="/topics" component={Feed} />
+        <Route path="/topics" component={Topics} />
         <Route path="/review" component={Review} />
         <Route path="/published" component={Published} />
         <Route path="/rejected" component={Rejected} />
