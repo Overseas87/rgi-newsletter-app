@@ -5,9 +5,17 @@ import { UpdateSettingsBody } from "@workspace/api-zod";
 import { getScrapeStatus } from "../lib/scraper";
 
 const DISCIPLINE_KEYWORDS: Record<string, string[]> = {
-  "Strategic Foresight": ["AI", "Technology", "Geopolitics", "Strategy", "Innovation", "Future of Work", "Policy"],
-  "System Vitality": ["Leadership", "Culture", "Economy", "Finance", "Health", "Education"],
-  "Civic Stewardship": ["Governance", "Democracy", "Sustainability", "Environmental Health", "Central Florida"],
+  "Strategic Foresight": [
+    "AI & Artificial Intelligence", "Technology & Digital Innovation", "Geopolitics",
+    "Global Politics", "Wars & Crisis", "Macroeconomics", "Supply Chains & Trade", "Future of Work",
+  ],
+  "System Vitality": [
+    "Business & Strategy", "Leadership & Organizations", "Finance & Markets",
+    "Fintech", "Energy & Oil",
+  ],
+  "Civic Stewardship": [
+    "Policy & Regulation", "Climate & Environmental Health",
+  ],
 };
 
 function inferDiscipline(tags: string[]): string {

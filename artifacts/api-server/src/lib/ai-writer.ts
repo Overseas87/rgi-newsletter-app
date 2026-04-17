@@ -109,7 +109,7 @@ Return ONLY a valid JSON object with these exact fields:
 - body: string (the complete 450-600 word brief — clean prose, no markdown, no visible structure)
 - rgiTake: string (3-4 sentences of unapologetic RGI editorial opinion. MUST: (1) state explicitly whether RGI agrees, partially agrees, or disagrees with the dominant claim in the sources — and WHY with reasoning; (2) name the RGI discipline; (3) challenge any incomplete or misleading narrative; (4) tell leaders what to do or stop doing. Declarative voice: "RGI takes the view that...", "The evidence does not support...", "This marks a structural shift..." Forbidden: neutral hedging, restating what sources said.)
 - keyTakeaways: string array of EXACTLY 5 items — short, crisp, actionable insights. Start each with a strong verb or noun. Scannable in 10 seconds. No filler.
-- topicTags: string array (from: ["AI", "Leadership", "Geopolitics", "Finance", "Environmental Health", "Central Florida", "Strategy", "Culture", "Technology", "Policy", "Education", "Economy", "Innovation", "Governance", "Health", "Democracy", "Future of Work", "Sustainability"])
+- topicTags: string array (from: ["AI & Artificial Intelligence", "Technology & Digital Innovation", "Geopolitics", "Global Politics", "Wars & Crisis", "Finance & Markets", "Fintech", "Macroeconomics", "Business & Strategy", "Leadership & Organizations", "Energy & Oil", "Climate & Environmental Health", "Supply Chains & Trade", "Policy & Regulation", "Future of Work"])
 - discipline: string (exactly one of: "Strategic Foresight", "System Vitality", "Civic Stewardship", or "Multiple")
 - relevancyScore: number 1-10
 
@@ -190,7 +190,7 @@ Return ONLY a valid JSON object:
 - body: string (500-650 words of clean flowing prose — no markdown, no headers, no bullets)
 - rgiTake: string (3-4 sentences of unapologetic RGI editorial opinion. MUST: (1) state explicitly whether RGI agrees, partially agrees, or disagrees with today's dominant narrative — and WHY; (2) name the RGI discipline(s) most implicated; (3) identify what leaders must do differently; (4) take a definitive stand. Forbidden: neutral hedging, summarizing articles, vague conclusions.)
 - keyTakeaways: string array of EXACTLY 5 items — crisp, actionable insights for leaders. Start each with a strong verb or noun. No filler.
-- topicTags: string array (from: ["AI", "Leadership", "Geopolitics", "Finance", "Environmental Health", "Central Florida", "Strategy", "Culture", "Technology", "Policy", "Education", "Economy", "Innovation", "Governance", "Health", "Democracy", "Future of Work", "Sustainability"])
+- topicTags: string array (from: ["AI & Artificial Intelligence", "Technology & Digital Innovation", "Geopolitics", "Global Politics", "Wars & Crisis", "Finance & Markets", "Fintech", "Macroeconomics", "Business & Strategy", "Leadership & Organizations", "Energy & Oil", "Climate & Environmental Health", "Supply Chains & Trade", "Policy & Regulation", "Future of Work"])
 - discipline: string (one of: "Strategic Foresight", "System Vitality", "Civic Stewardship", "Multiple")
 - relevancyScore: number 1-10
 

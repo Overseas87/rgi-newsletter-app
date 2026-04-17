@@ -29,9 +29,17 @@ import {
 
 // ─── Discipline mapping ────────────────────────────────────────────────────────
 const DISCIPLINE_KEYWORDS: Record<string, string[]> = {
-  "Strategic Foresight": ["AI", "Technology", "Geopolitics", "Innovation", "Strategy", "Future of Work", "Policy", "Economy", "Finance"],
-  "System Vitality": ["Leadership", "Culture", "Health", "Education", "Future of Work"],
-  "Civic Stewardship": ["Governance", "Democracy", "Sustainability", "Environmental Health", "Central Florida"],
+  "Strategic Foresight": [
+    "AI & Artificial Intelligence", "Technology & Digital Innovation", "Geopolitics",
+    "Global Politics", "Wars & Crisis", "Macroeconomics", "Supply Chains & Trade", "Future of Work",
+  ],
+  "System Vitality": [
+    "Business & Strategy", "Leadership & Organizations", "Finance & Markets",
+    "Fintech", "Energy & Oil",
+  ],
+  "Civic Stewardship": [
+    "Policy & Regulation", "Climate & Environmental Health",
+  ],
 };
 
 function inferDiscipline(tag: string): string {

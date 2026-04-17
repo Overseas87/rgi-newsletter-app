@@ -80,15 +80,18 @@ Sentence 2: State one concrete forward-looking implication for senior leaders. U
 Format: "RGI [agrees/partially agrees/disagrees]: [reason]. [Forward implication for leaders]."
 If the article is low-relevance (score 1-4), write: "RGI notes this item falls outside the core strategic lens — limited implications for senior leadership."
 
-TOPIC TAGS — choose only from this list:
-- "AI", "Technology", "Innovation", "Geopolitics", "Leadership", "Strategy", "Culture", "Future of Work"
-- "Finance", "Economy", "Policy", "Governance", "Democracy", "Education", "Health"
-- "Sustainability", "Environmental Health", "Central Florida"
+TOPIC TAGS — choose only from this exact list:
+"AI & Artificial Intelligence", "Technology & Digital Innovation", "Geopolitics", "Global Politics",
+"Wars & Crisis", "Finance & Markets", "Fintech", "Macroeconomics", "Business & Strategy",
+"Leadership & Organizations", "Energy & Oil", "Climate & Environmental Health",
+"Supply Chains & Trade", "Policy & Regulation", "Future of Work"
 
 TAGGING RULES:
-1. 1-3 tags maximum — be selective, never tag tangentially
-2. NEVER use "Leadership" or "Strategy" as catch-alls — only if the PRIMARY focus is leadership/strategy itself
-3. AI regulation → "AI" + "Policy" only
+1. 1-3 tags maximum — be selective based on PRIMARY content focus, never tag tangentially
+2. NEVER use "Business & Strategy" or "Leadership & Organizations" as catch-alls — only if the PRIMARY focus is strategy/leadership itself
+3. AI regulation articles → "AI & Artificial Intelligence" + "Policy & Regulation" only
+4. Economic policy → "Macroeconomics" + "Policy & Regulation"; climate policy → "Climate & Environmental Health" + "Policy & Regulation"
+5. Use the full tag string exactly as listed above — no abbreviations or partial matches
 
 Return ONLY valid JSON with keys: relevancyScore, authenticityScore, viewpoint, topicTags, teaserSummary, disciplineAlignment, isPrimarySignal. No explanation.
 

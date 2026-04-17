@@ -22,11 +22,26 @@ import {
 import { VoiceInput } from "@/components/voice-input";
 
 const TOPIC_GROUPS = [
-  { label: "Technology & Innovation", topics: ["AI", "Technology", "Innovation"] },
-  { label: "Society & Governance", topics: ["Geopolitics", "Policy", "Governance", "Democracy"] },
-  { label: "Business & Economy", topics: ["Finance", "Economy", "Strategy"] },
-  { label: "Organizations & People", topics: ["Leadership", "Culture", "Future of Work", "Education"] },
-  { label: "Environment & Community", topics: ["Environmental Health", "Sustainability", "Health", "Central Florida"] },
+  {
+    label: "Technology & Intelligence",
+    topics: ["AI & Artificial Intelligence", "Technology & Digital Innovation", "Fintech"],
+  },
+  {
+    label: "Global & Geopolitical",
+    topics: ["Geopolitics", "Global Politics", "Wars & Crisis"],
+  },
+  {
+    label: "Economic",
+    topics: ["Finance & Markets", "Macroeconomics", "Supply Chains & Trade"],
+  },
+  {
+    label: "Business & Leadership",
+    topics: ["Business & Strategy", "Leadership & Organizations", "Future of Work"],
+  },
+  {
+    label: "Policy & Environment",
+    topics: ["Policy & Regulation", "Climate & Environmental Health", "Energy & Oil"],
+  },
 ];
 
 type Mode = "daily_brief" | "topic_article";

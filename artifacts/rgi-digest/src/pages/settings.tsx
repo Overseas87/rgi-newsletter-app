@@ -10,11 +10,26 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Save, Check } from "lucide-react";
 
 const ALL_TOPICS = [
-  { group: "Technology & Innovation", topics: ["AI", "Technology", "Innovation"] },
-  { group: "Society & Governance", topics: ["Geopolitics", "Policy", "Governance", "Democracy"] },
-  { group: "Business & Economy", topics: ["Finance", "Economy", "Strategy"] },
-  { group: "Organizations & People", topics: ["Leadership", "Culture", "Future of Work", "Education"] },
-  { group: "Environment & Community", topics: ["Environmental Health", "Sustainability", "Health", "Central Florida"] },
+  {
+    group: "Technology & Intelligence",
+    topics: ["AI & Artificial Intelligence", "Technology & Digital Innovation", "Fintech"],
+  },
+  {
+    group: "Global & Geopolitical",
+    topics: ["Geopolitics", "Global Politics", "Wars & Crisis"],
+  },
+  {
+    group: "Economic",
+    topics: ["Finance & Markets", "Macroeconomics", "Supply Chains & Trade"],
+  },
+  {
+    group: "Business & Leadership",
+    topics: ["Business & Strategy", "Leadership & Organizations", "Future of Work"],
+  },
+  {
+    group: "Policy & Environment",
+    topics: ["Policy & Regulation", "Climate & Environmental Health", "Energy & Oil"],
+  },
 ];
 
 const ARTICLE_LENGTHS = [
