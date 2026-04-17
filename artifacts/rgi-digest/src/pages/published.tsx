@@ -206,7 +206,7 @@ function SendNewsletterDialog({
                 <Users className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-blue-900">This article will be distributed to all active subscribers.</p>
-                  <p className="text-xs text-blue-700 mt-0.5">Subscriber count is shown on send. Manage subscribers via the Weekly Digest settings.</p>
+                  <p className="text-xs text-blue-700 mt-0.5">Subscriber count is shown on send. Manage subscribers via Settings.</p>
                 </div>
               </div>
 

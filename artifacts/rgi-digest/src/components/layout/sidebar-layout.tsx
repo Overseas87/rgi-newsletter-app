@@ -12,7 +12,6 @@ import {
   Menu,
   Wand2,
   Info,
-  Mail,
 } from "lucide-react";
 import { useGetScrapeStatus, useTriggerScrape, getGetScrapeStatusQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,6 @@ const NAV_ITEMS = [
   { path: "/published", label: "Published", icon: Archive },
   { path: "/rejected", label: "Rejected", icon: XCircle },
   { path: "/sources", label: "Sources", icon: Database },
-  { path: "/newsletter", label: "Weekly Digest", icon: Mail },
   { path: "/settings", label: "Settings", icon: SettingsIcon },
   { path: "/about", label: "About RGI", icon: Info },
 ];
