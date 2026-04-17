@@ -1,0 +1,19 @@
+Fix the data persistence and initialization of the system so that the app always has working data and does not appear empty after deployment.
+
+First, ensure that all core data is stored in a persistent database instead of temporary memory. This includes sources, scraped articles, generated articles, and article states. The system must not rely on in-memory storage that resets when the app restarts or is deployed.
+
+Second, initialize the system with default sources. When the app is first launched or if no sources exist, automatically populate a set of predefined high-quality sources. These should include major news outlets, institutional sources, and optionally high-authority social sources. The system must never start with zero sources.
+
+Third, ensure that scraping always has something to work with. If the user clicks “Scrape Now,” the system should immediately pull articles from the existing sources and display them. The system must not return an empty state unless there is a real error.
+
+Fourth, improve the scraping experience so that the user always sees content. Do not clear existing articles when scraping starts. Instead, keep existing articles visible while new ones are being fetched. Once new data is ready, update the feed dynamically.
+
+Fifth, cache previously scraped articles. The dashboard should always show recent articles from the last 24 hours, even before a new scrape is triggered. The system should never feel empty when opened.
+
+Sixth, add a fallback behavior. If scraping fails or returns no results, display previously cached articles and show a message indicating that no new data was found instead of showing an empty dashboard.
+
+Seventh, remove or disable any features that are not relevant for internal use. Specifically remove or hide any public-facing subscription elements such as “Subscribe to Intelligent Digest,” since this tool is intended for internal RGI usage only.
+
+Eighth, ensure that the Sources page is always populated and functional. The user must be able to see, add, and manage sources. The system must not allow a state where zero sources exist without automatically correcting it.
+
+The goal is that the system always feels alive, populated, and reliable. The user should never encounter an empty dashboard, missing sources, or non-functional scraping.

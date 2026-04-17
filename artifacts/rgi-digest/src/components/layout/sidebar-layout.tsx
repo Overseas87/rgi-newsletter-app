@@ -30,7 +30,7 @@ const NAV_ITEMS = [
   { path: "/published", label: "Published", icon: Archive },
   { path: "/rejected", label: "Rejected", icon: XCircle },
   { path: "/sources", label: "Sources", icon: Database },
-  { path: "/newsletter", label: "Newsletter", icon: Mail },
+  { path: "/newsletter", label: "Weekly Digest", icon: Mail },
   { path: "/settings", label: "Settings", icon: SettingsIcon },
   { path: "/about", label: "About RGI", icon: Info },
 ];
