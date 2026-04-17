@@ -37,13 +37,21 @@ const DISCIPLINE_COLORS: Record<string, string> = {
   "Civic Stewardship": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
 };
 
-function ImportanceBar({ score }: { score: number }) {
-  const pct = Math.min(100, (score / 10) * 100);
-  const color = score >= 8 ? "bg-amber-500" : score >= 6.5 ? "bg-primary" : "bg-slate-500";
+function ScoreBadge({ score, size = "md" }: { score: number; size?: "sm" | "md" }) {
+  const isHigh = score >= 8;
+  const isMid = score >= 6.5;
+  const colorClass = isHigh
+    ? "bg-amber-500/15 text-amber-400 border-amber-500/25"
+    : isMid
+    ? "bg-blue-500/15 text-blue-400 border-blue-500/25"
+    : "bg-slate-500/10 text-slate-400 border-slate-500/15";
+  const sizeClass = size === "sm"
+    ? "text-[10px] px-1.5 py-0.5 min-w-[2.6rem]"
+    : "text-xs px-2 py-1 min-w-[3rem]";
   return (
-    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-      <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
-    </div>
+    <span className={`inline-flex items-center justify-center rounded border font-semibold tabular-nums leading-none shrink-0 ${colorClass} ${sizeClass}`}>
+      {score.toFixed(1)}
+    </span>
   );
 }
 
@@ -241,8 +249,6 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
             <>
               {displayed.map((article, i) => {
                 const rank = i + 1;
-                const isHigh = article.relevancyScore >= 8;
-                const isMid = article.relevancyScore >= 6.5;
                 return (
                   <div
                     key={article.id}
@@ -311,16 +317,9 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
                         </div>
                       </div>
 
-                      {/* Score ring — shows relevancy + authenticity */}
-                      <div className="shrink-0 flex flex-col items-center gap-0.5 mt-0.5">
-                        <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-[11px] font-bold tabular-nums ${isHigh ? "text-amber-400 border-amber-500/40" : isMid ? "text-primary border-primary/40" : "text-slate-400 border-slate-500/20"}`}>
-                          {article.relevancyScore.toFixed(1)}
-                        </div>
-                        {article.authenticityScore != null && (
-                          <span title="Authenticity score" className={`text-[9px] font-semibold tabular-nums ${article.authenticityScore >= 8 ? "text-emerald-400" : article.authenticityScore >= 5.5 ? "text-slate-400" : "text-orange-400"}`}>
-                            A{article.authenticityScore.toFixed(1)}
-                          </span>
-                        )}
+                      {/* Score badge */}
+                      <div className="shrink-0 mt-0.5">
+                        <ScoreBadge score={article.relevancyScore} />
                       </div>
                     </div>
                   </div>
@@ -404,8 +403,6 @@ function TopicArticlesModal({
             </div>
           ) : (
             articles.map((article) => {
-              const isHigh = article.relevancyScore >= 8;
-              const isMid = article.relevancyScore >= 6.5;
               const pubDate = article.publishedAt ? new Date(article.publishedAt) : null;
               return (
                 <a
@@ -416,8 +413,8 @@ function TopicArticlesModal({
                   className="flex items-start gap-3 rounded-lg border border-border bg-background/50 hover:bg-muted/40 hover:border-primary/30 transition-all p-3 group"
                 >
                   {/* Score */}
-                  <div className={`shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center text-[11px] font-bold tabular-nums ${isHigh ? "text-amber-400 border-amber-500/40" : isMid ? "text-primary border-primary/40" : "text-slate-400 border-slate-500/20"}`}>
-                    {article.relevancyScore.toFixed(1)}
+                  <div className="shrink-0 mt-1">
+                    <ScoreBadge score={article.relevancyScore} size="sm" />
                   </div>
 
                   {/* Content */}
@@ -450,12 +447,6 @@ function TopicArticlesModal({
   );
 }
 
-function getPickScoreStyle(score: number) {
-  if (score >= 9) return { ring: "border-amber-500/60 text-amber-400", bar: "bg-amber-500", label: "Landmark" };
-  if (score >= 7.5) return { ring: "border-primary/50 text-primary", bar: "bg-primary", label: "High" };
-  if (score >= 6) return { ring: "border-slate-500/40 text-slate-400", bar: "bg-slate-500", label: "Solid" };
-  return { ring: "border-muted text-muted-foreground", bar: "bg-muted-foreground/40", label: "Low" };
-}
 
 function TopPicksSection({
   picks,
@@ -512,7 +503,6 @@ function TopPicksSection({
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {picks.map((article) => {
-          const style = getPickScoreStyle(article.relevancyScore);
           const isGenerating = generatingId === article.id;
           return (
             <div
@@ -526,9 +516,7 @@ function TopPicksSection({
                     <Badge key={t} variant="outline" className="text-[10px] px-1.5 h-4">{t}</Badge>
                   ))}
                 </div>
-                <div className={`shrink-0 w-9 h-9 rounded-full border-2 flex items-center justify-center text-[11px] font-bold tabular-nums ${style.ring}`}>
-                  {article.relevancyScore.toFixed(1)}
-                </div>
+                <ScoreBadge score={article.relevancyScore} size="sm" />
               </div>
 
               {/* Headline */}
@@ -632,8 +620,8 @@ export default function Dashboard() {
     return (
       <div className="space-y-5">
         <Skeleton className="h-14 w-full" />
-        <div className="grid gap-5 lg:grid-cols-5">
-          <div className="lg:col-span-3"><Skeleton className="h-[480px] w-full" /></div>
+        <div className="grid gap-5 lg:grid-cols-7">
+          <div className="lg:col-span-5"><Skeleton className="h-[480px] w-full" /></div>
           <div className="lg:col-span-2"><Skeleton className="h-[480px] w-full" /></div>
         </div>
         <Skeleton className="h-12 w-full" />
@@ -715,80 +703,61 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Main Grid: Top Stories (left) + What Matters Today (right) ── */}
-      <div className="grid gap-5 lg:grid-cols-5">
+      {/* ── Main Grid: Top Stories (dominant) + What Matters Today (secondary panel) ── */}
+      <div className="grid gap-5 lg:grid-cols-7">
 
-        {/* Top Stories — dominant */}
-        <div className="lg:col-span-3">
+        {/* Top Stories — primary focus */}
+        <div className="lg:col-span-5">
           <TopStoriesSection
             articles={(summary.topArticles ?? []) as TopArticle[]}
             onNavigateFeed={() => navigate("/feed")}
           />
         </div>
 
-        {/* What Matters Today — sidebar */}
+        {/* What Matters Today — compact secondary panel */}
         <div className="lg:col-span-2">
-          <Card className="h-full">
-            <CardHeader className="pb-3">
+          <Card className="h-full border-border/60 bg-card/60">
+            <CardHeader className="pb-2 pt-4 px-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-base">What Matters Today</CardTitle>
-                </div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">What Matters Today</p>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="gap-1 text-xs h-7 px-2"
+                  className="h-6 px-1.5 text-[10px] text-muted-foreground hover:text-foreground gap-0.5"
                   onClick={() => navigate("/topics")}
                   data-testid="btn-go-to-topics"
                 >
-                  Topics <ChevronRight className="h-3 w-3" />
+                  All <ChevronRight className="h-3 w-3" />
                 </Button>
               </div>
-              <CardDescription className="text-[11px]">Topics ranked by strategic importance</CardDescription>
             </CardHeader>
-            <CardContent className="pt-0 space-y-1.5">
+            <CardContent className="pt-0 px-3 pb-4 space-y-1">
               {summary.topicIntelligence && summary.topicIntelligence.length > 0 ? (
-                summary.topicIntelligence.slice(0, 8).map((ti, i) => (
+                summary.topicIntelligence.slice(0, 5).map((ti, i) => (
                   <button
                     key={ti.topic}
                     onClick={() => handleTopicClick(ti.topic)}
-                    className="w-full text-left flex items-start gap-3 px-3 py-2.5 rounded-lg border border-border bg-background/50 hover:bg-muted/30 hover:border-primary/20 transition-colors group cursor-pointer"
+                    className="w-full text-left flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-muted/40 hover:border-primary/10 border border-transparent transition-colors group cursor-pointer"
                   >
-                    <span className="text-base font-bold text-muted-foreground/25 w-5 text-right shrink-0 tabular-nums leading-snug mt-0.5">
+                    <span className="text-xs font-bold text-muted-foreground/30 w-4 text-right shrink-0 tabular-nums">
                       {i + 1}
                     </span>
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-semibold text-sm leading-none group-hover:text-primary transition-colors">{ti.topic}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-[13px] leading-snug group-hover:text-primary transition-colors truncate">{ti.topic}</span>
                         {ti.hasEmergingSignal && (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-wide">
-                            <Zap className="h-2 w-2" />Signal
-                          </span>
+                          <Zap className="h-2.5 w-2.5 text-amber-400 shrink-0" />
                         )}
-                        <Badge
-                          variant="outline"
-                          className={`text-[9px] px-1.5 h-4 ml-auto ${DISCIPLINE_COLORS[ti.discipline] ?? "bg-muted text-muted-foreground"}`}
-                        >
-                          {ti.discipline}
-                        </Badge>
-                        <ChevronRight className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary/60 transition-colors" />
                       </div>
-                      <ImportanceBar score={ti.importanceScore} />
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2 flex-1">{ti.significance}</p>
-                        <div className="text-right shrink-0">
-                          <p className="text-xs font-bold tabular-nums">{ti.importanceScore.toFixed(1)}</p>
-                          <p className="text-[9px] text-muted-foreground">{ti.articleCount} art.</p>
-                        </div>
-                      </div>
+                      <p className="text-[10px] text-muted-foreground/60 mt-0.5">{ti.articleCount} {ti.articleCount === 1 ? "source" : "sources"}</p>
                     </div>
+                    <ScoreBadge score={ti.importanceScore} size="sm" />
                   </button>
                 ))
               ) : (
-                <div className="text-center py-10 text-muted-foreground text-sm">
-                  <p className="text-sm font-medium mb-1">No data yet</p>
-                  <p className="text-xs">Scrape articles to see today's topic intelligence.</p>
+                <div className="text-center py-8 text-muted-foreground text-xs">
+                  <p className="font-medium mb-0.5">No data yet</p>
+                  <p>Scrape to populate.</p>
                 </div>
               )}
             </CardContent>
