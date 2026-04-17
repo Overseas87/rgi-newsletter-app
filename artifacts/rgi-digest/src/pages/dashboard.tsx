@@ -12,7 +12,6 @@ import {
   Clock,
   RefreshCw,
   Zap,
-  Twitter,
   AlertCircle,
   ChevronRight,
   Globe,
@@ -22,6 +21,8 @@ import {
   ChevronDown,
   ChevronUp,
   BookOpen,
+  Star,
+  Sparkles,
 } from "lucide-react";
 import { GenerateModal } from "@/components/generate-modal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -296,6 +297,133 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
   );
 }
 
+function getPickScoreStyle(score: number) {
+  if (score >= 9) return { ring: "border-amber-500/60 text-amber-400", bar: "bg-amber-500", label: "Landmark" };
+  if (score >= 7.5) return { ring: "border-primary/50 text-primary", bar: "bg-primary", label: "High" };
+  if (score >= 6) return { ring: "border-slate-500/40 text-slate-400", bar: "bg-slate-500", label: "Solid" };
+  return { ring: "border-muted text-muted-foreground", bar: "bg-muted-foreground/40", label: "Low" };
+}
+
+function TopPicksSection({
+  picks,
+  onGenerated,
+}: {
+  picks: TopArticle[];
+  onGenerated: () => void;
+}) {
+  const [generatingId, setGeneratingId] = useState<number | null>(null);
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
+
+  const handleGenerate = async (article: TopArticle) => {
+    setGeneratingId(article.id);
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const res = await fetch(`${base}/api/digest/topic-article`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ articleIds: [article.id], editorNotes: "" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || "Generation failed");
+      }
+      toast({
+        title: "Brief generated",
+        description: `Article drafted from "${article.headline.slice(0, 60)}…". Review it now.`,
+      });
+      onGenerated();
+      navigate("/review");
+    } catch (e) {
+      toast({
+        title: "Generation failed",
+        description: String(e instanceof Error ? e.message : e),
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingId(null);
+    }
+  };
+
+  if (!picks || picks.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between px-0.5">
+        <div className="flex items-center gap-2">
+          <Star className="h-4 w-4 text-amber-400 fill-amber-400/30" />
+          <h2 className="text-sm font-semibold tracking-wide uppercase text-foreground/80">Today's Top Picks</h2>
+          <span className="text-[10px] text-muted-foreground ml-1">Best candidates for publication</span>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {picks.map((article) => {
+          const style = getPickScoreStyle(article.relevancyScore);
+          const isGenerating = generatingId === article.id;
+          return (
+            <div
+              key={article.id}
+              className="flex flex-col rounded-xl border border-border bg-card hover:border-primary/30 transition-colors p-4 gap-3"
+            >
+              {/* Score + tags */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-wrap gap-1 flex-1 min-w-0">
+                  {article.topicTags.slice(0, 2).map((t) => (
+                    <Badge key={t} variant="outline" className="text-[10px] px-1.5 h-4">{t}</Badge>
+                  ))}
+                </div>
+                <div className={`shrink-0 w-9 h-9 rounded-full border-2 flex items-center justify-center text-[11px] font-bold tabular-nums ${style.ring}`}>
+                  {article.relevancyScore.toFixed(1)}
+                </div>
+              </div>
+
+              {/* Headline */}
+              <p className="text-sm font-semibold leading-snug flex-1 line-clamp-3">{article.headline}</p>
+
+              {/* Teaser */}
+              {article.teaserSummary && (
+                <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">{article.teaserSummary}</p>
+              )}
+
+              {/* Source + date */}
+              <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                <span className="font-medium text-foreground/60">{article.sourceName}</span>
+                {article.publishedAt && (
+                  <span>· {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}</span>
+                )}
+                <a
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto inline-flex items-center gap-0.5 text-primary/60 hover:text-primary transition-colors"
+                  title="Open source article"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+
+              {/* Action */}
+              <Button
+                size="sm"
+                className="w-full h-7 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white mt-auto"
+                onClick={() => handleGenerate(article)}
+                disabled={isGenerating || generatingId !== null}
+              >
+                {isGenerating ? (
+                  <><Loader2 className="h-3 w-3 animate-spin" />Generating…</>
+                ) : (
+                  <><Sparkles className="h-3 w-3" />Generate Brief</>
+                )}
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [briefLoading, setBriefLoading] = useState(false);
   const [topicModalOpen, setTopicModalOpen] = useState(false);
@@ -493,6 +621,14 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+
+      {/* ── Today's Top Picks ── */}
+      {summary.topPicks && summary.topPicks.length > 0 && (
+        <TopPicksSection
+          picks={(summary.topPicks ?? []) as TopArticle[]}
+          onGenerated={() => queryClient.invalidateQueries()}
+        />
+      )}
 
       {/* ── Compact Stats Strip ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

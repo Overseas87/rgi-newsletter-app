@@ -610,6 +610,28 @@ export const GetDashboardSummaryResponse = zod.object({
       disciplineAlignment: zod.string().nullish(),
     }),
   ),
+  topPicks: zod.array(
+    zod.object({
+      id: zod.number(),
+      headline: zod.string(),
+      url: zod.string(),
+      sourceName: zod.string(),
+      sourceUrl: zod.string().nullish(),
+      author: zod.string().nullish(),
+      authorType: zod.string().nullish(),
+      platform: zod.string().nullish(),
+      isEmergingSignal: zod.boolean(),
+      isPrimarySignal: zod.boolean(),
+      relevancyScore: zod.number(),
+      topicTags: zod.array(zod.string()),
+      teaserSummary: zod.string().nullish(),
+      publishedAt: zod.string().nullish(),
+      scrapedAt: zod.string(),
+      content: zod.string().nullish(),
+      status: zod.enum(["pending", "selected", "dismissed"]),
+      disciplineAlignment: zod.string().nullish(),
+    }),
+  ),
   lastScrapeAt: zod.string().nullish(),
   articlesByTag: zod.array(
     zod.object({

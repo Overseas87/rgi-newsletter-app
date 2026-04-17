@@ -48,7 +48,7 @@ AUTOMATIC LOW SCORES (1-3) — these content types are ALWAYS low relevance rega
 - Routine earnings beats with no strategic signal
 - Press releases announcing minor hires or product updates with no market significance
 
-HIGH SCORES (8-10) REQUIRE:
+HIGH SCORES (8-10) REQUIRE ALL of the following:
 - Systemic or market-level shifts (not one company's quarterly result)
 - Geopolitical developments affecting global business or security
 - Major AI, technology, or regulatory developments with broad leadership implications
@@ -56,10 +56,20 @@ HIGH SCORES (8-10) REQUIRE:
 - Economic inflection points (rate changes, recession signals, major policy shifts)
 - Primary signals from heads of state, Fortune 500 CEOs, central bank governors, major institutional leaders
 
+MULTI-FACTOR SCORING — evaluate each factor and combine:
+1. Strategic Importance (40%): How fundamentally does this reshape leadership, markets, or governance? Minor update = 1-3. Industry-shifting development = 8-10.
+2. Impact Scope (25%): Local/individual = low. National = mid. Global/systemic = high.
+3. Source Authority (20%): Anonymous/minor outlet = low. Major publication = mid. Direct primary signal from a CEO, head of state, central bank, or major institution = high bonus (+1 to +2 points).
+4. Innovation/Disruption Level (15%): Incremental = low. Paradigm-shifting = high.
+
+PRIMARY SIGNAL BONUS: If a high-authority figure (Fortune 500 CEO, head of state, central bank governor, major institution) directly communicates something significant — add up to +2 points on top of the base multi-factor score. Primary signals that arrive before press coverage deserve the highest possible scores.
+
+RECENCY: This system prioritizes same-day intelligence. Content older than 24 hours that covers events already widely reported should be scored 1-2 points lower than fresher identical content. Breaking news and developments published in the last 6 hours deserve slight recency boosts.
+
 Analyze the following article and return a JSON object with these exact fields:
 - relevancyScore: number 1-10 — be decisive. Most articles should score 4-6. Fewer than 10% deserve 8+. Articles outside RGI's scope score 1-3.
 - topicTags: array of 1-3 SPECIFIC strings chosen ONLY from the permitted list below
-- teaserSummary: 1-2 sentence analytical summary (max 220 chars) that highlights STRATEGIC SIGNIFICANCE — never just restate the headline. Ask: what does this mean for leaders?
+- teaserSummary: 1-2 sentence analytical summary (max 220 chars) that highlights STRATEGIC SIGNIFICANCE — never just restate the headline. Ask: what does this mean for leaders and how does it connect to the broader strategic picture?
 - disciplineAlignment: the single best-matching discipline: "Strategic Foresight", "System Vitality", "Civic Stewardship", or "Multiple" (only if truly 2+ disciplines equally central)
 - isPrimarySignal: boolean — true ONLY if this is a DIRECT, ORIGINAL communication (executive's own post, official company announcement, government statement, press release). False for news REPORTING on those events.
 
@@ -89,10 +99,10 @@ TAGGING RULES:
 3. AI regulation → "AI" + "Policy" only; not also "Leadership", "Strategy", "Governance"
 
 Scoring reference:
-- 9-10: Major strategic inflection point — a development that reshapes markets, policy, or leadership practice
-- 7-8: High relevance — illuminates a trend or decision senior leaders must understand NOW
-- 5-6: Useful context — informative background, not urgent
-- 3-4: Marginal — peripheral to RGI's focus, minor developments
+- 9-10: Major strategic inflection point — reshapes markets, policy, or leadership practice at a systemic level
+- 7-8: High relevance — illuminates a critical trend or decision that senior leaders must understand NOW
+- 5-6: Useful context — informative background with some strategic value, not urgent
+- 3-4: Marginal — peripheral to RGI's focus, minor or local developments
 - 1-2: Not relevant — entertainment, lifestyle, local noise, routine updates
 
 Return ONLY valid JSON with keys: relevancyScore, topicTags, teaserSummary, disciplineAlignment, isPrimarySignal. No explanation.

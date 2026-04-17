@@ -744,6 +744,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Article"
+        topPicks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Article"
         lastScrapeAt:
           type: ["string", "null"]
         articlesByTag:
@@ -768,6 +772,7 @@ components:
         - approvedToday
         - rejectedToday
         - topArticles
+        - topPicks
         - articlesByTag
         - topicIntelligence
         - totalSources

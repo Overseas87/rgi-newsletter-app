@@ -264,6 +264,7 @@ export interface DashboardSummary {
   approvedToday: number;
   rejectedToday: number;
   topArticles: Article[];
+  topPicks: Article[];
   /** @nullable */
   lastScrapeAt?: string | null;
   articlesByTag: TagCount[];

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, articlesTable, digestArticlesTable, sourcesTable, settingsTable } from "@workspace/db";
-import { eq, gte, sql, desc, count, and } from "drizzle-orm";
+import { eq, gte, sql, desc, count, and, ne } from "drizzle-orm";
 import { UpdateSettingsBody } from "@workspace/api-zod";
 import { getScrapeStatus } from "../lib/scraper";
 
@@ -65,13 +65,23 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
         ),
     ]);
 
-  const [topArticles, allArticlesToday, sourcesResult, activeSourcesResult] = await Promise.all([
+  const [topArticles, topPicks, allArticlesToday, sourcesResult, activeSourcesResult] = await Promise.all([
     db
       .select()
       .from(articlesTable)
       .where(gte(articlesTable.scrapedAt, today))
       .orderBy(desc(articlesTable.relevancyScore))
       .limit(10),
+    // Top Picks: today's highest-scoring articles NOT yet selected for generation
+    db
+      .select()
+      .from(articlesTable)
+      .where(and(
+        gte(articlesTable.scrapedAt, today),
+        ne(articlesTable.status, "selected")
+      ))
+      .orderBy(desc(articlesTable.relevancyScore))
+      .limit(4),
     db
       .select({
         topicTags: articlesTable.topicTags,
@@ -135,6 +145,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
     approvedToday: approvedTodayResult[0]?.count ?? 0,
     rejectedToday: rejectedTodayResult[0]?.count ?? 0,
     topArticles,
+    topPicks,
     lastScrapeAt: scrapeStatus.lastScrapeAt,
     articlesByTag,
     topicIntelligence,
