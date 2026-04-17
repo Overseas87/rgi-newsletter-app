@@ -83,8 +83,9 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
   const contentWindow = todayCount >= 5 ? today : fortyEightHoursAgo;
 
   const [topArticles, allArticlesWindow, sourcesResult, activeSourcesResult] = await Promise.all([
-    // Top Stories: articles scoring 7.0+ ranked by composite — 65% relevancy + 35% authenticity.
-    // Minimum score enforced so only genuinely relevant intelligence appears in the top list.
+    // Top Stories: articles scoring 7.0+ ranked strictly by relevancyScore descending.
+    // authenticityScore is used only as a tiebreaker when two articles share the same relevancy score.
+    // No other factor may override rank — higher relevancy score always means higher position.
     db
       .select()
       .from(articlesTable)
@@ -92,7 +93,11 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
         gte(articlesTable.scrapedAt, contentWindow),
         gte(articlesTable.relevancyScore, 7.0)
       ))
-      .orderBy(desc(sql`${articlesTable.relevancyScore} * 0.65 + COALESCE(${articlesTable.authenticityScore}, 5.0) * 0.35`))
+      .orderBy(
+        desc(articlesTable.relevancyScore),
+        desc(sql`COALESCE(${articlesTable.authenticityScore}, 5.0)`),
+        desc(articlesTable.publishedAt)
+      )
       .limit(10),
     db
       .select({
