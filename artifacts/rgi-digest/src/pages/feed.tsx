@@ -302,17 +302,35 @@ export default function Feed() {
 
       {/* Editor Notes (shown when items selected) */}
       {selected.size >= 2 && (
-        <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-2">
-          <p className="text-xs font-semibold text-primary uppercase tracking-wide">
-            {selected.size} articles selected — ready to synthesize
-          </p>
+        <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+              {selected.size} article{selected.size !== 1 ? "s" : ""} selected
+            </p>
+            <button
+              onClick={() => setSelected(new Set())}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear
+            </button>
+          </div>
           <Input
-            placeholder="Optional editor notes or synthesis direction for Claude..."
+            placeholder="Optional editor direction for Claude (angle, focus, tone)..."
             value={editorNotes}
             onChange={(e) => setEditorNotes(e.target.value)}
             className="text-sm bg-background"
             data-testid="input-editor-notes"
           />
+          <Button
+            onClick={handleGenerate}
+            disabled={generating || generateDigest.isPending}
+            className="w-full gap-2"
+            size="sm"
+            data-testid="btn-synthesize"
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+            {generating || generateDigest.isPending ? "Generating..." : "Synthesize Strategic Brief"}
+          </Button>
         </div>
       )}
 

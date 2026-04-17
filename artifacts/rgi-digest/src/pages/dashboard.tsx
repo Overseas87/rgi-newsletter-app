@@ -39,16 +39,16 @@ function ScoreBadge({ score, size = "md" }: { score: number; size?: "sm" | "md" 
   const isHigh = score >= 8;
   const isMid = score >= 6.5;
   const colorClass = isHigh
-    ? "bg-amber-50 text-amber-700 border-amber-300"
+    ? "bg-amber-50 text-amber-800 border-amber-300"
     : isMid
-    ? "bg-blue-50 text-blue-700 border-blue-200"
-    : "bg-slate-100 text-slate-600 border-slate-300";
+    ? "bg-blue-50 text-blue-800 border-blue-200"
+    : "bg-slate-100 text-slate-600 border-slate-200";
   const sizeClass = size === "sm"
-    ? "text-[10px] px-1.5 py-0.5 min-w-[2.6rem]"
-    : "text-xs px-2 py-1 min-w-[3rem]";
+    ? "text-[10px] px-1.5 py-0.5 min-w-[3.6rem]"
+    : "text-xs px-2 py-1 min-w-[4rem]";
   return (
     <span className={`inline-flex items-center justify-center rounded border font-semibold tabular-nums leading-none shrink-0 ${colorClass} ${sizeClass}`}>
-      {score.toFixed(1)}
+      {score.toFixed(1)}<span className="opacity-50 font-normal ml-0.5">/10</span>
     </span>
   );
 }

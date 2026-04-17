@@ -128,7 +128,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
 
   // Tag counts and scores for trending topics — only count articles scoring >= 6.5
   // to ensure topics reflect genuinely relevant intelligence (not noise)
-  const MIN_TOPIC_SCORE = 6.5;
+  const MIN_TOPIC_SCORE = 7.0;
   const tagData: Record<string, { count: number; totalScore: number; hasEmergingSignal: boolean }> = {};
   let socialSignalsCount = 0;
   let emergingSignalsCount = 0;

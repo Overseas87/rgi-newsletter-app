@@ -386,16 +386,9 @@ export async function runScrape(): Promise<{
           source.authorityLevel ?? 3
         );
 
-        // Apply a small programmatic recency bonus (max +0.2) based on publish time.
-        // This ensures recency is a secondary tiebreaker only — never a primary driver.
-        // A 9.2 article from 20 hours ago always beats a 5.5 article from 1 minute ago.
-        const hoursOld = item.publishedAt
-          ? (Date.now() - item.publishedAt.getTime()) / (1000 * 60 * 60)
-          : 12;
-        const recencyBonus = hoursOld <= 12
-          ? Math.round(0.2 * (1 - hoursOld / 12) * 10) / 10
-          : 0;
-        const finalScore = Math.min(10, Math.round((scored.relevancyScore + recencyBonus) * 10) / 10);
+        // Score is set purely by the AI's multi-factor strategic assessment.
+        // No programmatic adjustments after scoring — the score must reflect strategic merit only.
+        const finalScore = scored.relevancyScore;
 
         const isSignal = detectEmergingSignal(item.headline, finalScore);
 
