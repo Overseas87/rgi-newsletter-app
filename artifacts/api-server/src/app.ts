@@ -14,21 +14,23 @@ const app: Express = express();
 // Start cron scheduler for daily scrapes
 startScheduler();
 
-// Startup initialization: seed sources → initialize scrape status → auto-scrape if needed
+// Startup initialization: seed sources → initialize scrape status → auto-scrape if needed.
+// Auto-scrape only fires when there are no articles in the last 24 hours, so a restart
+// or redeploy never wipes the visible dashboard — existing data stays displayed immediately.
 seedDefaultSources()
   .then(() => initializeScrapeStatus())
   .then(async () => {
-    // Auto-trigger a scrape if no articles have been fetched today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const [{ todayCount }] = await db
-      .select({ todayCount: count() })
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [{ recentCount }] = await db
+      .select({ recentCount: count() })
       .from(articlesTable)
-      .where(gte(articlesTable.scrapedAt, today));
+      .where(gte(articlesTable.scrapedAt, twentyFourHoursAgo));
 
-    if (todayCount === 0) {
-      logger.info("No articles for today — triggering automatic startup scrape");
+    if (recentCount === 0) {
+      logger.info("No articles in the last 24 hours — triggering automatic startup scrape");
       runScrape().catch((err) => logger.error({ err }, "Startup scrape failed"));
+    } else {
+      logger.info({ recentCount }, "Recent articles found — skipping startup scrape, dashboard ready");
     }
   })
   .catch((err) => logger.error({ err }, "Startup initialization failed"));

@@ -46,12 +46,14 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Adaptive lookback: start with today, expand to 48h if content is sparse
-  const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+  // Adaptive lookback: today → last 7 days → all-time most recent, so the
+  // dashboard is never empty after a restart, redeploy, or gap in scraping.
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const [totalArticlesResult, pendingReviewResult, approvedTodayResult, rejectedTodayResult] =
+  const [totalArticlesResult, totalRecentResult, pendingReviewResult, approvedTodayResult, rejectedTodayResult] =
     await Promise.all([
       db.select({ count: count() }).from(articlesTable).where(gte(articlesTable.scrapedAt, today)),
+      db.select({ count: count() }).from(articlesTable).where(gte(articlesTable.scrapedAt, sevenDaysAgo)),
       db
         .select({ count: count() })
         .from(digestArticlesTable)
@@ -77,10 +79,12 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
     ]);
 
   const todayCount = totalArticlesResult[0]?.count ?? 0;
+  const recentCount = totalRecentResult[0]?.count ?? 0;
 
-  // If today has fewer than 5 articles, expand the window to 48 hours so the
-  // dashboard is never empty — editors always see content immediately on load.
-  const contentWindow = todayCount >= 5 ? today : fortyEightHoursAgo;
+  // Tiered content window: prefer today, fall back to 7 days, then all-time.
+  // This guarantees the dashboard always shows the best available historical data
+  // immediately after a restart or redeploy — never requiring a fresh scrape first.
+  const contentWindow = todayCount >= 5 ? today : sevenDaysAgo;
 
   const [topArticles, allArticlesWindow, sourcesResult, activeSourcesResult] = await Promise.all([
     // Top Stories: articles scoring 7.0+ ranked strictly by relevancyScore descending.
