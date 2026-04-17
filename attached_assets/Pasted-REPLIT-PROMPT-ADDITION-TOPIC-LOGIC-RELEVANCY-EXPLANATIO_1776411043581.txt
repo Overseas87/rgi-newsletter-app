@@ -1,0 +1,181 @@
+REPLIT PROMPT ADDITION — TOPIC LOGIC, RELEVANCY EXPLANATION, AND INTELLIGENCE FEED FIX
+
+Please improve the existing RGI app with the following product and UX upgrades.
+
+1. Topic drill-down must work properly
+
+When the user clicks on a topic (for example AI, Geopolitics, Leadership, Climate, Finance), the app must open a topic view that shows all relevant articles from the current day for that topic.
+
+For each article shown in that topic view, display:
+
+headline
+source
+author if available
+publish date and exact time
+short preview
+relevancy score
+link to original source
+
+Add sorting options:
+
+highest relevancy
+newest
+source
+
+Add filtering options:
+
+minimum relevancy score
+source type
+time
+
+This topic view must feel like a clean daily article board for that topic.
+
+2. Remove or redefine the “General” topic
+
+The current “General” topic is too broad and distorts the topic distribution. It should not act as a catch-all bucket for hundreds of articles while narrower topics have only a few.
+
+Fix this by doing the following:
+
+Remove “General” as a default top-level topic category
+or
+Replace it with a more meaningful label such as:
+Cross-Topic
+Multi-Domain
+General Leadership Relevance
+
+But do not allow it to absorb everything.
+
+New rule:
+
+every article should first be assigned to one or more real topics
+only articles that truly span multiple categories should appear in a cross-topic bucket
+topic counts should reflect actual thematic distribution, not lazy default classification
+
+The topic ratios on the dashboard must feel realistic and logically balanced.
+
+3. Add “Why this is relevant” explanation for top articles
+
+For every top article by relevancy, add a clickable explanation option such as:
+
+“Why this matters to RGI”
+or
+“Why this scored highly”
+
+When clicked, open a panel, modal, or expandable section that explains:
+
+why the article received a high relevancy score
+how it connects to RGI’s mission
+which of the three RGI disciplines it aligns with:
+Strategic Foresight
+System Vitality
+Civic Stewardship
+
+This explanation should be short but intelligent, for example 3–6 sentences.
+
+It should not be generic. It should clearly explain the RGI logic behind the score.
+
+Example style:
+“This story scored highly because it reflects a major technological transition with leadership implications across multiple time horizons. It aligns strongly with Strategic Foresight because it signals how AI-driven change may alter organizational priorities before those shifts are fully visible in the market.”
+
+4. Rebuild / fix the Intelligence Feed
+
+The Intelligence Feed is currently not working properly. Fix it so it becomes one of the core usable parts of the app.
+
+The Intelligence Feed must:
+
+load reliably
+show a broad set of current-day relevant items
+include articles from multiple source types
+support sorting and filtering
+clearly separate:
+News
+Social
+Institutional
+Corporate
+Market sources
+
+Each feed item must display:
+
+headline
+topic
+source
+source type
+timestamp
+short preview
+relevancy score
+source link
+
+The feed must not feel empty, broken, or passive. It should feel like a live intelligence board.
+
+Also add:
+
+loading state
+empty state with explanation
+error state if feed fails to load
+refresh option
+5. Improve topic classification quality
+
+The app must classify articles into topics more intelligently.
+
+Requirements:
+
+one article may belong to multiple topics
+topic classification should be based on article content, not only keywords
+avoid over-classifying everything into geopolitics or general
+keep topic assignment consistent and explainable
+
+Suggested topic set:
+
+AI & Technology
+Geopolitics
+Leadership & Organizations
+Finance & Markets
+Climate & Environment
+Civic / Societal Systems
+Cross-Topic
+6. Add topic count integrity
+
+The dashboard must show topic counts that are trustworthy and useful.
+
+Rules:
+
+count only current-day items
+do not inflate counts using duplicate sources
+if multiple articles are about the same event, cluster them where possible
+topic counts should reflect distinct relevant items, not noisy duplication
+
+This is important so the user can trust the topic overview.
+
+7. Improve article interaction logic
+
+Every top article card should support:
+
+click to open full article/source details
+click to see “Why this matters to RGI”
+click to view related articles on the same topic
+click to include article in generated brief
+
+This should make the app feel interactive and editor-driven, not static.
+
+8. Keep everything aligned with RGI perspective
+
+All topic labeling, relevancy explanations, and article ranking must reflect the RGI lens:
+
+leadership under disruption
+technological change
+geopolitical volatility
+organizational vitality
+civic stewardship
+long-term strategic implications
+
+The app must not feel like a generic news dashboard. It must feel like an RGI intelligence tool.
+
+Final requirement
+
+After this update, the user experience should be:
+
+I can click a topic and see all related articles for today
+I can understand why an article is ranked highly
+I can trust the topic counts
+I can use the intelligence feed as a real working dashboard
+I can move from raw signals to editorial judgment

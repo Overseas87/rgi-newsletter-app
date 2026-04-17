@@ -131,7 +131,7 @@ function DigestCard({ article }: { article: DigestArticle }) {
 
   const handleReject = () => {
     reject.mutate(
-      { id: article.id },
+      { id: article.id, data: {} },
       {
         onSuccess: () => {
           invalidate();

@@ -43,7 +43,7 @@ function SourceRow({ source }: { source: Source }) {
 
   const handleSave = () => {
     update.mutate(
-      { id: source.id, data: { name, url, tier: Number(tier) } },
+      { id: source.id, data: { name, url, tier: Number(tier) as 1 | 2 | 3 } },
       { onSuccess: () => { setEditing(false); invalidate(); } }
     );
   };
@@ -147,7 +147,7 @@ export default function Sources() {
   const handleCreate = () => {
     if (!newName || !newUrl) return;
     createSource.mutate(
-      { data: { name: newName, url: newUrl, type: "rss", tier: Number(newTier), isActive: true } },
+      { data: { name: newName, url: newUrl, type: "rss", tier: Number(newTier) as 1 | 2 | 3 } },
       {
         onSuccess: () => {
           setNewName("");

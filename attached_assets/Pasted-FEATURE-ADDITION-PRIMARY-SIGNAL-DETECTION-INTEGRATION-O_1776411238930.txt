@@ -1,0 +1,106 @@
+FEATURE ADDITION: PRIMARY SIGNAL DETECTION & INTEGRATION
+Objective
+
+Upgrade the system to recognize that not all valuable information comes from traditional news articles.
+
+The system must treat:
+
+direct statements from credible actors
+official announcements
+executive communication
+
+as first-class intelligence signals, even if no news article exists yet.
+
+🧠 1. PRIMARY vs SECONDARY INFORMATION MODEL
+
+The system must distinguish between:
+
+Primary Signals (HIGH VALUE)
+direct statements from CEOs, companies, policymakers
+official announcements
+original posts on Twitter/X or LinkedIn
+company blog posts or press releases
+Secondary Signals
+news articles reporting on those events
+commentary or analysis
+Rule:
+
+Primary signals can be equal or higher priority than news articles.
+
+⚖️ 2. AUTHORITY-BASED SCORING (CRITICAL)
+
+Relevancy must NOT depend on format (tweet vs article).
+
+Instead, score based on:
+
+who is speaking
+what is being announced
+potential impact
+Example:
+Elon Musk tweet about Tesla strategy → HIGH relevance
+random Twitter opinion → LOW relevance
+🔍 3. HIGH-VALUE SOCIAL SIGNAL DETECTION
+
+The system must actively detect:
+
+major announcements
+strategic decisions
+product launches
+policy statements
+financial signals
+
+Mark these with a label:
+
+👉 “Primary Signal”
+👉 or “Direct Signal”
+
+🧩 4. INCLUDE PRIMARY SIGNALS IN INTELLIGENCE FEED
+
+In the Daily Intelligence Feed:
+
+Primary signals must:
+
+appear alongside news articles
+be clearly labeled
+show:
+platform (X / LinkedIn)
+author name
+author role (CEO, company, policymaker)
+timestamp
+preview
+relevance score
+✍️ 5. INTEGRATE INTO ARTICLE GENERATION
+
+When generating articles or daily briefs:
+
+The AI must:
+
+include primary signals as core inputs
+not wait for news coverage
+clearly distinguish:
+
+Example phrasing:
+
+“In a direct statement on X, Tesla announced…”
+“According to Bloomberg…”
+🧠 6. PRIORITY RULE
+
+If a high-authority primary signal exists:
+
+it must be included in the article
+even if no news article exists yet
+⚠️ 7. FILTER LOW-QUALITY SIGNALS
+
+The system must:
+
+ignore low-authority posts
+ignore opinions without information
+prioritize:
+decision-relevant content
+original announcements
+🎯 FINAL RULE
+
+The system must understand:
+
+👉 information is not defined by format
+👉 information is defined by impact and authority

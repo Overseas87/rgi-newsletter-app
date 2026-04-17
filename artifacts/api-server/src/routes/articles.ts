@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, articlesTable } from "@workspace/db";
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { eq, and, gte, desc, asc } from "drizzle-orm";
 import {
   ListArticlesQueryParams,
   GetArticleParams,
@@ -16,7 +16,7 @@ router.get("/articles", async (req, res): Promise<void> => {
     return;
   }
 
-  const { status, minScore, topicTag, source, limit } = query.data;
+  const { status, minScore, topicTag, source, platform, sortBy, limit } = query.data;
 
   let dbQuery = db.select().from(articlesTable).$dynamic();
 
@@ -31,21 +31,33 @@ router.get("/articles", async (req, res): Promise<void> => {
   if (source) {
     conditions.push(eq(articlesTable.sourceName, source));
   }
+  if (platform) {
+    conditions.push(eq(articlesTable.platform, platform as "news" | "twitter" | "linkedin"));
+  }
 
   if (conditions.length > 0) {
     dbQuery = dbQuery.where(and(...conditions));
   }
 
-  const articles = await dbQuery
-    .orderBy(desc(articlesTable.relevancyScore), desc(articlesTable.scrapedAt))
-    .limit(limit ?? 50);
-
-  let filtered = articles;
-  if (topicTag) {
-    filtered = articles.filter((a) => a.topicTags.includes(topicTag));
+  // Apply sort order
+  if (sortBy === "time") {
+    dbQuery = dbQuery.orderBy(desc(articlesTable.publishedAt), desc(articlesTable.scrapedAt));
+  } else if (sortBy === "source") {
+    dbQuery = dbQuery.orderBy(asc(articlesTable.sourceName), desc(articlesTable.relevancyScore));
+  } else {
+    // Default: by relevance
+    dbQuery = dbQuery.orderBy(desc(articlesTable.relevancyScore), desc(articlesTable.scrapedAt));
   }
 
-  res.json(filtered);
+  dbQuery = dbQuery.limit(limit ?? 200);
+
+  let articles = await dbQuery;
+
+  if (topicTag) {
+    articles = articles.filter((a) => a.topicTags.includes(topicTag));
+  }
+
+  res.json(articles);
 });
 
 router.get("/articles/:id", async (req, res): Promise<void> => {

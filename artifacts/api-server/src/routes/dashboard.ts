@@ -4,6 +4,34 @@ import { eq, gte, sql, desc, count, and } from "drizzle-orm";
 import { UpdateSettingsBody } from "@workspace/api-zod";
 import { getScrapeStatus } from "../lib/scraper";
 
+const DISCIPLINE_KEYWORDS: Record<string, string[]> = {
+  "Strategic Foresight": ["AI", "Technology", "Geopolitics", "Strategy", "Innovation", "Future of Work", "Policy"],
+  "System Vitality": ["Leadership", "Culture", "Economy", "Finance", "Health", "Education"],
+  "Civic Stewardship": ["Governance", "Democracy", "Sustainability", "Environmental Health", "Central Florida"],
+};
+
+function inferDiscipline(tags: string[]): string {
+  const scores: Record<string, number> = {
+    "Strategic Foresight": 0,
+    "System Vitality": 0,
+    "Civic Stewardship": 0,
+  };
+
+  for (const tag of tags) {
+    for (const [discipline, keywords] of Object.entries(DISCIPLINE_KEYWORDS)) {
+      if (keywords.includes(tag)) scores[discipline]++;
+    }
+  }
+
+  const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+  return best[1] > 0 ? best[0] : "Strategic Foresight";
+}
+
+function describeSignificance(topic: string, count: number, avgScore: number): string {
+  const level = avgScore >= 8.5 ? "high" : avgScore >= 7 ? "moderate" : "emerging";
+  return `${count} source${count !== 1 ? "s" : ""} covering this topic with ${level} strategic relevance`;
+}
+
 const router: IRouter = Router();
 
 router.get("/dashboard/summary", async (req, res): Promise<void> => {
@@ -37,34 +65,67 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
         ),
     ]);
 
-  const topArticles = await db
-    .select()
-    .from(articlesTable)
-    .where(gte(articlesTable.scrapedAt, today))
-    .orderBy(desc(articlesTable.relevancyScore))
-    .limit(10);
-
-  // Count by topic tag (simplified)
-  const allArticlesToday = await db
-    .select({ topicTags: articlesTable.topicTags })
-    .from(articlesTable)
-    .where(gte(articlesTable.scrapedAt, today));
-
-  const tagCounts: Record<string, number> = {};
-  for (const article of allArticlesToday) {
-    for (const tag of article.topicTags) {
-      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-    }
-  }
-
-  const articlesByTag = Object.entries(tagCounts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([tag, count]) => ({ tag, count }));
-
-  const [sourcesResult, activeSourcesResult] = await Promise.all([
+  const [topArticles, allArticlesToday, sourcesResult, activeSourcesResult] = await Promise.all([
+    db
+      .select()
+      .from(articlesTable)
+      .where(gte(articlesTable.scrapedAt, today))
+      .orderBy(desc(articlesTable.relevancyScore))
+      .limit(10),
+    db
+      .select({
+        topicTags: articlesTable.topicTags,
+        relevancyScore: articlesTable.relevancyScore,
+        platform: articlesTable.platform,
+        isEmergingSignal: articlesTable.isEmergingSignal,
+      })
+      .from(articlesTable)
+      .where(gte(articlesTable.scrapedAt, today)),
     db.select({ count: count() }).from(sourcesTable),
     db.select({ count: count() }).from(sourcesTable).where(eq(sourcesTable.isActive, true)),
   ]);
+
+  // Tag counts and scores for trending topics
+  const tagData: Record<string, { count: number; totalScore: number; hasEmergingSignal: boolean }> = {};
+  let socialSignalsCount = 0;
+  let emergingSignalsCount = 0;
+
+  for (const article of allArticlesToday) {
+    if (article.platform === "twitter" || article.platform === "linkedin") {
+      socialSignalsCount++;
+    }
+    if (article.isEmergingSignal) {
+      emergingSignalsCount++;
+    }
+    for (const tag of article.topicTags) {
+      if (!tagData[tag]) tagData[tag] = { count: 0, totalScore: 0, hasEmergingSignal: false };
+      tagData[tag].count++;
+      tagData[tag].totalScore += article.relevancyScore;
+      if (article.isEmergingSignal) tagData[tag].hasEmergingSignal = true;
+    }
+  }
+
+  const articlesByTag = Object.entries(tagData)
+    .sort((a, b) => b[1].count - a[1].count)
+    .map(([tag, data]) => ({ tag, count: data.count }));
+
+  // Topic Intelligence: top topics ranked by weighted importance
+  const topicIntelligence = Object.entries(tagData)
+    .map(([topic, data]) => {
+      const avgScore = data.count > 0 ? data.totalScore / data.count : 0;
+      // Weighted importance: avg score * log(count+1) for diversity bonus
+      const importanceScore = Math.min(10, avgScore * (1 + Math.log(data.count + 1) * 0.15));
+      return {
+        topic,
+        articleCount: data.count,
+        importanceScore: Math.round(importanceScore * 10) / 10,
+        significance: describeSignificance(topic, data.count, avgScore),
+        discipline: inferDiscipline([topic]),
+        hasEmergingSignal: data.hasEmergingSignal,
+      };
+    })
+    .sort((a, b) => b.importanceScore - a.importanceScore)
+    .slice(0, 8);
 
   const scrapeStatus = getScrapeStatus();
 
@@ -76,8 +137,11 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
     topArticles,
     lastScrapeAt: scrapeStatus.lastScrapeAt,
     articlesByTag,
+    topicIntelligence,
     totalSources: sourcesResult[0]?.count ?? 0,
     activeSources: activeSourcesResult[0]?.count ?? 0,
+    socialSignalsCount,
+    emergingSignalsCount,
   });
 });
 

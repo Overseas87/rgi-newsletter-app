@@ -14,7 +14,7 @@ import {
   RegenerateDigestArticleParams,
   RegenerateDigestArticleBody,
 } from "@workspace/api-zod";
-import { generateDigestArticle } from "../lib/ai-writer";
+import { generateDigestArticle, generateDailyBrief } from "../lib/ai-writer";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -94,6 +94,53 @@ router.post("/digest/generate", async (req, res): Promise<void> => {
   } catch (e) {
     req.log.error({ err: e }, "Failed to generate digest article");
     res.status(500).json({ error: "Failed to generate article" });
+  }
+});
+
+// Daily brief: auto-selects today's top articles and generates a comprehensive brief
+router.post("/digest/daily-brief", async (req, res): Promise<void> => {
+  const articleIds: number[] | undefined = Array.isArray(req.body?.articleIds)
+    ? req.body.articleIds
+    : undefined;
+
+  req.log.info({ articleIds, auto: !articleIds }, "Generating daily intelligence brief");
+
+  try {
+    const generated = await generateDailyBrief(articleIds);
+
+    // Build the editor notes field to store the executive summary
+    const executiveSummaryText = generated.executiveSummary.length > 0
+      ? "EXECUTIVE SUMMARY:\n" + generated.executiveSummary.map((s) => `• ${s}`).join("\n")
+      : null;
+
+    const [digestArticle] = await db
+      .insert(digestArticlesTable)
+      .values({
+        headline: generated.headline,
+        body: generated.body,
+        rgiTake: generated.rgiTake,
+        topicTags: generated.topicTags,
+        sourceArticleIds: generated.sourceArticleIds,
+        relevancyScore: generated.relevancyScore,
+        discipline: generated.discipline,
+        status: "pending_review",
+        editorNotes: executiveSummaryText,
+      })
+      .returning();
+
+    // Mark source articles as selected
+    if (generated.sourceArticleIds.length > 0) {
+      await db
+        .update(articlesTable)
+        .set({ status: "selected" })
+        .where(inArray(articlesTable.id, generated.sourceArticleIds));
+    }
+
+    const enriched = await enrichDigestArticle(digestArticle);
+    res.status(201).json(enriched);
+  } catch (e) {
+    req.log.error({ err: e }, "Failed to generate daily brief");
+    res.status(500).json({ error: String(e instanceof Error ? e.message : "Failed to generate daily brief") });
   }
 });
 
@@ -251,7 +298,6 @@ router.post("/digest/:id/regenerate", async (req, res): Promise<void> => {
   }
 
   try {
-    // Synchronously regenerate — client waits for the AI response
     const generated = await generateDigestArticle(
       existing.sourceArticleIds,
       body.data.editorNotes

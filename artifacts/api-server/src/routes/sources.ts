@@ -29,6 +29,7 @@ router.post("/sources", async (req, res): Promise<void> => {
       url: body.data.url,
       type: body.data.type,
       tier: body.data.tier,
+      isActive: true,
     })
     .returning();
 

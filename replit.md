@@ -1,8 +1,8 @@
-# RGI Daily Intelligence Digest
+# RGI Strategic Intelligence System
 
 ## Overview
 
-Internal editorial tool for the Rick Goings Institute at Rollins College. Scrapes major news outlets daily, uses Claude AI to score articles 1-10 against RGI's three disciplines, and lets an editor approve/edit/reject/regenerate AI-written newsletter drafts. Maintains a published archive.
+Internal editorial platform for the Rick Goings Institute at Rollins College. Scrapes 45+ news and social media sources daily, uses Claude AI to score articles against RGI's three disciplines, lets editors curate and synthesize articles into Strategic Briefs, and generates comprehensive Daily Intelligence Briefs covering everything that matters for senior leaders.
 
 ## Architecture
 
@@ -16,7 +16,7 @@ pnpm workspace monorepo using TypeScript with:
 
 ## Design
 
-Dark navy/white/gold palette. No emojis. Morning Brew meets HBR aesthetic. Serif headings, clean cards.
+Dark navy/white/gold palette. No emojis. HBR/Foreign Affairs aesthetic. Serif headings, clean cards.
 
 ## Stack
 
@@ -28,70 +28,120 @@ Dark navy/white/gold palette. No emojis. Morning Brew meets HBR aesthetic. Serif
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
-- **Scraping**: axios + cheerio + rss-parser + node-cron
+- **State management**: React Query (TanStack Query v5)
+- **Routing**: Wouter
+- **UI components**: shadcn/ui (Radix UI primitives)
+- **Styling**: Tailwind CSS
+- **AI models**: Claude Haiku (scraper scoring), Claude Sonnet (article/brief synthesis)
+- **Logging**: Pino
 
-## Key Features
+## Pages
 
-1. **Dashboard** — Prominent "Scrape Now" banner at top with full last-scraped timestamp; stats (articles today, pending, approved, active sources); Trending Topics ranking grid; Top Articles by relevancy
-2. **Today's Topics** — "Today's Topic Rankings" section (top 6 tags with discipline icons, color-coded); search/filter by discipline; select articles to generate digest entries
-3. **Pending Review** — Full-length Claude-written articles (500-900 words, multi-paragraph); eye icon for full-page article Dialog; Edit/Save/Cancel inline editing; Approve/Regenerate/Reject with toast notifications
-4. **Published Archive** — All approved digest entries; full-page article Dialog view; queries `status="approved"`
-5. **Rejected** — Items rejected during review
-6. **Source Management** — 45 active RSS sources across Tier 1/2/3; CRUD with toggle; covers AI/tech, leadership, geopolitics, finance, environment, social impact, Central Florida
-7. **Settings** — Configure minimum relevancy threshold, scrape interval, scrape time
+| Route | Page | Description |
+|-------|------|-------------|
+| `/` | Dashboard | Stats, What Matters Today (topic intelligence), Generate Daily Brief button, top articles |
+| `/feed` | Intelligence Feed | Browse + filter all pending articles by platform/sort/search; select articles to synthesize |
+| `/review` | Pending Review | Review, edit, approve, or reject AI-generated strategic briefs |
+| `/published` | Published Archive | All approved briefs |
+| `/rejected` | Rejected | Rejected briefs |
+| `/sources` | Source Management | Add/edit/toggle news and social sources |
+| `/settings` | Settings | Relevancy threshold, scrape schedule |
 
-## Layer 2 Bug Fixes & Enhancements (Completed)
+## Core Features
 
-- Published page now correctly queries `status="approved"` (not "published")
-- Regenerate endpoint is synchronous — UI waits for Claude's response (~15-30s)
-- Toast notifications wired for all approve/reject/regenerate/save actions
-- AI writer prompt updated for 500-900 word articles with clean prose (no markdown)
-- Markdown stripping utility (`stripMarkdown`) applied to all article body displays
-- Dashboard redesigned with prominent Scrape Now banner + full datetime timestamp
-- Topics page enhanced with Topic Rankings section (discipline-inferred, color-coded)
-- Full-page article Dialog added to Review and Published pages
-- Sources expanded from 14 to 45 RSS feeds (WSJ, FT, BBC, Foreign Affairs, CFR, Brookings, Nature, SSIR, etc.)
+### Scraping (Layer 1)
+- 45+ sources: RSS feeds, Nitter/Twitter, LinkedIn (skipped — requires API)
+- Parallel fetch with Promise.allSettled (no single failure blocks others)
+- Author extraction from RSS fields and social posts
+- Signal detection: `isEmergingSignal` flag for high-relevance emerging trends
 
-## RGI Disciplines
+### AI Scoring (Layer 2)
+- Claude Haiku scores each article 1-10 against RGI disciplines
+- Author authority bonus (1-5 scale) + tier bonus applied to relevancy score
+- Topic tags assigned from a controlled vocabulary of 18 RGI-relevant topics
+- Discipline alignment: Strategic Foresight / System Vitality / Civic Stewardship
 
-All AI scoring and writing is anchored to three disciplines:
-1. **Strategic Foresight** — Anticipating change and positioning organizations for unseen futures
-2. **System Vitality** — Organizational energy, resilience, adaptive capacity
-3. **Civic Stewardship** — Responsibility to communities and institutions beyond profit
+### Strategic Brief Generation (Layer 3a)
+- Editor selects 2+ articles in Intelligence Feed
+- Claude Sonnet synthesizes them into one 700-900 word brief
+- Structure: Context → Synthesis → Implications → RGI Perspective → What Leaders Should Watch
+- Brief goes to Pending Review queue
 
-## Backend Routes
+### Daily Intelligence Brief (Layer 3b)
+- One-click: editor clicks "Generate Daily Brief" on dashboard
+- Auto-selects top 15-20 articles from today (score ≥ 6.0)
+- Claude Sonnet generates a comprehensive 900-1,200 word daily brief
+- Output includes: Headline, Executive Summary (6 bullets), full prose body by theme, Cross-Theme Insight, RGI Perspective, Why This Matters for Leaders
+- Stored as a digest article in Pending Review for editor approval
+- Optional: editor can pass specific article IDs via POST /api/digest/daily-brief body
 
-- `GET/POST /api/sources` — Source management
-- `GET/PATCH/DELETE /api/sources/:id` — Individual source operations
-- `GET /api/articles` — List articles with filters (status, minScore, topicTag, source)
-- `GET /api/digest/articles` — List digest articles with status filter
-- `POST /api/digest/articles/generate` — Generate digest entry from article IDs (Claude)
-- `GET/PATCH/DELETE /api/digest/articles/:id` — Individual digest article operations
-- `POST /api/digest/articles/:id/approve` — Approve for publication
-- `POST /api/digest/articles/:id/reject` — Reject entry
-- `POST /api/digest/articles/:id/regenerate` — Regenerate with Claude
-- `GET /api/scrape/status` — Current scrape status
-- `POST /api/scrape/trigger` — Manually trigger scrape
-- `GET /api/dashboard/summary` — Dashboard stats
-- `GET/PATCH /api/settings` — App settings
+### Intelligence Feed (Layer 3c)
+- Filter by platform: All / News / X (Twitter) / LinkedIn
+- Sort by: Relevance / Time / Source
+- Search by keyword, source name, or author
+- Emerging signal banner when high-priority items detected
+- Multi-select with optional editor notes → Generate Brief
 
-## Key Commands
+### Dashboard Topic Intelligence
+- "What Matters Today" section ranks top 8 topics by weighted importance score
+- Importance = avg relevancy × log(count) diversity bonus
+- Shows discipline alignment, article count, emerging signal flag, significance description
+- Social signal count and emerging signal count shown as stat cards
 
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/api-server run dev` — run API server locally
+## API Routes
 
-## Key Files
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/articles | List articles (filters: status, minScore, topicTag, source, platform, sortBy) |
+| GET | /api/articles/:id | Get single article |
+| DELETE | /api/articles/:id | Delete article |
+| GET | /api/dashboard/summary | Full dashboard stats including topic intelligence |
+| GET | /api/dashboard/settings | Get settings |
+| PATCH | /api/dashboard/settings | Update settings |
+| GET | /api/sources | List sources |
+| POST | /api/sources | Create source |
+| PATCH | /api/sources/:id | Update source |
+| DELETE | /api/sources/:id | Delete source |
+| GET | /api/digest | List digest articles |
+| POST | /api/digest/generate | Generate strategic brief from selected article IDs |
+| POST | /api/digest/daily-brief | Auto-generate comprehensive daily brief |
+| GET | /api/digest/:id | Get digest article |
+| PATCH | /api/digest/:id | Update digest article |
+| DELETE | /api/digest/:id | Delete digest article |
+| POST | /api/digest/:id/approve | Approve digest article |
+| POST | /api/digest/:id/reject | Reject digest article |
+| POST | /api/digest/:id/regenerate | Regenerate digest article |
+| POST | /api/scrape | Trigger manual scrape |
+| GET | /api/scrape/status | Get scrape status |
 
-- `lib/api-spec/openapi.yaml` — API contract source of truth
-- `lib/db/src/schema/` — Drizzle schemas (sources, articles, digest_articles, settings)
-- `artifacts/api-server/src/lib/scraper.ts` — RSS fetch + AI scoring engine
-- `artifacts/api-server/src/lib/ai-writer.ts` — Claude article generator with RGI voice
-- `artifacts/api-server/src/lib/scheduler.ts` — node-cron daily scrape scheduler
-- `artifacts/api-server/src/routes/` — All API route handlers
-- `artifacts/rgi-digest/src/pages/` — All frontend pages
+## Database Schema
 
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+### articles
+id, headline, url, sourceName, sourceUrl, author, authorType, platform (news/twitter/linkedin), isEmergingSignal, relevancyScore, topicTags, teaserSummary, content, status (pending/selected/dismissed), disciplineAlignment, publishedAt, scrapedAt
+
+### digest_articles
+id, headline, body, rgiTake, topicTags, discipline, relevancyScore, sourceArticleIds, editorNotes, status (pending_review/approved/rejected), publishedAt, createdAt, updatedAt
+
+### sources
+id, name, url, type, tier (1-3), authorName, authorType, authorityLevel (1-5), description, isActive, createdAt
+
+### settings
+id, relevancyThreshold, scrapeIntervalHours, scrapeTimeUtc
+
+## OpenAPI / Codegen
+
+Spec: `lib/api-spec/openapi.yaml` (v0.2.0)
+Run codegen: `pnpm --filter @workspace/api-spec run codegen`
+After codegen, run typecheck: `pnpm -w run typecheck:libs`
+
+## Development
+
+```bash
+pnpm install          # Install all dependencies
+pnpm -w run db:push   # Push schema changes to DB
+pnpm --filter @workspace/api-spec run codegen  # Regenerate API client + Zod schemas
+```
+
+Workflows (auto-managed by Replit):
+- `artifacts/api-server: API Server` — Express backend
+- `artifacts/rgi-digest: web` — Vite React frontend
