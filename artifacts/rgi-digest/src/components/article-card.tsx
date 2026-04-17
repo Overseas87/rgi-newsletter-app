@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Article } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { ExternalLink, Zap, Twitter, Linkedin, Newspaper, BookOpen, Building2, TrendingUp, Globe, ChevronDown, ChevronUp, Compass, Shield, Cpu, Loader2 } from "lucide-react";
+import { ExternalLink, Zap, Twitter, Linkedin, Newspaper, BookOpen, Building2, TrendingUp, Globe, ChevronDown, ChevronUp, Compass, Shield, Cpu, Loader2, Radio } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface ArticleCardProps {
@@ -160,7 +160,7 @@ export function ArticleCard({ article, selectable, selected, onSelect, onTopicCl
     <Card
       className={`transition-all cursor-default ${
         selected ? "border-primary shadow-sm shadow-primary/10" : ""
-      } ${article.isEmergingSignal ? "border-amber-500/30" : ""}`}
+      } ${article.isPrimarySignal ? "border-violet-500/40 bg-violet-500/[0.02]" : article.isEmergingSignal ? "border-amber-500/30" : ""}`}
       data-testid={`article-card-${article.id}`}
     >
       <CardHeader className="pb-2 pt-4 px-4">
@@ -195,6 +195,11 @@ export function ArticleCard({ article, selectable, selected, onSelect, onTopicCl
                 {format(new Date(publishTime), "MMM d, h:mm a")}
               </span>
               <div className="ml-auto flex items-center gap-1.5">
+                {article.isPrimarySignal && (
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300 border border-violet-500/30 uppercase tracking-wide">
+                    <Radio className="h-2.5 w-2.5" />Primary Signal
+                  </span>
+                )}
                 {article.isEmergingSignal && (
                   <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-wide">
                     <Zap className="h-2.5 w-2.5" />Signal

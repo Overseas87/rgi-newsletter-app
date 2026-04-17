@@ -26,6 +26,8 @@ const SYNTHESIS_PROMPT = `You are writing an RGI Strategic Intelligence Brief �
 
 CRITICAL INSTRUCTION: Do NOT summarize these articles individually. Instead, read them as a collection of signals. Identify what they have in common. Extract the underlying pattern. Then write ONE integrated piece that reveals the deeper narrative connecting them all.
 
+ATTRIBUTION RULE: When a source is marked [PRIMARY SIGNAL], that is a direct, original statement or announcement. Attribute it as such: "In a direct post on X, [name/company] stated…" or "In an official announcement, [company] declared…" — never attribute primary signals as if they are news reports. Primary signals can carry equal or greater weight than news articles reporting on the same topic.
+
 Source Articles (synthesize ALL of these into one unified brief):
 {SOURCES}
 
@@ -119,8 +121,13 @@ export async function generateDigestArticle(
 
   const sourcesText = articles
     .map(
-      (a, i) =>
-        `SOURCE ${i + 1}:\nHeadline: ${a.headline}\nPublication: ${a.sourceName}${a.author ? `\nAuthor: ${a.author}` : ""}${a.platform && a.platform !== "news" ? `\nPlatform: ${a.platform}` : ""}\nURL: ${a.url}\nContent: ${(a.content || a.teaserSummary || a.headline).slice(0, 4000)}`
+      (a, i) => {
+        const isPrimary = (a as any).isPrimarySignal;
+        const signalType = isPrimary
+          ? `[PRIMARY SIGNAL — direct ${a.platform === "twitter" ? "post on X" : a.platform === "linkedin" ? "post on LinkedIn" : "statement"}${a.author ? ` from ${a.author}${a.authorType ? `, ${a.authorType}` : ""}` : ""}]`
+          : "";
+        return `SOURCE ${i + 1}${signalType ? " " + signalType : ""}:\nHeadline: ${a.headline}\nPublication: ${a.sourceName}${a.author ? `\nAuthor: ${a.author}${a.authorType ? ` (${a.authorType})` : ""}` : ""}${a.platform && a.platform !== "news" ? `\nPlatform: ${a.platform}` : ""}\nURL: ${a.url}\nContent: ${(a.content || a.teaserSummary || a.headline).slice(0, 4000)}`;
+      }
     )
     .join("\n\n---\n\n");
 

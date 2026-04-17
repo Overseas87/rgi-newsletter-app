@@ -42,6 +42,7 @@ Analyze the following article and return a JSON object with these exact fields:
 - topicTags: array of 1-3 SPECIFIC strings chosen ONLY from the permitted list below
 - teaserSummary: 1-2 sentence analytical summary (max 200 chars) that highlights strategic significance — NOT just a restatement of the headline
 - disciplineAlignment: the single best-matching discipline: "Strategic Foresight", "System Vitality", "Civic Stewardship", or "Multiple" (only use Multiple if truly 2+ disciplines are equally central)
+- isPrimarySignal: boolean — true ONLY if this is a DIRECT, ORIGINAL communication: an executive's own post/statement, an official company announcement, a government/policy statement, a press release from the organization itself, or an original public declaration. False for news articles REPORTING on those events. Authority determines relevancyScore; format determines isPrimarySignal.
 
 TOPIC TAGS — choose only from this list, and only assign tags where the article's PRIMARY focus matches:
 - "AI" — artificial intelligence, machine learning, automation, foundation models
@@ -93,6 +94,7 @@ async function scoreArticle(
   topicTags: string[];
   teaserSummary: string;
   disciplineAlignment: string;
+  isPrimarySignal: boolean;
 }> {
   const prompt = RGI_RELEVANCY_PROMPT
     .replace("{TITLE}", headline)
@@ -113,6 +115,7 @@ async function scoreArticle(
     topicTags: [] as string[],
     teaserSummary: headline.slice(0, 200),
     disciplineAlignment: "Multiple",
+    isPrimarySignal: false,
   };
 
   try {
@@ -351,6 +354,7 @@ export async function runScrape(): Promise<{
           authorType: item.authorType || source.authorType || null,
           platform: item.platform || "news" as const,
           isEmergingSignal: isSignal,
+          isPrimarySignal: scored.isPrimarySignal ?? false,
           relevancyScore: scored.relevancyScore,
           topicTags: scored.topicTags,
           teaserSummary: scored.teaserSummary,

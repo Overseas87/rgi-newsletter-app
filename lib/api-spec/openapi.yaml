@@ -505,6 +505,8 @@ components:
           type: ["string", "null"]
         isEmergingSignal:
           type: boolean
+        isPrimarySignal:
+          type: boolean
         relevancyScore:
           type: number
         topicTags:
@@ -534,6 +536,7 @@ components:
         - scrapedAt
         - status
         - isEmergingSignal
+        - isPrimarySignal
 
     DigestArticle:
       type: object

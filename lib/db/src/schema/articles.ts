@@ -12,6 +12,7 @@ export const articlesTable = pgTable("articles", {
   authorType: text("author_type"),
   platform: text("platform", { enum: ["news", "twitter", "linkedin"] }).default("news"),
   isEmergingSignal: boolean("is_emerging_signal").notNull().default(false),
+  isPrimarySignal: boolean("is_primary_signal").notNull().default(false),
   relevancyScore: real("relevancy_score").notNull().default(0),
   topicTags: text("topic_tags").array().notNull().default([]),
   teaserSummary: text("teaser_summary"),

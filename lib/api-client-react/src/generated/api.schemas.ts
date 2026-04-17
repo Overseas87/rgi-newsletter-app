@@ -49,6 +49,7 @@ export interface Article {
   /** @nullable */
   platform?: string | null;
   isEmergingSignal: boolean;
+  isPrimarySignal: boolean;
   relevancyScore: number;
   topicTags: string[];
   /** @nullable */
