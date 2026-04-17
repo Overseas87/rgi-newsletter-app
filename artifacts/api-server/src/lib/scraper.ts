@@ -8,47 +8,73 @@ export interface ScrapedItem {
   url: string;
   sourceName: string;
   sourceUrl?: string;
+  author?: string;
+  authorType?: string;
+  platform?: "news" | "twitter" | "linkedin";
   content?: string;
   publishedAt?: Date;
   teaserSummary?: string;
+}
+
+// Keywords that suggest a breaking/high-signal story
+const SIGNAL_KEYWORDS = [
+  "announces", "launches", "breaks", "urgent", "exclusive", "first",
+  "major", "historic", "unprecedented", "crisis", "breakthrough",
+  "collapse", "warning", "alert", "confirmed", "reveals", "admits",
+  "resigns", "appointed", "banned", "sanctions", "emergency",
+];
+
+function detectEmergingSignal(headline: string, score: number): boolean {
+  if (score >= 8.5) return true;
+  const lower = headline.toLowerCase();
+  return SIGNAL_KEYWORDS.some((kw) => lower.includes(kw)) && score >= 7;
 }
 
 const RGI_RELEVANCY_PROMPT = `You are an editorial AI for the Rick Goings Institute (RGI) at Rollins College. RGI equips leaders to build organizations that last, contribute, and stay vital in demanding times.
 
 RGI's three core disciplines:
 1. Strategic Foresight — AI acceleration, geopolitical volatility, market transitions, weak signals, pattern recognition
-2. System Vitality — organizational culture, leadership, human energy, trust, institutional health
-3. Civic Stewardship — corporate responsibility, civic institutions, community impact, legitimacy of firms in society
+2. System Vitality — organizational culture, leadership, human energy, trust, institutional health, future of work
+3. Civic Stewardship — corporate responsibility, civic institutions, community impact, legitimacy of firms in society, democracy, policy
 
 Analyze the following article and return a JSON object with:
-- relevancyScore: number 1-10 (how relevant to RGI's disciplines)
-- topicTags: array of strings from: ["AI", "Leadership", "Geopolitics", "Finance", "Environmental Health", "Central Florida", "Strategy", "Culture", "Technology", "Policy", "Education", "Economy", "Innovation", "Governance", "Health"]
-- teaserSummary: one sentence teaser (max 150 chars)
+- relevancyScore: number 1-10 (how relevant to RGI's disciplines and leadership audiences)
+- topicTags: array of strings from: ["AI", "Leadership", "Geopolitics", "Finance", "Environmental Health", "Central Florida", "Strategy", "Culture", "Technology", "Policy", "Education", "Economy", "Innovation", "Governance", "Health", "Democracy", "Future of Work", "Sustainability"]
+- teaserSummary: 1-2 sentence analytical summary (max 200 chars) — NOT just the headline
 - disciplineAlignment: which discipline(s) it aligns with: "Strategic Foresight", "System Vitality", "Civic Stewardship", or "Multiple"
+
+Scoring guidelines:
+- 9-10: Critical strategic importance for senior leaders (major policy shift, technology inflection, geopolitical event)
+- 7-8: High relevance to leadership, organizational strategy, or societal trends
+- 5-6: Moderate relevance — useful context but not essential
+- 1-4: Low relevance — industry noise or outside RGI's focus
 
 Return ONLY valid JSON. No explanation.
 
 Article:
 Title: {TITLE}
+Source: {SOURCE}
 Content: {CONTENT}`;
 
 async function scoreArticle(
   headline: string,
   content: string,
-  sourceTier: number
+  sourceName: string,
+  sourceTier: number,
+  authorityLevel: number
 ): Promise<{
   relevancyScore: number;
   topicTags: string[];
   teaserSummary: string;
   disciplineAlignment: string;
 }> {
-  const prompt = RGI_RELEVANCY_PROMPT.replace("{TITLE}", headline).replace(
-    "{CONTENT}",
-    content.slice(0, 2000)
-  );
+  const prompt = RGI_RELEVANCY_PROMPT
+    .replace("{TITLE}", headline)
+    .replace("{SOURCE}", sourceName)
+    .replace("{CONTENT}", content.slice(0, 2500));
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-haiku-4-5",
     max_tokens: 512,
     messages: [{ role: "user", content: prompt }],
   });
@@ -58,18 +84,21 @@ async function scoreArticle(
 
   let result = {
     relevancyScore: 5,
-    topicTags: ["General"],
-    teaserSummary: headline.slice(0, 150),
+    topicTags: [] as string[],
+    teaserSummary: headline.slice(0, 200),
     disciplineAlignment: "Multiple",
   };
 
   try {
-    const parsed = JSON.parse(text.trim());
+    const cleanText = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
+    const parsed = JSON.parse(cleanText);
     result = { ...result, ...parsed };
 
-    // Apply source tier bonus
+    // Apply tier + authority bonus
     const tierBonus = sourceTier === 1 ? 0.5 : sourceTier === 2 ? 0.2 : 0;
-    result.relevancyScore = Math.min(10, result.relevancyScore + tierBonus);
+    const authorityBonus = (authorityLevel - 3) * 0.3; // authority 1-5, baseline 3
+    result.relevancyScore = Math.min(10, Math.max(1, result.relevancyScore + tierBonus + authorityBonus));
+    result.relevancyScore = Math.round(result.relevancyScore * 10) / 10;
   } catch (e) {
     logger.warn({ err: e, text }, "Failed to parse AI scoring response");
   }
@@ -77,59 +106,114 @@ async function scoreArticle(
   return result;
 }
 
-async function fetchRssItems(url: string): Promise<ScrapedItem[]> {
+async function fetchRssItems(source: {
+  url: string;
+  name: string;
+  authorName?: string | null;
+  authorType?: string | null;
+}): Promise<ScrapedItem[]> {
   const axios = (await import("axios")).default;
   const cheerio = (await import("cheerio")).load;
 
   try {
-    const response = await axios.get(url, {
+    const response = await axios.get(source.url, {
       timeout: 15000,
-      headers: { "User-Agent": "RGI-Digest-Bot/1.0" },
+      headers: {
+        "User-Agent": "RGI-Intelligence-Bot/2.0",
+        "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
+      },
     });
 
     const $ = cheerio(response.data, { xmlMode: true });
     const items: ScrapedItem[] = [];
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
 
     $("item, entry").each((_, el) => {
       const $el = $(el);
+
       const headline =
         $el.find("title").first().text().trim() ||
         $el.children("title").first().text().trim();
+
       const link =
         $el.find("link").first().attr("href") ||
         $el.find("link").first().text().trim() ||
         $el.children("link").first().attr("href") ||
         $el.children("link").first().text().trim();
+
       const description =
         $el.find("description").first().text().trim() ||
         $el.find("summary").first().text().trim() ||
+        $el.find("content\\:encoded, encoded").first().text().trim() ||
         $el.find("content").first().text().trim();
+
       const pubDateStr =
         $el.find("pubDate").first().text().trim() ||
         $el.find("published").first().text().trim() ||
-        $el.find("updated").first().text().trim();
+        $el.find("updated").first().text().trim() ||
+        $el.find("dc\\:date, date").first().text().trim();
 
-      if (headline && link) {
-        const pubDate = pubDateStr ? new Date(pubDateStr) : undefined;
-        // Only include articles from the last 24 hours
-        if (!pubDate || Date.now() - pubDate.getTime() < 24 * 60 * 60 * 1000) {
-          items.push({
-            headline,
-            url: link,
-            sourceName: url,
-            content: description,
-            publishedAt: pubDate,
-            teaserSummary: description?.slice(0, 200),
-          });
-        }
-      }
+      // Extract author from multiple possible fields
+      const articleAuthor =
+        $el.find("author name").first().text().trim() ||
+        $el.find("dc\\:creator, creator").first().text().trim() ||
+        $el.find("author").first().text().trim() ||
+        source.authorName ||
+        "";
+
+      if (!headline || !link) return;
+
+      const pubDate = pubDateStr ? new Date(pubDateStr) : undefined;
+      // Include articles from last 24 hours, or those without a date (assume recent)
+      if (pubDate && !isNaN(pubDate.getTime()) && pubDate.getTime() < cutoff) return;
+
+      // Clean HTML from description
+      const cleanDesc = description
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 3000);
+
+      items.push({
+        headline,
+        url: link,
+        sourceName: source.name,
+        author: articleAuthor || undefined,
+        authorType: source.authorType || undefined,
+        platform: "news",
+        content: cleanDesc,
+        publishedAt: pubDate,
+        teaserSummary: cleanDesc?.slice(0, 200),
+      });
     });
 
-    return items.slice(0, 20);
+    return items.slice(0, 25);
   } catch (e) {
-    logger.warn({ err: e, url }, "Failed to fetch RSS feed");
+    logger.warn({ err: e, url: source.url }, "Failed to fetch RSS feed");
     return [];
   }
+}
+
+async function fetchNitterItems(source: {
+  url: string;
+  name: string;
+  authorName?: string | null;
+  authorType?: string | null;
+}): Promise<ScrapedItem[]> {
+  // Twitter sources use Nitter RSS format: handle stored as nitter URL or @handle
+  // The URL should be a Nitter RSS URL like https://nitter.net/{handle}/rss
+  const items = await fetchRssItems(source);
+  return items.map((item) => ({
+    ...item,
+    platform: "twitter" as const,
+    author: source.authorName || item.author,
+    authorType: source.authorType || "Social",
+  }));
 }
 
 let scrapeInProgress = false;
@@ -153,7 +237,7 @@ export async function runScrape(): Promise<{
   }
 
   scrapeInProgress = true;
-  logger.info("Starting scrape run");
+  logger.info("Starting parallel scrape run");
 
   let articlesFound = 0;
   let articlesAdded = 0;
@@ -164,21 +248,54 @@ export async function runScrape(): Promise<{
       .from(sourcesTable)
       .where(eq(sourcesTable.isActive, true));
 
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // PARALLEL: fetch all sources simultaneously
+    logger.info({ count: sources.length }, "Fetching sources in parallel");
+    const fetchResults = await Promise.allSettled(
+      sources.map(async (source) => {
+        let items: ScrapedItem[] = [];
 
-    for (const source of sources) {
-      let items: ScrapedItem[] = [];
+        if (source.type === "rss" || source.type === "website") {
+          items = await fetchRssItems({
+            url: source.url,
+            name: source.name,
+            authorName: source.authorName,
+            authorType: source.authorType,
+          });
+        } else if (source.type === "twitter") {
+          // Twitter via Nitter RSS
+          items = await fetchNitterItems({
+            url: source.url,
+            name: source.name,
+            authorName: source.authorName,
+            authorType: source.authorType,
+          });
+        } else if (source.type === "linkedin") {
+          // LinkedIn sources — log as needing configuration
+          logger.info({ source: source.name }, "LinkedIn source requires API configuration — skipping");
+          return { source, items: [] };
+        }
 
-      if (source.type === "rss") {
-        items = await fetchRssItems(source.url);
-      } else {
-        logger.info({ sourceType: source.type }, "Skipping non-RSS source for now");
-        continue;
+        return { source, items };
+      })
+    );
+
+    // Collect all items
+    const allItems: Array<{ source: typeof sources[0]; item: ScrapedItem }> = [];
+    for (const result of fetchResults) {
+      if (result.status === "fulfilled") {
+        const { source, items } = result.value;
+        for (const item of items) {
+          allItems.push({ source, item });
+        }
       }
+    }
 
-      articlesFound += items.length;
+    articlesFound = allItems.length;
+    logger.info({ articlesFound }, "All sources fetched — scoring articles");
 
-      for (const item of items) {
+    // PARALLEL: score all articles simultaneously (Claude Haiku is fast)
+    const scoringResults = await Promise.allSettled(
+      allItems.map(async ({ source, item }) => {
         // Check if article already exists
         const existing = await db
           .select({ id: articlesTable.id })
@@ -186,36 +303,54 @@ export async function runScrape(): Promise<{
           .where(eq(articlesTable.url, item.url))
           .limit(1);
 
-        if (existing.length > 0) continue;
+        if (existing.length > 0) return null;
 
+        const content = item.content || item.headline;
+        const scored = await scoreArticle(
+          item.headline,
+          content,
+          source.name,
+          source.tier,
+          source.authorityLevel ?? 3
+        );
+
+        const isSignal = detectEmergingSignal(item.headline, scored.relevancyScore);
+
+        return {
+          headline: item.headline,
+          url: item.url,
+          sourceName: source.name,
+          sourceUrl: source.url,
+          author: item.author || null,
+          authorType: item.authorType || source.authorType || null,
+          platform: item.platform || "news" as const,
+          isEmergingSignal: isSignal,
+          relevancyScore: scored.relevancyScore,
+          topicTags: scored.topicTags,
+          teaserSummary: scored.teaserSummary,
+          publishedAt: item.publishedAt,
+          content: item.content,
+          status: "pending" as const,
+          disciplineAlignment: scored.disciplineAlignment,
+        };
+      })
+    );
+
+    // Insert new articles
+    for (const result of scoringResults) {
+      if (result.status === "fulfilled" && result.value !== null) {
         try {
-          const content = item.content || item.headline;
-          const scored = await scoreArticle(item.headline, content, source.tier);
-
-          await db.insert(articlesTable).values({
-            headline: item.headline,
-            url: item.url,
-            sourceName: source.name,
-            sourceUrl: source.url,
-            relevancyScore: scored.relevancyScore,
-            topicTags: scored.topicTags,
-            teaserSummary: scored.teaserSummary,
-            publishedAt: item.publishedAt,
-            content: item.content,
-            status: "pending",
-            disciplineAlignment: scored.disciplineAlignment,
-          });
-
+          await db.insert(articlesTable).values(result.value);
           articlesAdded++;
         } catch (e) {
-          logger.error({ err: e, url: item.url }, "Failed to process article");
+          logger.warn({ err: e }, "Failed to insert article (likely duplicate)");
         }
       }
     }
 
     lastScrapeAt = new Date();
     lastScrapeArticlesFound = articlesFound;
-    logger.info({ articlesFound, articlesAdded }, "Scrape run complete");
+    logger.info({ articlesFound, articlesAdded }, "Parallel scrape run complete");
   } catch (e) {
     logger.error({ err: e }, "Scrape run failed");
   } finally {

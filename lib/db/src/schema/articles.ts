@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, real, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, real, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -9,6 +9,9 @@ export const articlesTable = pgTable("articles", {
   sourceName: text("source_name").notNull(),
   sourceUrl: text("source_url"),
   author: text("author"),
+  authorType: text("author_type"),
+  platform: text("platform", { enum: ["news", "twitter", "linkedin"] }).default("news"),
+  isEmergingSignal: boolean("is_emerging_signal").notNull().default(false),
   relevancyScore: real("relevancy_score").notNull().default(0),
   topicTags: text("topic_tags").array().notNull().default([]),
   teaserSummary: text("teaser_summary"),

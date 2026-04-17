@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
-  List,
+  Rss,
   CheckCircle,
   Archive,
   XCircle,
@@ -9,6 +9,7 @@ import {
   Settings as SettingsIcon,
   RefreshCw,
   Menu,
+  Zap,
 } from "lucide-react";
 import { useGetScrapeStatus, useTriggerScrape, getGetScrapeStatusQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const NAV_ITEMS = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/topics", label: "Today's Topics", icon: List },
+  { path: "/feed", label: "Intelligence Feed", icon: Rss },
   { path: "/review", label: "Pending Review", icon: CheckCircle },
   { path: "/published", label: "Published Archive", icon: Archive },
   { path: "/rejected", label: "Rejected", icon: XCircle },
@@ -38,14 +39,15 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     triggerScrape.mutate(undefined, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetScrapeStatusQueryKey() });
+        setTimeout(() => queryClient.invalidateQueries(), 6000);
       },
     });
   };
 
   const NavLinks = () => (
-    <nav className="flex flex-col gap-2 mt-8 px-4">
+    <nav className="flex flex-col gap-1 mt-6 px-3">
       {NAV_ITEMS.map((item) => {
-        const isActive = location === item.path;
+        const isActive = location === item.path || (item.path === "/feed" && location === "/topics");
         return (
           <Link
             key={item.path}
@@ -58,7 +60,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
             onClick={() => setMobileOpen(false)}
           >
-            <item.icon className="h-4 w-4" />
+            <item.icon className="h-4 w-4 shrink-0" />
             {item.label}
           </Link>
         );
@@ -70,7 +72,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-[100dvh] flex flex-col md:flex-row bg-background text-foreground dark">
       {/* Mobile Header */}
       <header className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card">
-        <div className="font-serif font-bold text-lg text-primary tracking-tight">RGI Digest</div>
+        <div className="flex items-center gap-2">
+          <Zap className="h-4 w-4 text-primary" />
+          <span className="font-serif font-bold text-lg text-primary tracking-tight">RGI Intelligence</span>
+        </div>
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" data-testid="btn-mobile-menu">
@@ -79,7 +84,13 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0 bg-sidebar border-sidebar-border">
             <div className="p-6 border-b border-sidebar-border">
-              <h2 className="font-serif font-bold text-xl text-primary tracking-tight">RGI Digest</h2>
+              <div className="flex items-center gap-2 mb-1">
+                <Zap className="h-5 w-5 text-primary" />
+                <h2 className="font-serif font-bold text-xl text-primary tracking-tight">RGI Intelligence</h2>
+              </div>
+              <p className="text-xs text-sidebar-foreground/50 uppercase tracking-wider font-semibold">
+                Strategic Brief System
+              </p>
             </div>
             <NavLinks />
           </SheetContent>
@@ -89,20 +100,23 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 border-r border-sidebar-border bg-sidebar shrink-0">
         <div className="p-6 border-b border-sidebar-border">
-          <h2 className="font-serif font-bold text-2xl text-primary tracking-tight">RGI Digest</h2>
-          <p className="text-xs text-sidebar-foreground/60 mt-1 uppercase tracking-wider font-semibold">
-            Daily Intelligence
+          <div className="flex items-center gap-2 mb-1">
+            <Zap className="h-5 w-5 text-primary" />
+            <h2 className="font-serif font-bold text-2xl text-primary tracking-tight">RGI Intelligence</h2>
+          </div>
+          <p className="text-xs text-sidebar-foreground/50 uppercase tracking-wider font-semibold mt-0.5">
+            Strategic Brief System
           </p>
         </div>
         <div className="flex-1 overflow-y-auto">
           <NavLinks />
         </div>
-        <div className="p-4 border-t border-sidebar-border">
-          <div className="mb-4">
-            <p className="text-xs text-muted-foreground mb-1">Last Scraped</p>
-            <p className="text-sm font-medium">
+        <div className="p-4 border-t border-sidebar-border space-y-3">
+          <div>
+            <p className="text-xs text-muted-foreground mb-0.5">Last Scraped</p>
+            <p className="text-xs font-medium">
               {scrapeStatus?.lastScrapeAt
-                ? format(new Date(scrapeStatus.lastScrapeAt), "MMM d, h:mm a")
+                ? format(new Date(scrapeStatus.lastScrapeAt), "MMM d, yyyy 'at' h:mm a")
                 : "Never"}
             </p>
           </div>
@@ -111,9 +125,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             disabled={triggerScrape.isPending || scrapeStatus?.isRunning}
             className="w-full justify-start gap-2"
             variant="secondary"
+            size="sm"
             data-testid="btn-trigger-scrape"
           >
-            <RefreshCw className={`h-4 w-4 ${scrapeStatus?.isRunning ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${scrapeStatus?.isRunning ? "animate-spin" : ""}`} />
             {scrapeStatus?.isRunning ? "Scraping..." : "Scrape Now"}
           </Button>
         </div>
@@ -125,7 +140,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         <div className="md:hidden p-4 border-b border-border bg-card flex items-center justify-between">
           <div className="text-sm">
             <span className="text-muted-foreground">Last Scraped: </span>
-            <span className="font-medium">
+            <span className="font-medium text-xs">
               {scrapeStatus?.lastScrapeAt
                 ? format(new Date(scrapeStatus.lastScrapeAt), "MMM d, h:mm a")
                 : "Never"}

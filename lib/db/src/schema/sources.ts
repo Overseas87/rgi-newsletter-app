@@ -9,6 +9,10 @@ export const sourcesTable = pgTable("sources", {
   type: text("type", { enum: ["rss", "website", "twitter", "linkedin"] }).notNull().default("rss"),
   tier: integer("tier").notNull().default(1),
   isActive: boolean("is_active").notNull().default(true),
+  authorName: text("author_name"),
+  authorType: text("author_type"),
+  authorityLevel: integer("authority_level").default(3),
+  description: text("description"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

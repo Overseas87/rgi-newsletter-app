@@ -2,8 +2,8 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification for RGI Daily Intelligence Digest
+  version: 0.2.0
+  description: API specification for RGI Strategic Intelligence System
 servers:
   - url: /api
     description: Base API path
@@ -72,7 +72,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [pending, approved, rejected, generating]
+            enum: [pending, selected, dismissed]
         - name: minScore
           in: query
           schema:
@@ -85,11 +85,21 @@ paths:
           in: query
           schema:
             type: string
+        - name: platform
+          in: query
+          schema:
+            type: string
+            enum: [news, twitter, linkedin]
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [relevance, time, source]
         - name: limit
           in: query
           schema:
             type: integer
-            default: 50
+            default: 200
       responses:
         "200":
           description: List of articles
@@ -168,7 +178,7 @@ paths:
     post:
       operationId: generateDigestArticle
       tags: [digest]
-      summary: Generate an AI digest article from one or more scraped articles
+      summary: Generate an RGI Strategic Brief from one or more scraped articles
       requestBody:
         required: true
         content:
@@ -353,7 +363,7 @@ paths:
     patch:
       operationId: updateSource
       tags: [sources]
-      summary: Update a source (enable/disable, change tier)
+      summary: Update a source (enable/disable, change tier, authority level)
       parameters:
         - name: id
           in: path
@@ -487,6 +497,14 @@ components:
           type: string
         sourceUrl:
           type: ["string", "null"]
+        author:
+          type: ["string", "null"]
+        authorType:
+          type: ["string", "null"]
+        platform:
+          type: ["string", "null"]
+        isEmergingSignal:
+          type: boolean
         relevancyScore:
           type: number
         topicTags:
@@ -515,6 +533,7 @@ components:
         - topicTags
         - scrapedAt
         - status
+        - isEmergingSignal
 
     DigestArticle:
       type: object
@@ -626,6 +645,14 @@ components:
           enum: [1, 2, 3]
         isActive:
           type: boolean
+        authorName:
+          type: ["string", "null"]
+        authorType:
+          type: ["string", "null"]
+        authorityLevel:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
         createdAt:
           type: string
       required:
@@ -650,6 +677,14 @@ components:
         tier:
           type: integer
           enum: [1, 2, 3]
+        authorName:
+          type: ["string", "null"]
+        authorType:
+          type: ["string", "null"]
+        authorityLevel:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
       required:
         - name
         - url
@@ -668,6 +703,14 @@ components:
           enum: [1, 2, 3]
         isActive:
           type: boolean
+        authorName:
+          type: ["string", "null"]
+        authorType:
+          type: ["string", "null"]
+        authorityLevel:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
 
     DashboardSummary:
       type: object
@@ -690,9 +733,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TagCount"
+        topicIntelligence:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopicIntelligence"
         totalSources:
           type: integer
         activeSources:
+          type: integer
+        socialSignalsCount:
+          type: integer
+        emergingSignalsCount:
           type: integer
       required:
         - totalArticlesToday
@@ -701,8 +752,11 @@ components:
         - rejectedToday
         - topArticles
         - articlesByTag
+        - topicIntelligence
         - totalSources
         - activeSources
+        - socialSignalsCount
+        - emergingSignalsCount
 
     TagCount:
       type: object
@@ -714,6 +768,29 @@ components:
       required:
         - tag
         - count
+
+    TopicIntelligence:
+      type: object
+      properties:
+        topic:
+          type: string
+        articleCount:
+          type: integer
+        importanceScore:
+          type: number
+        significance:
+          type: string
+        discipline:
+          type: string
+        hasEmergingSignal:
+          type: boolean
+      required:
+        - topic
+        - articleCount
+        - importanceScore
+        - significance
+        - discipline
+        - hasEmergingSignal
 
     Settings:
       type: object
