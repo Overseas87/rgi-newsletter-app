@@ -3,26 +3,27 @@ import { useGetDashboardSummary, useGetScrapeStatus, useTriggerScrape } from "@w
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { format, formatDistanceToNow } from "date-fns";
 import {
-  BarChart3,
   FileText,
   CheckCircle,
   Database,
   Clock,
   RefreshCw,
-  TrendingUp,
   Zap,
   Twitter,
   AlertCircle,
-  Wand2,
   ChevronRight,
   Globe,
   Tag,
   Loader2,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  BookOpen,
 } from "lucide-react";
 import { GenerateModal } from "@/components/generate-modal";
-import { ArticleCard } from "@/components/article-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -41,6 +42,251 @@ function ImportanceBar({ score }: { score: number }) {
     <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
       <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
     </div>
+  );
+}
+
+type TopArticle = {
+  id: number;
+  headline: string;
+  url: string;
+  sourceName: string;
+  author?: string | null;
+  publishedAt?: string | null;
+  teaserSummary?: string | null;
+  relevancyScore: number;
+  topicTags: string[];
+  disciplineAlignment?: string | null;
+  isEmergingSignal?: boolean | null;
+  content?: string | null;
+};
+
+function TopStoryModal({ article, open, onClose }: { article: TopArticle | null; open: boolean; onClose: () => void }) {
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [explanationLoading, setExplanationLoading] = useState(false);
+
+  const loadExplanation = async (id: number) => {
+    if (explanation) return;
+    setExplanationLoading(true);
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const res = await fetch(`${base}/api/articles/${id}/explain`);
+      if (res.ok) {
+        const data = await res.json();
+        setExplanation(data.explanation ?? null);
+      }
+    } catch {
+      // silent
+    } finally {
+      setExplanationLoading(false);
+    }
+  };
+
+  const handleOpenChange = (o: boolean) => {
+    if (!o) { onClose(); setExplanation(null); }
+    else if (article) loadExplanation(article.id);
+  };
+
+  if (!article) return null;
+
+  const discipline = article.disciplineAlignment ?? "";
+  const disciplineColor = DISCIPLINE_COLORS[discipline] ?? "bg-muted text-muted-foreground";
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            {article.topicTags.map((t) => (
+              <Badge key={t} variant="outline" className="text-[10px] font-semibold uppercase tracking-wide">{t}</Badge>
+            ))}
+            {discipline && (
+              <Badge variant="outline" className={`text-[10px] ml-auto ${disciplineColor}`}>{discipline}</Badge>
+            )}
+          </div>
+          <DialogTitle className="text-xl font-serif leading-snug">{article.headline}</DialogTitle>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2 flex-wrap">
+            <span className="font-semibold text-foreground">{article.sourceName}</span>
+            {article.author && <span>by {article.author}</span>}
+            {article.publishedAt && (
+              <span>{formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}</span>
+            )}
+            <div className={`ml-auto flex items-center gap-1 text-xs font-bold ${article.relevancyScore >= 8 ? "text-red-400" : article.relevancyScore >= 6.5 ? "text-amber-400" : "text-primary"}`}>
+              RGI Score: {article.relevancyScore.toFixed(1)}
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-5 mt-2">
+          {article.teaserSummary && (
+            <div className="rounded-lg bg-muted/50 border border-border p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Strategic Summary</p>
+              <p className="text-sm leading-relaxed">{article.teaserSummary}</p>
+            </div>
+          )}
+
+          {/* RGI Relevance Explanation */}
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen className="h-3.5 w-3.5 text-primary" />
+              <p className="text-xs font-bold uppercase tracking-widest text-primary">RGI Relevance</p>
+            </div>
+            {explanationLoading ? (
+              <div className="space-y-1.5">
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-4/5" />
+                <Skeleton className="h-3 w-3/5" />
+              </div>
+            ) : explanation ? (
+              <p className="text-sm leading-relaxed text-muted-foreground">{explanation}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">No explanation available.</p>
+            )}
+          </div>
+
+          {article.content && article.content.length > 80 && (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Article Preview</p>
+              <p className="text-sm text-muted-foreground leading-relaxed line-clamp-6">{article.content}</p>
+            </div>
+          )}
+
+          <a
+            href={article.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Read original article
+          </a>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[]; onNavigateFeed: () => void }) {
+  const [showAll, setShowAll] = useState(false);
+  const [selected, setSelected] = useState<TopArticle | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const displayed = showAll ? articles.slice(0, 10) : articles.slice(0, 5);
+
+  const open = (article: TopArticle) => { setSelected(article); setModalOpen(true); };
+
+  return (
+    <>
+      <TopStoryModal article={selected} open={modalOpen} onClose={() => setModalOpen(false)} />
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-primary" />
+              <CardTitle>Top Stories Today</CardTitle>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-xs"
+              onClick={onNavigateFeed}
+              data-testid="btn-go-to-feed-2"
+            >
+              Full feed <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <CardDescription>Highest-scoring articles from today's scrape, filtered through the RGI strategic lens</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 p-3 pt-0">
+          {articles.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground text-sm">
+              <p className="text-base font-medium mb-1">No articles yet</p>
+              <p>Click "Scrape Now" to fetch today's intelligence feed.</p>
+            </div>
+          ) : (
+            <>
+              {displayed.map((article, i) => {
+                const rank = i + 1;
+                const isHigh = article.relevancyScore >= 8;
+                const isMid = article.relevancyScore >= 6.5;
+                return (
+                  <button
+                    key={article.id}
+                    onClick={() => open(article)}
+                    className="w-full text-left rounded-lg border border-border bg-background/50 hover:bg-muted/50 hover:border-primary/30 transition-all p-4 group"
+                  >
+                    <div className="flex items-start gap-4">
+                      {/* Rank */}
+                      <span className={`shrink-0 text-2xl font-bold tabular-nums w-7 text-right leading-none mt-0.5 ${rank === 1 ? "text-primary" : "text-muted-foreground/30"}`}>
+                        {rank}
+                      </span>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 space-y-1.5">
+                        <div className="flex items-start gap-2 flex-wrap">
+                          {article.isEmergingSignal && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-wide shrink-0">
+                              <Zap className="h-2.5 w-2.5" />Signal
+                            </span>
+                          )}
+                          {article.topicTags.slice(0, 2).map((t) => (
+                            <Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0.5 h-auto shrink-0">{t}</Badge>
+                          ))}
+                        </div>
+
+                        <p className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors">
+                          {article.headline}
+                        </p>
+
+                        {article.teaserSummary && (
+                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{article.teaserSummary}</p>
+                        )}
+
+                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
+                          <span className="font-medium text-foreground/70">{article.sourceName}</span>
+                          {article.author && <span>· {article.author}</span>}
+                          {article.publishedAt && (
+                            <span>· {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}</span>
+                          )}
+                          <a
+                            href={article.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="ml-auto inline-flex items-center gap-1 text-primary/60 hover:text-primary transition-colors"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Score ring */}
+                      <div className={`shrink-0 w-9 h-9 rounded-full border-2 flex items-center justify-center text-[11px] font-bold tabular-nums mt-0.5 ${isHigh ? "text-red-400 border-red-500/40" : isMid ? "text-amber-400 border-amber-500/40" : "text-primary/60 border-primary/20"}`}>
+                        {article.relevancyScore.toFixed(1)}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+
+              {articles.length > 5 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full gap-2 text-xs mt-1"
+                  onClick={() => setShowAll(!showAll)}
+                >
+                  {showAll ? (
+                    <><ChevronUp className="h-3.5 w-3.5" />Show fewer</>
+                  ) : (
+                    <><ChevronDown className="h-3.5 w-3.5" />Show top 10</>
+                  )}
+                </Button>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </>
   );
 }
 
@@ -324,69 +570,11 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Trending Topics Tags */}
-      {summary.articlesByTag && summary.articlesByTag.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              <CardTitle>Coverage by Topic</CardTitle>
-            </div>
-            <CardDescription>Article volume across all sources today</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {summary.articlesByTag.slice(0, 9).map((tagCount, i) => (
-                <div key={tagCount.tag} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background/50">
-                  <span className="text-2xl font-bold text-muted-foreground/40 w-8 text-right shrink-0">
-                    {i + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{tagCount.tag}</p>
-                    <p className="text-xs text-muted-foreground">{tagCount.count} article{tagCount.count !== 1 ? "s" : ""}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Top Articles */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-primary" />
-              <CardTitle>Top Articles by Relevancy</CardTitle>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1 text-xs"
-              onClick={() => navigate("/feed")}
-              data-testid="btn-go-to-feed-2"
-            >
-              View all <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-          <CardDescription>Highest-scoring items from the latest scrapes, aligned to RGI disciplines</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {summary.topArticles?.length > 0 ? (
-              summary.topArticles.map((article) => (
-                <ArticleCard key={article.id} article={article} />
-              ))
-            ) : (
-              <div className="text-center py-12 text-muted-foreground text-sm">
-                <p className="text-base font-medium mb-1">No articles yet</p>
-                <p>Click "Scrape Now" to fetch today's content, or "Generate Daily Brief" after scraping.</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Top Stories Today */}
+      <TopStoriesSection
+        articles={(summary.topArticles ?? []) as TopArticle[]}
+        onNavigateFeed={() => navigate("/feed")}
+      />
     </div>
   );
 }
