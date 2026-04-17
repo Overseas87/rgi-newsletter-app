@@ -61,6 +61,18 @@ export const ListArticlesResponseItem = zod.object({
   isEmergingSignal: zod.boolean(),
   isPrimarySignal: zod.boolean(),
   relevancyScore: zod.number(),
+  authenticityScore: zod
+    .number()
+    .nullish()
+    .describe(
+      "Credibility score 1-10 based on source reputation, primary vs secondary reporting, author authority, and cross-source validation",
+    ),
+  viewpoint: zod
+    .string()
+    .nullish()
+    .describe(
+      "One-sentence summary of the position or perspective the article takes",
+    ),
   topicTags: zod.array(zod.string()),
   teaserSummary: zod.string().nullish(),
   publishedAt: zod.string().nullish(),
@@ -90,6 +102,18 @@ export const GetArticleResponse = zod.object({
   isEmergingSignal: zod.boolean(),
   isPrimarySignal: zod.boolean(),
   relevancyScore: zod.number(),
+  authenticityScore: zod
+    .number()
+    .nullish()
+    .describe(
+      "Credibility score 1-10 based on source reputation, primary vs secondary reporting, author authority, and cross-source validation",
+    ),
+  viewpoint: zod
+    .string()
+    .nullish()
+    .describe(
+      "One-sentence summary of the position or perspective the article takes",
+    ),
   topicTags: zod.array(zod.string()),
   teaserSummary: zod.string().nullish(),
   publishedAt: zod.string().nullish(),
@@ -142,6 +166,18 @@ export const ListDigestArticlesResponseItem = zod.object({
         isEmergingSignal: zod.boolean(),
         isPrimarySignal: zod.boolean(),
         relevancyScore: zod.number(),
+        authenticityScore: zod
+          .number()
+          .nullish()
+          .describe(
+            "Credibility score 1-10 based on source reputation, primary vs secondary reporting, author authority, and cross-source validation",
+          ),
+        viewpoint: zod
+          .string()
+          .nullish()
+          .describe(
+            "One-sentence summary of the position or perspective the article takes",
+          ),
         topicTags: zod.array(zod.string()),
         teaserSummary: zod.string().nullish(),
         publishedAt: zod.string().nullish(),
@@ -210,6 +246,18 @@ export const GetDigestArticleResponse = zod.object({
         isEmergingSignal: zod.boolean(),
         isPrimarySignal: zod.boolean(),
         relevancyScore: zod.number(),
+        authenticityScore: zod
+          .number()
+          .nullish()
+          .describe(
+            "Credibility score 1-10 based on source reputation, primary vs secondary reporting, author authority, and cross-source validation",
+          ),
+        viewpoint: zod
+          .string()
+          .nullish()
+          .describe(
+            "One-sentence summary of the position or perspective the article takes",
+          ),
         topicTags: zod.array(zod.string()),
         teaserSummary: zod.string().nullish(),
         publishedAt: zod.string().nullish(),
@@ -277,6 +325,18 @@ export const UpdateDigestArticleResponse = zod.object({
         isEmergingSignal: zod.boolean(),
         isPrimarySignal: zod.boolean(),
         relevancyScore: zod.number(),
+        authenticityScore: zod
+          .number()
+          .nullish()
+          .describe(
+            "Credibility score 1-10 based on source reputation, primary vs secondary reporting, author authority, and cross-source validation",
+          ),
+        viewpoint: zod
+          .string()
+          .nullish()
+          .describe(
+            "One-sentence summary of the position or perspective the article takes",
+          ),
         topicTags: zod.array(zod.string()),
         teaserSummary: zod.string().nullish(),
         publishedAt: zod.string().nullish(),
@@ -340,6 +400,18 @@ export const ApproveDigestArticleResponse = zod.object({
         isEmergingSignal: zod.boolean(),
         isPrimarySignal: zod.boolean(),
         relevancyScore: zod.number(),
+        authenticityScore: zod
+          .number()
+          .nullish()
+          .describe(
+            "Credibility score 1-10 based on source reputation, primary vs secondary reporting, author authority, and cross-source validation",
+          ),
+        viewpoint: zod
+          .string()
+          .nullish()
+          .describe(
+            "One-sentence summary of the position or perspective the article takes",
+          ),
         topicTags: zod.array(zod.string()),
         teaserSummary: zod.string().nullish(),
         publishedAt: zod.string().nullish(),
@@ -400,6 +472,18 @@ export const RejectDigestArticleResponse = zod.object({
         isEmergingSignal: zod.boolean(),
         isPrimarySignal: zod.boolean(),
         relevancyScore: zod.number(),
+        authenticityScore: zod
+          .number()
+          .nullish()
+          .describe(
+            "Credibility score 1-10 based on source reputation, primary vs secondary reporting, author authority, and cross-source validation",
+          ),
+        viewpoint: zod
+          .string()
+          .nullish()
+          .describe(
+            "One-sentence summary of the position or perspective the article takes",
+          ),
         topicTags: zod.array(zod.string()),
         teaserSummary: zod.string().nullish(),
         publishedAt: zod.string().nullish(),
@@ -460,6 +544,18 @@ export const RegenerateDigestArticleResponse = zod.object({
         isEmergingSignal: zod.boolean(),
         isPrimarySignal: zod.boolean(),
         relevancyScore: zod.number(),
+        authenticityScore: zod
+          .number()
+          .nullish()
+          .describe(
+            "Credibility score 1-10 based on source reputation, primary vs secondary reporting, author authority, and cross-source validation",
+          ),
+        viewpoint: zod
+          .string()
+          .nullish()
+          .describe(
+            "One-sentence summary of the position or perspective the article takes",
+          ),
         topicTags: zod.array(zod.string()),
         teaserSummary: zod.string().nullish(),
         publishedAt: zod.string().nullish(),
@@ -601,6 +697,18 @@ export const GetDashboardSummaryResponse = zod.object({
       isEmergingSignal: zod.boolean(),
       isPrimarySignal: zod.boolean(),
       relevancyScore: zod.number(),
+      authenticityScore: zod
+        .number()
+        .nullish()
+        .describe(
+          "Credibility score 1-10 based on source reputation, primary vs secondary reporting, author authority, and cross-source validation",
+        ),
+      viewpoint: zod
+        .string()
+        .nullish()
+        .describe(
+          "One-sentence summary of the position or perspective the article takes",
+        ),
       topicTags: zod.array(zod.string()),
       teaserSummary: zod.string().nullish(),
       publishedAt: zod.string().nullish(),
@@ -623,6 +731,18 @@ export const GetDashboardSummaryResponse = zod.object({
       isEmergingSignal: zod.boolean(),
       isPrimarySignal: zod.boolean(),
       relevancyScore: zod.number(),
+      authenticityScore: zod
+        .number()
+        .nullish()
+        .describe(
+          "Credibility score 1-10 based on source reputation, primary vs secondary reporting, author authority, and cross-source validation",
+        ),
+      viewpoint: zod
+        .string()
+        .nullish()
+        .describe(
+          "One-sentence summary of the position or perspective the article takes",
+        ),
       topicTags: zod.array(zod.string()),
       teaserSummary: zod.string().nullish(),
       publishedAt: zod.string().nullish(),

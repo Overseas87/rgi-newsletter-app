@@ -20,7 +20,15 @@ RGI's editorial standards:
 - Never sensationalist — avoids hyperbole, jargon, and empty speculation
 - Grounds macro trends in the actual decisions real leaders face right now
 - Never fabricates data — derives all analysis from the provided source material
-- Prioritizes insight over information, pattern over event, implication over description`;
+- Prioritizes insight over information, pattern over event, implication over description
+
+RGI's analytical principles — apply these at all times:
+- VIEWPOINT AWARENESS: Every source has a perspective. Identify it. Understand what claim or argument the source is actually making before synthesizing or evaluating it.
+- CONFLICT DETECTION: When sources present conflicting perspectives, name the disagreement explicitly. Do not flatten contradictory evidence into a false consensus.
+- CHALLENGE MAINSTREAM NARRATIVES: Identify when the dominant narrative may be incomplete, exaggerated, or misleading. Apply independent analytical judgment, not editorial group-think.
+- LONG-TERM THINKING: Prioritize second and third-order consequences over first-order reactions. Ask: what does this mean in 2, 5, or 10 years?
+- RGI TAKES A POSITION: The RGI Take is not a neutral summary. It is editorial opinion grounded in RGI principles. It must clearly state whether RGI agrees, partially agrees, or disagrees with the source material's dominant claim — and explain why with strategic reasoning.
+- CREDIBILITY WEIGHTING: Higher-authenticity sources (primary signals, Tier-1 outlets, named experts) carry more analytical weight than speculative or secondary sources. Note when a claim rests on weak sourcing.`;
 
 const SYNTHESIS_PROMPT = `You are writing an RGI Strategic Intelligence Brief — a premium, editor-curated intelligence piece synthesizing multiple source articles into a single coherent analysis.
 
@@ -28,23 +36,29 @@ CRITICAL INSTRUCTION: Do NOT summarize these articles individually. Instead, rea
 
 ATTRIBUTION RULE: When a source is marked [PRIMARY SIGNAL], that is a direct, original statement or announcement. Attribute it as such: "In a direct post on X, [name/company] stated…" or "In an official announcement, [company] declared…" — never attribute primary signals as if they are news reports. Primary signals can carry equal or greater weight than news articles reporting on the same topic.
 
+VIEWPOINT & CREDIBILITY RULES:
+- Each source carries a viewpoint and an authenticity level. Higher-authenticity sources deserve more weight.
+- Identify the dominant perspective across sources. If sources conflict, name the disagreement explicitly — do not manufacture false consensus.
+- When sources present contradictory claims, analyze both sides and explain which evidence is more robust and why.
+- Do not echo the most common narrative by default. Ask: is this narrative complete? Is it potentially exaggerated or misleading? Apply independent analytical judgment.
+
 Source Articles (synthesize ALL of these into one unified brief):
 {SOURCES}
 
 EDITORIAL DIRECTION — MANDATORY PRIORITY:
 {NOTES}
-The above direction MUST shape the entire article — its angle, tone, emphasis, and structure. This is not a suggestion. If the editor specifies a focus, lead with it. If the editor names a specific angle or audience, build the entire piece around it. The final article must clearly and unmistakably reflect these instructions. Ignore this at the cost of the entire piece.
+The above direction MUST shape the entire article — its angle, tone, emphasis, and structure. This is not a suggestion. If the editor specifies a focus, lead with it. If the editor names a specific angle or audience, build the entire piece around it. The final article must clearly and unmistakably reflect these instructions.
 
 Write a concise, focused brief following this three-part logic in the body (flowing prose, no labeled sections):
 
 1. WHAT IS HAPPENING — Frame the key development with precision. Use specific facts and examples from the sources. Be direct — one tight paragraph that sets the context without padding.
 
-2. THE PATTERN — What connects these signals? Identify the underlying trend or tension. Why does this matter now? This is the analytical heart: name the pattern and explain its strategic significance.
+2. THE PATTERN — What connects these signals? Identify the underlying trend or tension. If sources disagree, name the disagreement and analyze it. Why does this matter now? This is the analytical heart.
 
 3. IMPLICATIONS FOR LEADERS — Who is affected, how, and on what timeline? Be concrete about risk, opportunity, and the decisions leaders face as a result. End with 1-2 things to watch.
 
 Requirements:
-- Body: 400-600 words, target around 500 words. Be ruthlessly concise. Every sentence must earn its place.
+- Body: 400-600 words. Be ruthlessly concise. Every sentence must earn its place.
 - Write as clean, flowing prose — no bullet points, no visible headers, no markdown in the body
 - Analytical and direct — avoid padding, vague generalities, and filler transitions
 - All claims must trace to the provided sources
@@ -52,8 +66,8 @@ Requirements:
 Return ONLY a valid JSON object with these exact fields:
 - headline: string (strong, direct, analytical — not clickbait; no colons; written as a senior editor would headline a Foreign Affairs piece)
 - body: string (the complete 400-700 word brief as described — clean prose only, no markdown, no headers, no bullets)
-- rgiTake: string (3-4 sentences of unapologetic editorial OPINION from RGI. This is NOT a summary — it must stake a clear position. It must: (1) name the specific RGI discipline, (2) argue WHY this matters in a broader strategic or societal context, (3) connect it to how leaders and organizations must think or act differently, and (4) take a definitive stand — not "this may affect" but "this fundamentally changes." Use active, declarative voice: "This marks a turning point...", "The strategic imperative is clear:", "Leaders who fail to grasp this..." Forbidden: neutral hedging, restating what happened, generic observations, vague language like "this is important" or "leaders should pay attention.")
-- keyTakeaways: string array of EXACTLY 5 items — each a short, crisp, actionable insight a leader can act on. Start each with a strong verb or noun. No filler. These should be scannable in 10 seconds.
+- rgiTake: string (3-4 sentences of unapologetic editorial OPINION from RGI. This MUST: (1) explicitly state whether RGI agrees, partially agrees, or disagrees with the dominant claim in the source material — and WHY; (2) name the specific RGI discipline; (3) challenge the narrative if it is incomplete or misleading; (4) connect to what leaders must do or stop doing. Use declarative voice: "RGI takes the view that...", "The evidence here does not support...", "This marks a turning point...", "The strategic imperative is clear:". Forbidden: neutral hedging, summarizing what the sources said, vague conclusions like "leaders should be aware.")
+- keyTakeaways: string array of EXACTLY 5 items — each a short, crisp, actionable insight a leader can act on. Start each with a strong verb or noun. No filler. Scannable in 10 seconds.
 - topicTags: string array (choose only from: ["AI", "Leadership", "Geopolitics", "Finance", "Environmental Health", "Central Florida", "Strategy", "Culture", "Technology", "Policy", "Education", "Economy", "Innovation", "Governance", "Health", "Democracy", "Future of Work", "Sustainability"])
 - discipline: string (exactly one of: "Strategic Foresight", "System Vitality", "Civic Stewardship", or "Multiple")
 - relevancyScore: number 1-10 (how strategically significant this is for senior leaders at the intersection of business, policy, and society)
@@ -130,10 +144,13 @@ export async function generateDigestArticle(
     .map(
       (a, i) => {
         const isPrimary = (a as any).isPrimarySignal;
+        const authenticityScore = (a as any).authenticityScore ?? 5;
+        const viewpoint = (a as any).viewpoint;
         const signalType = isPrimary
           ? `[PRIMARY SIGNAL — direct ${a.platform === "twitter" ? "post on X" : a.platform === "linkedin" ? "post on LinkedIn" : "statement"}${a.author ? ` from ${a.author}${a.authorType ? `, ${a.authorType}` : ""}` : ""}]`
           : "";
-        return `SOURCE ${i + 1}${signalType ? " " + signalType : ""}:\nHeadline: ${a.headline}\nPublication: ${a.sourceName}${a.author ? `\nAuthor: ${a.author}${a.authorType ? ` (${a.authorType})` : ""}` : ""}${a.platform && a.platform !== "news" ? `\nPlatform: ${a.platform}` : ""}\nURL: ${a.url}\nContent: ${(a.content || a.teaserSummary || a.headline).slice(0, 4000)}`;
+        const credibilityLabel = authenticityScore >= 8 ? "HIGH" : authenticityScore >= 6 ? "MODERATE" : "LOW";
+        return `SOURCE ${i + 1}${signalType ? " " + signalType : ""}:\nHeadline: ${a.headline}\nPublication: ${a.sourceName}${a.author ? `\nAuthor: ${a.author}${a.authorType ? ` (${a.authorType})` : ""}` : ""}${a.platform && a.platform !== "news" ? `\nPlatform: ${a.platform}` : ""}\nAuthenticity: ${authenticityScore}/10 (${credibilityLabel} credibility)${viewpoint ? `\nViewpoint: ${viewpoint}` : ""}\nURL: ${a.url}\nContent: ${(a.content || a.teaserSummary || a.headline).slice(0, 4000)}`;
       }
     )
     .join("\n\n---\n\n");
@@ -408,8 +425,12 @@ export async function generateDailyBrief(
 
   const sourcesText = articles
     .map(
-      (a, i) =>
-        `SOURCE ${i + 1}:\nHeadline: ${a.headline}\nPublication: ${a.sourceName}${a.author ? `\nAuthor: ${a.author}` : ""}${a.platform && a.platform !== "news" ? `\nPlatform: ${a.platform}` : ""}\nTopics: ${a.topicTags.join(", ")}\nRelevancy Score: ${a.relevancyScore}/10${a.isEmergingSignal ? "\n[EMERGING SIGNAL]" : ""}\nURL: ${a.url}\nContent: ${(a.content || a.teaserSummary || a.headline).slice(0, 3000)}`
+      (a, i) => {
+        const authenticityScore = (a as any).authenticityScore ?? 5;
+        const viewpoint = (a as any).viewpoint;
+        const credibilityLabel = authenticityScore >= 8 ? "HIGH" : authenticityScore >= 6 ? "MODERATE" : "LOW";
+        return `SOURCE ${i + 1}:\nHeadline: ${a.headline}\nPublication: ${a.sourceName}${a.author ? `\nAuthor: ${a.author}` : ""}${a.platform && a.platform !== "news" ? `\nPlatform: ${a.platform}` : ""}\nTopics: ${a.topicTags.join(", ")}\nRelevancy: ${a.relevancyScore}/10 | Authenticity: ${authenticityScore}/10 (${credibilityLabel})${a.isEmergingSignal ? "\n[EMERGING SIGNAL]" : ""}${viewpoint ? `\nViewpoint: ${viewpoint}` : ""}\nURL: ${a.url}\nContent: ${(a.content || a.teaserSummary || a.headline).slice(0, 3000)}`;
+      }
     )
     .join("\n\n---\n\n");
 

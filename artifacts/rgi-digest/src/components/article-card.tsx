@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Article } from "@workspace/api-client-react";
 import { format, formatDistanceToNow } from "date-fns";
-import { ExternalLink, Zap, Twitter, Linkedin, Newspaper, BookOpen, Building2, TrendingUp, Globe, ChevronDown, ChevronUp, Compass, Shield, Cpu, Loader2, Radio } from "lucide-react";
+import { ExternalLink, Zap, Twitter, Linkedin, Newspaper, BookOpen, Building2, TrendingUp, Globe, ChevronDown, ChevronUp, Compass, Shield, Cpu, Loader2, Radio, ShieldCheck, ShieldAlert, ShieldQuestion, MessageSquareQuote } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface ArticleCardProps {
@@ -20,6 +20,31 @@ export function getScoreColor(score: number) {
   if (score >= 7.5) return "bg-primary/10 text-primary border-primary/30";
   if (score >= 6) return "bg-slate-500/10 text-slate-400 border-slate-500/20";
   return "bg-muted text-muted-foreground border-border";
+}
+
+function AuthenticityBadge({ score }: { score?: number | null }) {
+  if (score == null) return null;
+  let icon: React.ReactNode;
+  let cls: string;
+  let label: string;
+  if (score >= 8) {
+    icon = <ShieldCheck className="h-2.5 w-2.5" />;
+    cls = "bg-emerald-500/10 text-emerald-400 border-emerald-500/25";
+    label = `Auth ${score.toFixed(1)}`;
+  } else if (score >= 5.5) {
+    icon = <ShieldQuestion className="h-2.5 w-2.5" />;
+    cls = "bg-slate-500/10 text-slate-400 border-slate-500/20";
+    label = `Auth ${score.toFixed(1)}`;
+  } else {
+    icon = <ShieldAlert className="h-2.5 w-2.5" />;
+    cls = "bg-orange-500/10 text-orange-400 border-orange-500/25";
+    label = `Auth ${score.toFixed(1)}`;
+  }
+  return (
+    <span title={`Authenticity / Credibility: ${score}/10`} className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded border tabular-nums ${cls}`}>
+      {icon}{label}
+    </span>
+  );
 }
 
 const DISCIPLINE_COLORS: Record<string, string> = {
@@ -198,7 +223,7 @@ export function ArticleCard({ article, selectable, selected, onSelect, onTopicCl
                 <span className="text-muted-foreground/50"> · </span>
                 {formatDistanceToNow(new Date(publishTime), { addSuffix: true })}
               </span>
-              <div className="ml-auto flex items-center gap-1.5">
+              <div className="ml-auto flex items-center gap-1.5 flex-wrap justify-end">
                 {article.isPrimarySignal && (
                   <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300 border border-violet-500/30 uppercase tracking-wide">
                     <Radio className="h-2.5 w-2.5" />Primary Signal
@@ -209,8 +234,9 @@ export function ArticleCard({ article, selectable, selected, onSelect, onTopicCl
                     <Zap className="h-2.5 w-2.5" />Signal
                   </span>
                 )}
+                <AuthenticityBadge score={article.authenticityScore} />
                 <Badge variant="outline" className={`text-xs font-bold tabular-nums ${getScoreColor(article.relevancyScore)}`}>
-                  {article.relevancyScore.toFixed(1)}<span className="font-normal opacity-60"> / 10</span>
+                  {article.relevancyScore.toFixed(1)}<span className="font-normal opacity-60"> Rel</span>
                 </Badge>
               </div>
             </div>
@@ -232,11 +258,19 @@ export function ArticleCard({ article, selectable, selected, onSelect, onTopicCl
         </div>
       </CardHeader>
 
-      {(article.teaserSummary || article.content) && (
-        <CardContent className="px-4 pb-2">
-          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 ml-7">
-            {article.teaserSummary || article.content?.substring(0, 200)}
-          </p>
+      {(article.teaserSummary || article.content || article.viewpoint) && (
+        <CardContent className="px-4 pb-2 space-y-1.5">
+          {(article.teaserSummary || article.content) && (
+            <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 ml-7">
+              {article.teaserSummary || article.content?.substring(0, 200)}
+            </p>
+          )}
+          {article.viewpoint && (
+            <p className="ml-7 flex items-start gap-1.5 text-[11px] text-muted-foreground/70 italic leading-snug">
+              <MessageSquareQuote className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground/40" />
+              <span>{article.viewpoint}</span>
+            </p>
+          )}
         </CardContent>
       )}
 

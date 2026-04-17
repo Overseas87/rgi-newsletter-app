@@ -23,6 +23,7 @@ import {
   BookOpen,
   Star,
   Sparkles,
+  MessageSquareQuote,
 } from "lucide-react";
 import { GenerateModal } from "@/components/generate-modal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -55,6 +56,8 @@ type TopArticle = {
   publishedAt?: string | null;
   teaserSummary?: string | null;
   relevancyScore: number;
+  authenticityScore?: number | null;
+  viewpoint?: string | null;
   topicTags: string[];
   disciplineAlignment?: string | null;
   isEmergingSignal?: boolean | null;
@@ -125,8 +128,15 @@ function TopStoryModal({ article, open, onClose }: { article: TopArticle | null;
                 {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
               </span>
             )}
-            <div className={`ml-auto flex items-center gap-1 text-xs font-bold ${article.relevancyScore >= 8 ? "text-amber-400" : article.relevancyScore >= 6.5 ? "text-primary" : "text-slate-400"}`}>
-              RGI Score: {article.relevancyScore.toFixed(1)}
+            <div className="ml-auto flex items-center gap-2">
+              {article.authenticityScore != null && (
+                <span className={`text-xs font-semibold ${article.authenticityScore >= 8 ? "text-emerald-400" : article.authenticityScore >= 5.5 ? "text-slate-400" : "text-orange-400"}`}>
+                  Auth {article.authenticityScore.toFixed(1)}
+                </span>
+              )}
+              <div className={`text-xs font-bold ${article.relevancyScore >= 8 ? "text-amber-400" : article.relevancyScore >= 6.5 ? "text-primary" : "text-slate-400"}`}>
+                Rel {article.relevancyScore.toFixed(1)}
+              </div>
             </div>
           </div>
         </DialogHeader>
@@ -136,6 +146,16 @@ function TopStoryModal({ article, open, onClose }: { article: TopArticle | null;
             <div className="rounded-lg bg-muted/50 border border-border p-4">
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Strategic Summary</p>
               <p className="text-sm leading-relaxed">{article.teaserSummary}</p>
+            </div>
+          )}
+
+          {article.viewpoint && (
+            <div className="rounded-lg bg-muted/30 border border-border p-4 flex items-start gap-3">
+              <MessageSquareQuote className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Source Viewpoint</p>
+                <p className="text-sm italic text-foreground/70 leading-relaxed">{article.viewpoint}</p>
+              </div>
             </div>
           )}
 
@@ -262,6 +282,13 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
                           <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{article.teaserSummary}</p>
                         )}
 
+                        {article.viewpoint && (
+                          <p className="flex items-start gap-1 text-[11px] text-muted-foreground/60 italic leading-snug">
+                            <MessageSquareQuote className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground/35" />
+                            <span className="line-clamp-1">{article.viewpoint}</span>
+                          </p>
+                        )}
+
                         <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
                           <span className="font-medium text-foreground/70">{article.sourceName}</span>
                           {article.author && <span>· {article.author}</span>}
@@ -284,9 +311,16 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
                         </div>
                       </div>
 
-                      {/* Score ring */}
-                      <div className={`shrink-0 w-9 h-9 rounded-full border-2 flex items-center justify-center text-[11px] font-bold tabular-nums mt-0.5 ${isHigh ? "text-amber-400 border-amber-500/40" : isMid ? "text-primary border-primary/40" : "text-slate-400 border-slate-500/20"}`}>
-                        {article.relevancyScore.toFixed(1)}
+                      {/* Score ring — shows relevancy + authenticity */}
+                      <div className="shrink-0 flex flex-col items-center gap-0.5 mt-0.5">
+                        <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-[11px] font-bold tabular-nums ${isHigh ? "text-amber-400 border-amber-500/40" : isMid ? "text-primary border-primary/40" : "text-slate-400 border-slate-500/20"}`}>
+                          {article.relevancyScore.toFixed(1)}
+                        </div>
+                        {article.authenticityScore != null && (
+                          <span title="Authenticity score" className={`text-[9px] font-semibold tabular-nums ${article.authenticityScore >= 8 ? "text-emerald-400" : article.authenticityScore >= 5.5 ? "text-slate-400" : "text-orange-400"}`}>
+                            A{article.authenticityScore.toFixed(1)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

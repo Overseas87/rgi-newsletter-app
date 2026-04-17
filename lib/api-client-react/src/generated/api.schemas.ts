@@ -51,6 +51,16 @@ export interface Article {
   isEmergingSignal: boolean;
   isPrimarySignal: boolean;
   relevancyScore: number;
+  /**
+   * Credibility score 1-10 based on source reputation, primary vs secondary reporting, author authority, and cross-source validation
+   * @nullable
+   */
+  authenticityScore?: number | null;
+  /**
+   * One-sentence summary of the position or perspective the article takes
+   * @nullable
+   */
+  viewpoint?: string | null;
   topicTags: string[];
   /** @nullable */
   teaserSummary?: string | null;

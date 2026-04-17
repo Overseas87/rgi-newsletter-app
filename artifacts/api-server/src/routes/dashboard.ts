@@ -66,11 +66,13 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
     ]);
 
   const [topArticles, topPicks, allArticlesToday, sourcesResult, activeSourcesResult] = await Promise.all([
+    // Top Stories: ranked by composite score — 65% relevancy + 35% authenticity
+    // This ensures high-relevance but low-credibility sources don't dominate
     db
       .select()
       .from(articlesTable)
       .where(gte(articlesTable.scrapedAt, today))
-      .orderBy(desc(articlesTable.relevancyScore))
+      .orderBy(desc(sql`${articlesTable.relevancyScore} * 0.65 + COALESCE(${articlesTable.authenticityScore}, 5.0) * 0.35`))
       .limit(10),
     // Top Picks: today's highest-scoring articles NOT yet selected for generation
     db
@@ -80,7 +82,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
         gte(articlesTable.scrapedAt, today),
         ne(articlesTable.status, "selected")
       ))
-      .orderBy(desc(articlesTable.relevancyScore))
+      .orderBy(desc(sql`${articlesTable.relevancyScore} * 0.65 + COALESCE(${articlesTable.authenticityScore}, 5.0) * 0.35`))
       .limit(4),
     db
       .select({

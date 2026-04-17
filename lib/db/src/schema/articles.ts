@@ -14,6 +14,8 @@ export const articlesTable = pgTable("articles", {
   isEmergingSignal: boolean("is_emerging_signal").notNull().default(false),
   isPrimarySignal: boolean("is_primary_signal").notNull().default(false),
   relevancyScore: real("relevancy_score").notNull().default(0),
+  authenticityScore: real("authenticity_score").default(5),
+  viewpoint: text("viewpoint"),
   topicTags: text("topic_tags").array().notNull().default([]),
   teaserSummary: text("teaser_summary"),
   publishedAt: timestamp("published_at", { withTimezone: true }),

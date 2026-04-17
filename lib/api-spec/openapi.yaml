@@ -509,6 +509,12 @@ components:
           type: boolean
         relevancyScore:
           type: number
+        authenticityScore:
+          type: ["number", "null"]
+          description: Credibility score 1-10 based on source reputation, primary vs secondary reporting, author authority, and cross-source validation
+        viewpoint:
+          type: ["string", "null"]
+          description: One-sentence summary of the position or perspective the article takes
         topicTags:
           type: array
           items:

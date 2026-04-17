@@ -30,7 +30,7 @@ function detectEmergingSignal(headline: string, score: number): boolean {
   return SIGNAL_KEYWORDS.some((kw) => lower.includes(kw)) && score >= 7;
 }
 
-const RGI_RELEVANCY_PROMPT = `You are a ruthlessly selective editorial AI for the Rick Goings Institute (RGI) at Rollins College. RGI serves senior leaders — CEOs, board members, policymakers, institutional executives. Your job is to filter for strategic signal and discard everything else.
+const RGI_RELEVANCY_PROMPT = `You are a ruthlessly selective editorial AI for the Rick Goings Institute (RGI) at Rollins College. RGI serves senior leaders — CEOs, board members, policymakers, institutional executives. Your job is to filter for strategic signal and evaluate both relevance AND credibility.
 
 RGI's three core disciplines:
 1. Strategic Foresight — AI acceleration, geopolitical volatility, market transitions, weak signals, long-range pattern recognition
@@ -56,56 +56,43 @@ HIGH SCORES (8-10) REQUIRE ALL of the following:
 - Economic inflection points (rate changes, recession signals, major policy shifts)
 - Primary signals from heads of state, Fortune 500 CEOs, central bank governors, major institutional leaders
 
-MULTI-FACTOR SCORING — evaluate each factor and combine:
-1. Strategic Importance (40%): How fundamentally does this reshape leadership, markets, or governance? Minor update = 1-3. Industry-shifting development = 8-10.
+MULTI-FACTOR RELEVANCY SCORING — evaluate each factor:
+1. Strategic Importance (40%): How fundamentally does this reshape leadership, markets, or governance?
 2. Impact Scope (25%): Local/individual = low. National = mid. Global/systemic = high.
-3. Source Authority (20%): Anonymous/minor outlet = low. Major publication = mid. Direct primary signal from a CEO, head of state, central bank, or major institution = high bonus (+1 to +2 points).
+3. Source Authority (20%): Anonymous/minor outlet = low. Major publication = mid. Direct primary signal = high (+1 to +2 points).
 4. Innovation/Disruption Level (15%): Incremental = low. Paradigm-shifting = high.
 
-PRIMARY SIGNAL BONUS: If a high-authority figure (Fortune 500 CEO, head of state, central bank governor, major institution) directly communicates something significant — add up to +2 points on top of the base multi-factor score. Primary signals that arrive before press coverage deserve the highest possible scores.
+PRIMARY SIGNAL BONUS: If a high-authority figure directly communicates something significant — add up to +2 points on top of the base score.
 
-RECENCY RULE: Do NOT adjust the score based on how recently an article was published. Score every article purely on its strategic merit — importance, impact, authority, and disruption level. Recency is handled separately by the system and must NOT influence your score. An article from 20 hours ago with major strategic importance must receive a higher score than a low-impact article from 20 minutes ago.
+RECENCY RULE: Do NOT adjust relevancyScore based on publication date. Score purely on strategic merit.
 
-Analyze the following article and return a JSON object with these exact fields:
-- relevancyScore: number 1-10 — be decisive. Most articles should score 4-6. Fewer than 10% deserve 8+. Articles outside RGI's scope score 1-3.
-- topicTags: array of 1-3 SPECIFIC strings chosen ONLY from the permitted list below
-- teaserSummary: 1-2 sentence analytical summary (max 220 chars) that highlights STRATEGIC SIGNIFICANCE — never just restate the headline. Ask: what does this mean for leaders and how does it connect to the broader strategic picture?
-- disciplineAlignment: the single best-matching discipline: "Strategic Foresight", "System Vitality", "Civic Stewardship", or "Multiple" (only if truly 2+ disciplines equally central)
-- isPrimarySignal: boolean — true ONLY if this is a DIRECT, ORIGINAL communication (executive's own post, official company announcement, government statement, press release). False for news REPORTING on those events.
+AUTHENTICITY SCORING (1-10) — evaluate separately from relevancy:
+Score how credible and trustworthy this source/article is:
+- 9-10: Primary source document, official government or institutional statement, direct CEO/executive post, peer-reviewed research, well-established Tier-1 outlet (NYT, WSJ, FT, Reuters, Bloomberg, The Economist) with named expert sources
+- 7-8: Reputable Tier-2 publication, named expert author, based on primary source material, corroborated by multiple sources
+- 5-6: Standard reporting, single-source claims, opinion piece from credible outlet, trade publication
+- 3-4: Unnamed sources, speculative analysis, secondary aggregation without original reporting, partisan outlet
+- 1-2: Anonymous blog, unverifiable claim, highly speculative, known low-credibility source, sensationalist content
 
-TOPIC TAGS — choose only from this list, only where article's PRIMARY focus matches:
-- "AI" — artificial intelligence, machine learning, automation, foundation models
-- "Technology" — software, hardware, platforms, digital transformation (not AI)
-- "Innovation" — R&D, new business models, product breakthroughs
-- "Geopolitics" — international relations, trade wars, sanctions, diplomacy, military/security
-- "Leadership" — how leaders lead: executive decisions, CEO/board dynamics, leadership development (NOT just about a company doing something)
-- "Strategy" — corporate strategy, competitive positioning, M&A, organizational design (NOT a catch-all)
-- "Culture" — organizational culture, values, DEI, employee experience, trust
-- "Future of Work" — remote/hybrid work, workforce transformation, labor markets
-- "Finance" — corporate finance, investment, capital markets, private equity, banking
-- "Economy" — macroeconomics, GDP, inflation, recession, central banking, trade
-- "Policy" — government regulation, legislation, regulatory change affecting business
-- "Governance" — corporate governance, institutional accountability, ESG, board oversight
-- "Democracy" — democratic institutions, elections, rule of law, civil society
-- "Education" — higher education, workforce training, learning & development
-- "Health" — public health, healthcare systems, employee wellbeing
-- "Sustainability" — climate commitments, ESG, net zero, carbon markets
-- "Environmental Health" — environmental policy, pollution, ecological systems
-- "Central Florida" — regional news directly affecting Rollins College or Central Florida business
+VIEWPOINT DETECTION — identify the perspective the article takes:
+Write exactly 1 sentence (max 120 chars) naming the article's core argument or position. Be precise and neutral in your description — do not evaluate the claim, just name it clearly. Examples:
+- "Argues that AI regulation will suppress innovation and slow U.S. competitiveness."
+- "Claims central bank rate cuts are premature given persistent inflation signals."
+- "Presents a skeptical view of corporate ESG commitments as primarily performative."
+- "Asserts that remote work productivity is overstated relative to in-office collaboration."
+If the article is purely informational (no clear argument), write: "Reports on [key event] without taking an editorial position."
+
+TOPIC TAGS — choose only from this list:
+- "AI", "Technology", "Innovation", "Geopolitics", "Leadership", "Strategy", "Culture", "Future of Work"
+- "Finance", "Economy", "Policy", "Governance", "Democracy", "Education", "Health"
+- "Sustainability", "Environmental Health", "Central Florida"
 
 TAGGING RULES:
 1. 1-3 tags maximum — be selective, never tag tangentially
 2. NEVER use "Leadership" or "Strategy" as catch-alls — only if the PRIMARY focus is leadership/strategy itself
-3. AI regulation → "AI" + "Policy" only; not also "Leadership", "Strategy", "Governance"
+3. AI regulation → "AI" + "Policy" only
 
-Scoring reference:
-- 9-10: Major strategic inflection point — reshapes markets, policy, or leadership practice at a systemic level
-- 7-8: High relevance — illuminates a critical trend or decision that senior leaders must understand NOW
-- 5-6: Useful context — informative background with some strategic value, not urgent
-- 3-4: Marginal — peripheral to RGI's focus, minor or local developments
-- 1-2: Not relevant — entertainment, lifestyle, local noise, routine updates
-
-Return ONLY valid JSON with keys: relevancyScore, topicTags, teaserSummary, disciplineAlignment, isPrimarySignal. No explanation.
+Return ONLY valid JSON with keys: relevancyScore, authenticityScore, viewpoint, topicTags, teaserSummary, disciplineAlignment, isPrimarySignal. No explanation.
 
 Article:
 Title: {TITLE}
@@ -120,6 +107,8 @@ async function scoreArticle(
   authorityLevel: number
 ): Promise<{
   relevancyScore: number;
+  authenticityScore: number;
+  viewpoint: string;
   topicTags: string[];
   teaserSummary: string;
   disciplineAlignment: string;
@@ -132,7 +121,7 @@ async function scoreArticle(
 
   const message = await anthropic.messages.create({
     model: "claude-haiku-4-5",
-    max_tokens: 512,
+    max_tokens: 600,
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -141,6 +130,8 @@ async function scoreArticle(
 
   let result = {
     relevancyScore: 5,
+    authenticityScore: 5,
+    viewpoint: "",
     topicTags: [] as string[],
     teaserSummary: headline.slice(0, 200),
     disciplineAlignment: "Multiple",
@@ -152,11 +143,16 @@ async function scoreArticle(
     const parsed = JSON.parse(cleanText);
     result = { ...result, ...parsed };
 
-    // Apply tier + authority bonus
+    // Apply tier + authority bonus to relevancy
     const tierBonus = sourceTier === 1 ? 0.5 : sourceTier === 2 ? 0.2 : 0;
     const authorityBonus = (authorityLevel - 3) * 0.3; // authority 1-5, baseline 3
     result.relevancyScore = Math.min(10, Math.max(1, result.relevancyScore + tierBonus + authorityBonus));
     result.relevancyScore = Math.round(result.relevancyScore * 10) / 10;
+
+    // Apply tier bonus to authenticity (tier 1 sources get +0.5 credibility floor boost)
+    const authTierBonus = sourceTier === 1 ? 0.5 : sourceTier === 2 ? 0.2 : 0;
+    result.authenticityScore = Math.min(10, Math.max(1, result.authenticityScore + authTierBonus));
+    result.authenticityScore = Math.round(result.authenticityScore * 10) / 10;
   } catch (e) {
     logger.warn({ err: e, text }, "Failed to parse AI scoring response");
   }
@@ -413,6 +409,8 @@ export async function runScrape(): Promise<{
           isEmergingSignal: isSignal,
           isPrimarySignal: scored.isPrimarySignal ?? false,
           relevancyScore: finalScore,
+          authenticityScore: scored.authenticityScore,
+          viewpoint: scored.viewpoint || null,
           topicTags: scored.topicTags,
           teaserSummary: scored.teaserSummary,
           publishedAt: item.publishedAt,
