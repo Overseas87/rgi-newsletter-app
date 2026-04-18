@@ -250,7 +250,12 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
                 return (
                   <div
                     key={article.id}
-                    className="rounded-lg border border-border bg-background/50 hover:bg-muted/50 hover:border-primary/30 transition-all p-4 group"
+                    className="rounded-lg border border-border bg-background/50 hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm transition-all p-4 group cursor-pointer"
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.closest("a") || target.closest("button")) return;
+                      if (article.url) window.open(article.url, "_blank", "noopener,noreferrer");
+                    }}
                   >
                     <div className="flex items-start gap-4">
                       {/* Rank */}

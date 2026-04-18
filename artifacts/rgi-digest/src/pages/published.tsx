@@ -153,8 +153,13 @@ export default function Published() {
                 {dailyBriefs.map((article) => (
                     <Card
                       key={article.id}
-                      className="border-blue-200/60 bg-blue-500/[0.02] hover:border-blue-300 transition-colors"
+                      className="border-blue-200/60 bg-blue-500/[0.02] hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
                       data-testid={`published-card-${article.id}`}
+                      onClick={(e) => {
+                        const target = e.target as HTMLElement;
+                        if (target.closest("a") || target.closest("button")) return;
+                        setSelectedRead(article);
+                      }}
                     >
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between gap-4">
@@ -221,8 +226,13 @@ export default function Published() {
                 {topicArticles.map((article) => (
                     <Card
                       key={article.id}
-                      className="hover:border-primary/40 transition-colors"
+                      className="hover:border-primary/40 hover:shadow-md transition-all cursor-pointer"
                       data-testid={`published-card-${article.id}`}
+                      onClick={(e) => {
+                        const target = e.target as HTMLElement;
+                        if (target.closest("a") || target.closest("button")) return;
+                        setSelectedRead(article);
+                      }}
                     >
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between gap-4">

@@ -180,10 +180,19 @@ function RgiExplanationPanel({ articleId, discipline }: { articleId: number; dis
 export function ArticleCard({ article, selectable, selected, onSelect, onTopicClick }: ArticleCardProps) {
   const publishTime = article.publishedAt || article.scrapedAt;
   const showExplain = article.relevancyScore >= 6.5;
+  const hasUrl = !!(article.url && article.url.trim());
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (!hasUrl) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("a") || target.closest("button") || target.closest('[role="checkbox"]')) return;
+    window.open(article.url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <Card
-      className={`transition-all cursor-default ${
+      onClick={handleCardClick}
+      className={`transition-all ${hasUrl ? "cursor-pointer hover:shadow-md hover:border-primary/30" : "cursor-default"} ${
         selected ? "border-primary shadow-sm shadow-primary/10" : ""
       } ${article.isPrimarySignal ? "border-violet-500/40 bg-violet-500/[0.02]" : article.isEmergingSignal ? "border-amber-500/30" : ""}`}
       data-testid={`article-card-${article.id}`}
@@ -243,16 +252,23 @@ export function ArticleCard({ article, selectable, selected, onSelect, onTopicCl
 
             {/* Headline */}
             <CardTitle className="text-base leading-snug font-semibold">
-              <a
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-primary transition-colors flex items-start gap-1.5 group"
-                data-testid={`link-article-${article.id}`}
-              >
-                {article.headline}
-                <ExternalLink className="h-3.5 w-3.5 mt-0.5 shrink-0 opacity-0 group-hover:opacity-60 transition-opacity text-muted-foreground" />
-              </a>
+              {hasUrl ? (
+                <a
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary transition-colors flex items-start gap-1.5 group"
+                  data-testid={`link-article-${article.id}`}
+                >
+                  {article.headline}
+                  <ExternalLink className="h-3.5 w-3.5 mt-0.5 shrink-0 opacity-0 group-hover:opacity-60 transition-opacity text-muted-foreground" />
+                </a>
+              ) : (
+                <span className="text-muted-foreground/70 flex items-start gap-1.5" data-testid={`link-article-${article.id}`}>
+                  {article.headline}
+                  <span className="text-[10px] font-normal text-muted-foreground/40 mt-1 shrink-0">no source</span>
+                </span>
+              )}
             </CardTitle>
           </div>
         </div>
