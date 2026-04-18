@@ -46,7 +46,7 @@ function ScoreBadge({ score, size = "md" }: { score: number; size?: "sm" | "md" 
         className={`inline-flex items-center justify-center rounded font-bold tabular-nums leading-none shrink-0 ${
           size === "sm" ? "text-[10px] px-1.5 py-0.5 min-w-[3.4rem]" : "text-xs px-2.5 py-1 min-w-[4rem]"
         }`}
-        style={{ backgroundColor: "#C09A3A", color: "#1A1A2E" }}
+        style={{ backgroundColor: "#C9A227", color: "#0B1F3B" }}
       >
         {score.toFixed(1)}<span className="opacity-50 font-normal ml-0.5">/10</span>
       </span>
@@ -372,7 +372,7 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
                       onClick={() => open(article)}
                       className="text-[11px] font-medium flex items-center gap-1 transition-colors"
                       style={{ color: "rgba(11,31,58,0.45)" }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = "#C09A3A")}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = "#C9A227")}
                       onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(11,31,58,0.45)")}
                       title="View RGI analysis"
                     >
@@ -516,7 +516,7 @@ function WhatMattersTodayPanel({
   return (
     <div
       className="w-72 shrink-0 flex flex-col gap-4 pl-8"
-      style={{ borderLeft: "2px solid #C09A3A" }}
+      style={{ borderLeft: "2px solid #C9A227" }}
     >
       {/* Header */}
       <div className="flex items-center justify-between" style={{ borderBottom: "1px solid #F0F0F0", paddingBottom: "12px" }}>
@@ -547,7 +547,7 @@ function WhatMattersTodayPanel({
             >
               <span
                 className="text-sm font-black w-5 text-right shrink-0 tabular-nums leading-none"
-                style={{ color: "#C09A3A" }}
+                style={{ color: "#C9A227" }}
               >
                 {i + 1}
               </span>
@@ -557,7 +557,7 @@ function WhatMattersTodayPanel({
                     {ti.topic}
                   </span>
                   {ti.hasEmergingSignal && (
-                    <Zap className="h-2.5 w-2.5 shrink-0" style={{ color: "#C09A3A" }} />
+                    <Zap className="h-2.5 w-2.5 shrink-0" style={{ color: "#C9A227" }} />
                   )}
                 </div>
                 <p className="text-[10px] text-muted-foreground/60 mt-0.5">
@@ -618,7 +618,7 @@ function WhatMattersTodayPanel({
                   </div>
                   <span
                     className="text-[10px] font-semibold tabular-nums shrink-0"
-                    style={{ color: ti.importanceScore >= 8 ? "#C09A3A" : ti.importanceScore >= 6.5 ? "#3B82F6" : "#9CA3AF" }}
+                    style={{ color: ti.importanceScore >= 8 ? "#C9A227" : ti.importanceScore >= 6.5 ? "#3B82F6" : "#9CA3AF" }}
                   >
                     {ti.importanceScore.toFixed(1)}
                   </span>
@@ -732,7 +732,7 @@ export default function Dashboard() {
             disabled={briefLoading || !hasArticles}
             size="sm"
             className="gap-1.5 text-xs h-9"
-            style={{ backgroundColor: "#0B1F3A", color: "white" }}
+            style={{ backgroundColor: "#0B1F3B", color: "white" }}
             data-testid="btn-generate-daily-brief"
           >
             {briefLoading ? (
@@ -747,7 +747,7 @@ export default function Dashboard() {
             disabled={!hasArticles}
             size="sm"
             className="gap-1.5 text-xs h-9"
-            style={{ backgroundColor: "#0B1F3A", color: "white" }}
+            style={{ backgroundColor: "#0B1F3B", color: "white" }}
             data-testid="btn-generate-topic-article"
           >
             <Tag className="h-3.5 w-3.5" />

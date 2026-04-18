@@ -50,9 +50,12 @@
   --color-sidebar-accent-border: var(--sidebar-accent-border);
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
+  /* Brand gold — used sparingly for high-priority accents */
+  --color-gold: hsl(var(--gold));
+
   --font-sans: var(--app-font-sans);
-  --font-serif: var(--app-font-serif);
-  --font-mono: var(--app-font-mono);
+  --font-serif: var(--app-font-sans);
+  --font-mono: var(--app-font-sans);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -61,69 +64,73 @@
 }
 
 :root {
-  /* ── Light editorial theme — RGI Intelligence Dashboard ── */
+  /* ── RGI–Crummer Design System ─────────────────────────────────────────────
+     Primary:  #0B1F3B  →  hsl(215 69% 14%)
+     Gold:     #C9A227  →  hsl(45  68% 47%)
+     BG:       #F7F8FA  (soft near-white)
+     Text:     #111827  (near-black, readable)
+  ─────────────────────────────────────────────────────────────────────────── */
 
-  /* Main content: clean white/near-white background, dark navy text */
-  --background: 210 20% 98%;
-  --foreground: 222 44% 13%;
+  --background: 216 20% 97%;
+  --foreground: 222 44% 10%;
 
-  /* Cards: pure white with subtle border */
+  /* Cards: pure white with subtle border + shadow via Tailwind shadow-sm */
   --card: 0 0% 100%;
-  --card-foreground: 222 44% 13%;
-  --card-border: 220 14% 90%;
+  --card-foreground: 222 44% 10%;
+  --card-border: 220 14% 91%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222 44% 13%;
+  --popover-foreground: 222 44% 10%;
   --popover-border: 220 14% 88%;
 
-  /* RGI blue — primary accent for buttons, links, highlights */
-  --primary: 213 72% 40%;
+  /* Primary — deep navy #0B1F3B */
+  --primary: 215 69% 14%;
   --primary-foreground: 0 0% 100%;
 
-  /* Secondary — very light gray for subtle UI elements */
+  /* Secondary — very light gray for subtle UI */
   --secondary: 210 16% 93%;
-  --secondary-foreground: 222 44% 22%;
+  --secondary-foreground: 222 44% 20%;
 
-  /* Muted — light gray surface, medium gray text */
+  /* Muted */
   --muted: 210 16% 94%;
   --muted-foreground: 215 16% 47%;
 
   --accent: 210 16% 93%;
-  --accent-foreground: 222 44% 22%;
+  --accent-foreground: 222 44% 20%;
 
   --destructive: 0 70% 48%;
   --destructive-foreground: 0 0% 100%;
 
   --border: 220 14% 90%;
   --input: 220 14% 90%;
-  --ring: 213 72% 40%;
+  --ring: 215 69% 14%;
 
-  /* ── Sidebar: stays dark navy as accent navigation ── */
+  /* Brand gold #C9A227 */
+  --gold: 45 68% 47%;
+
+  /* Sidebar stays white/light to match the nav panel */
   --sidebar: 222 47% 7%;
   --sidebar-foreground: 210 30% 92%;
   --sidebar-border: 220 30% 15%;
-  --sidebar-primary: 213 72% 62%;
+  --sidebar-primary: 215 60% 58%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 220 30% 14%;
   --sidebar-accent-foreground: 210 30% 92%;
-  --sidebar-ring: 213 72% 55%;
+  --sidebar-ring: 215 60% 52%;
 
-  /* Typography stack */
-  --app-font-sans: "Inter", system-ui, sans-serif;
-  --app-font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
-  --app-font-mono: "Space Mono", Menlo, monospace;
+  /* Single font stack — Inter throughout */
+  --app-font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-  --radius: 0.375rem;
+  --radius: 0.5rem;
 
-  /* Light-mode outline/elevation tokens */
-  --button-outline: rgba(0, 0, 0, 0.08);
-  --badge-outline: rgba(0, 0, 0, 0.06);
-  --opaque-button-border-intensity: 9;
+  /* Elevation tokens */
+  --button-outline: rgba(0, 0, 0, 0.07);
+  --badge-outline: rgba(0, 0, 0, 0.05);
   --elevate-1: rgba(0, 0, 0, 0.02);
   --elevate-2: rgba(0, 0, 0, 0.04);
 }
 
-/* .dark applies only to the sidebar (via explicit class on <aside>) */
+/* .dark — sidebar only */
 .dark {
   --background: 222 47% 9%;
   --foreground: 210 30% 96%;
@@ -133,7 +140,7 @@
   --popover: 222 47% 13%;
   --popover-foreground: 210 30% 96%;
   --popover-border: 220 30% 20%;
-  --primary: 213 72% 55%;
+  --primary: 215 60% 58%;
   --primary-foreground: 0 0% 100%;
   --secondary: 220 30% 20%;
   --secondary-foreground: 210 30% 96%;
@@ -145,19 +152,20 @@
   --destructive-foreground: 210 30% 96%;
   --border: 220 30% 20%;
   --input: 220 30% 20%;
-  --ring: 213 72% 55%;
+  --ring: 215 60% 58%;
+  --gold: 45 68% 52%;
   --sidebar: 222 47% 7%;
   --sidebar-foreground: 210 30% 92%;
   --sidebar-border: 220 30% 15%;
-  --sidebar-primary: 213 72% 62%;
+  --sidebar-primary: 215 60% 62%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 220 30% 14%;
   --sidebar-accent-foreground: 210 30% 92%;
-  --sidebar-ring: 213 72% 55%;
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
-  --elevate-1: rgba(255,255,255, .03);
-  --elevate-2: rgba(255,255,255, .07);
+  --sidebar-ring: 215 60% 55%;
+  --button-outline: rgba(255, 255, 255, 0.08);
+  --badge-outline: rgba(255, 255, 255, 0.04);
+  --elevate-1: rgba(255, 255, 255, 0.03);
+  --elevate-2: rgba(255, 255, 255, 0.06);
 }
 
 @layer base {
@@ -172,36 +180,46 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Serif headings for editorial feel */
-  h1, h2 {
-    font-family: var(--app-font-serif);
+  /* Inter throughout — bold weight for major headings */
+  h1 {
+    font-family: var(--app-font-sans);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+  }
+
+  h2 {
+    font-family: var(--app-font-sans);
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
     line-height: 1.2;
   }
 
-  /* Keep h3+ in sans for hierarchy */
   h3, h4, h5, h6 {
+    font-family: var(--app-font-sans);
     font-weight: 600;
     letter-spacing: -0.01em;
+    line-height: 1.3;
   }
 }
 
-/* RGI editorial typography utilities */
 @layer utilities {
+  /* Bold display text — Inter 700, tight tracking */
   .font-display {
-    font-family: var(--app-font-serif);
-    font-weight: 600;
+    font-family: var(--app-font-sans);
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
 
+  /* Long-form reading text */
   .text-editorial {
-    font-family: var(--app-font-serif);
-    font-size: 1.05rem;
+    font-family: var(--app-font-sans);
+    font-size: 0.9375rem;
     line-height: 1.75;
     font-weight: 400;
   }
 
-  /* Stricter body text for briefs */
+  /* Intelligence brief body text */
   .prose-brief {
     font-family: var(--app-font-sans);
     font-size: 0.9375rem;
@@ -209,16 +227,35 @@
     color: hsl(var(--muted-foreground));
   }
 
-  /* RGI blue divider */
+  /* Thin separator — uses primary navy at low opacity */
   .rgi-divider {
     border: none;
-    border-top: 1px solid hsl(213 72% 40% / 0.18);
+    border-top: 1px solid hsl(var(--primary) / 0.14);
   }
 
-  /* Sidebar nav active state */
+  /* Gold accent border — used sparingly */
+  .border-gold {
+    border-color: hsl(var(--gold));
+  }
+
+  /* Active nav state */
   .nav-active {
-    background-color: hsl(213 72% 55% / 0.14);
-    color: hsl(213 72% 72%);
-    border-left: 2px solid hsl(213 72% 62%);
+    background-color: hsl(var(--primary) / 0.07);
+    color: hsl(var(--primary));
+    border-left: 2px solid hsl(var(--primary));
+  }
+
+  /* Cards with consistent elevation */
+  .card-elevated {
+    @apply bg-white rounded-lg border border-card-border shadow-sm;
+  }
+
+  /* Section label — uppercase, tracked, small */
+  .label-section {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: hsl(var(--muted-foreground));
   }
 }

@@ -14,9 +14,24 @@ pnpm workspace monorepo using TypeScript with:
 - **Zod validation**: Auto-generated from OpenAPI spec (`lib/api-zod`)
 - **AI**: Claude via Replit Anthropic integration (`lib/integrations-anthropic-ai`)
 
-## Design
+## Design System
 
-Dark navy/white/gold palette. No emojis. HBR/Foreign Affairs aesthetic. Serif headings, clean cards.
+**Font**: Inter throughout — single font stack, no Playfair Display or Space Mono.
+- h1: `font-weight: 700`, `letter-spacing: -0.025em`
+- h2: `font-weight: 600`, `letter-spacing: -0.02em`
+- Body / prose: `font-size: 0.9375rem`, `line-height: 1.7`
+
+**Colors** (CSS variables in `src/index.css`):
+- Primary navy: `#0B1F3B` → `hsl(215 69% 14%)` — buttons, active states, headings
+- Gold accent: `#C9A227` → `hsl(45 68% 47%)` — score badges, rank numbers, brand label (used sparingly)
+- Background: `hsl(216 20% 97%)` — soft near-white
+- Card: `#FFFFFF` with `border: 1px solid hsl(220 14% 91%)`, `box-shadow: shadow-sm`
+
+**Spacing**: Tailwind 4-unit base (1 unit = 4px). Standard steps: 2 (8px), 4 (16px), 6 (24px), 8 (32px).
+
+**PDF palette** (`pdf-generator.ts` `C` constant): navy `#0B1F3B`, ink `#111111`, body `#1A1A1A`, mid `#555555`, muted `#888888`, hairline `#CCCCCC`.
+
+**Aesthetic**: Institutional, HBR/Foreign Affairs-adjacent. No emojis. White sidebar navigation. Thin horizontal rules as section separators.
 
 ## Stack
 

@@ -11,7 +11,7 @@ export interface ArticleWithSources extends DigestArticle {
 
 // ── Palette ────────────────────────────────────────────────────────────────────
 const C = {
-  navy:     "#0F2B4C" as string,   // header & section labels
+  navy:     "#0B1F3B" as string,   // header & section labels
   ink:      "#111111" as string,   // title, bold emphasis
   body:     "#1A1A1A" as string,   // body text — near-black for readability
   mid:      "#555555" as string,   // secondary text

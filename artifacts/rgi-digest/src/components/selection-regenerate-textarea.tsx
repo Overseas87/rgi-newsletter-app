@@ -16,8 +16,8 @@ interface SelectionRegenerateTa {
   "data-testid"?: string;
 }
 
-const NAVY = "#0B1F3A";
-const GOLD = "#C09A3A";
+const NAVY = "#0B1F3B";
+const GOLD = "#C9A227";
 
 function countWords(text: string) {
   return text.trim().split(/\s+/).filter(Boolean).length;

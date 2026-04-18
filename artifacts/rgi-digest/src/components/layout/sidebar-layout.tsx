@@ -54,8 +54,8 @@ const NAV_GROUPS = [
   },
 ];
 
-const NAVY = "#0B1F3A";
-const GOLD = "#C09A3A";
+const NAVY = "#0B1F3B";
+const GOLD = "#C9A227";
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
