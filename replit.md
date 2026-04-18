@@ -59,7 +59,7 @@ Dark navy/white/gold palette. No emojis. HBR/Foreign Affairs aesthetic. Serif he
 ### AI Scoring (Layer 2)
 - Claude Haiku scores each article 1-10 against RGI disciplines
 - Author authority bonus (1-5 scale) + tier bonus applied to relevancy score
-- Topic tags assigned from a controlled vocabulary of 18 RGI-relevant topics
+- Topic tags assigned from a controlled vocabulary of 31 canonical RGI-relevant topics (see scraper.ts `RGI_RELEVANCY_PROMPT`)
 - Discipline alignment: Strategic Foresight / System Vitality / Civic Stewardship
 
 ### Strategic Brief Generation (Layer 3a)
@@ -87,11 +87,17 @@ Dark navy/white/gold palette. No emojis. HBR/Foreign Affairs aesthetic. Serif he
 - Multi-select with optional editor notes → Generate Brief
 
 ### Today's Topics (Layer 5)
-- Full topic drill-down: click any topic to see all articles for that topic
+- **Top 5 / All Topics split**: homepage shows top 5 most important topics by importance score, with "Show all N more topics" expandable section
+- Full topic drill-down: click any topic to see all articles matching the same time window and score threshold
+- **Count consistency guaranteed**: dashboard count and drill-down count always match — both use `MIN_TOPIC_SCORE=7.0` and the same `contentWindowStart` time window (returned by `/api/dashboard/summary`)
+- Drill-down defaults to score 7+ filter with time window active; user can lower threshold or expand to "All history" via filter controls
+- Transparency note in drill-down shows whether count matches the topic card count exactly
 - Topic overview grid with discipline colors (Strategic Foresight=blue, System Vitality=amber, Civic Stewardship=green)
-- Within topic view: sort by Relevance, Newest, Source; filter by min score and source type
+- Within topic view: sort by Relevance, Newest, Source; filter by min score, source type, time window toggle
 - Multi-select articles within topic → Generate Brief
 - Route: /topics
+- **Expanded topic vocabulary**: 31 canonical topics (up from 12) covering all RGI-relevant domains
+- **Legacy tag compatibility**: DISCIPLINE_KEYWORDS maps both canonical and legacy (shorter) tag names so existing DB articles display correctly
 
 ### Why This Matters to RGI (Layer 5)
 - Every article card (score ≥ 6.5) shows "Why this matters to RGI" toggle
@@ -113,7 +119,7 @@ Dark navy/white/gold palette. No emojis. HBR/Foreign Affairs aesthetic. Serif he
 | GET | /api/articles/:id | Get single article |
 | GET | /api/articles/:id/explain | Generate RGI relevance explanation via Claude Haiku |
 | DELETE | /api/articles/:id | Delete article |
-| GET | /api/dashboard/summary | Full dashboard stats including topic intelligence |
+| GET | /api/dashboard/summary | Full dashboard stats including topic intelligence, `contentWindowStart`, `minTopicScore` |
 | GET | /api/dashboard/settings | Get settings |
 | PATCH | /api/dashboard/settings | Update settings |
 | GET | /api/sources | List sources |

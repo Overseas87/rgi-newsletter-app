@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -25,20 +24,42 @@ import {
   AlignLeft,
   TrendingUp,
   Cpu,
+  ChevronDown,
+  ChevronUp,
+  Info,
 } from "lucide-react";
 
-// ─── Discipline mapping ────────────────────────────────────────────────────────
+// ─── Discipline mapping (single source of truth, mirrors dashboard.ts) ─────────
 const DISCIPLINE_KEYWORDS: Record<string, string[]> = {
   "Strategic Foresight": [
+    // Canonical tags (new articles)
     "Technology & AI", "Innovation & Digital Transformation", "Geopolitics & Global Power",
     "Economics & Macroeconomics", "Supply Chains & Global Trade", "Future of Work & Society",
+    "Wars, Conflict & Security", "Defense & Military", "Currency & Monetary Policy",
+    "Trade & Tariffs", "Cybersecurity", "Robotics & Automation", "Industrial Policy",
+    // Legacy / informal tags (existing articles in DB)
+    "Geopolitics", "Global Politics", "Wars & Crisis", "Macroeconomics",
+    "AI & Artificial Intelligence", "Future of Work", "Supply Chains & Trade",
+    "Defense & Security", "Trade", "Technology", "Cybersecurity & Digital Security",
   ],
   "System Vitality": [
+    // Canonical tags
     "Business Strategy & Corporations", "Leadership & Organizations",
-    "Finance & Markets", "Energy & Resources",
+    "Finance & Markets", "Energy & Resources", "Banking & Credit", "Oil & Gas",
+    "Commodities", "Operations & Manufacturing", "Corporate Governance",
+    "Venture & Startups", "Labor Markets", "Real Estate",
+    // Legacy / informal tags
+    "Energy & Oil", "Energy", "Finance", "Banking", "Business Strategy",
+    "Leadership", "Organizations", "Manufacturing", "Startups & Venture",
   ],
   "Civic Stewardship": [
+    // Canonical tags
     "Policy, Regulation & Governance", "Climate & Environmental Systems",
+    "Public Health", "Education", "Agriculture & Food Systems", "Mobility & Infrastructure",
+    // Legacy / informal tags
+    "Policy & Regulation", "Climate & Environmental Health", "Climate Change",
+    "Governance", "Regulation", "Sustainability", "Environmental",
+    "Health", "Infrastructure",
   ],
 };
 
@@ -70,10 +91,13 @@ const DISC_BADGE: Record<string, string> = {
   "Multiple": "bg-violet-50 text-violet-700 border-violet-200",
 };
 
+// ─── Score threshold: must match MIN_TOPIC_SCORE in dashboard.ts ──────────────
+const MIN_TOPIC_SCORE = 7.0;
+
 // ─── Sort types ────────────────────────────────────────────────────────────────
 type SortMode = "relevance" | "newest" | "source";
 
-// ─── Topic Grid ───────────────────────────────────────────────────────────────
+// ─── Topic Card ───────────────────────────────────────────────────────────────
 interface TopicCardProps {
   topic: string;
   count: number;
@@ -83,13 +107,55 @@ interface TopicCardProps {
   discipline: string;
   significance: string;
   rank: number;
+  featured?: boolean;
   onClick: () => void;
 }
 
-function TopicCard({ topic, count, importanceScore, avgRelevancyScore, discipline, rank, onClick }: TopicCardProps) {
+function TopicCard({
+  topic, count, importanceScore, avgRelevancyScore, discipline, rank, featured, onClick,
+}: TopicCardProps) {
   const disc = discipline in DISC_COLOR ? discipline : inferDiscipline(topic);
   const colorClass = DISC_COLOR[disc] ?? DISC_COLOR["Strategic Foresight"];
   const Icon = DISC_ICON[disc] ?? Compass;
+
+  if (featured) {
+    return (
+      <button
+        onClick={onClick}
+        className={`w-full text-left p-5 rounded-xl border-2 transition-all hover:scale-[1.01] hover:shadow-lg active:scale-[0.99] ${colorClass}`}
+        data-testid={`topic-card-${topic.replace(/\s+/g, "-")}`}
+      >
+        <div className="flex items-start gap-3">
+          <span className="text-3xl font-black opacity-15 leading-none w-8 shrink-0 text-right tabular-nums">
+            {rank}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="font-bold text-base">{topic}</span>
+            </div>
+            <Badge variant="outline" className={`text-[10px] mb-2.5 ${DISC_BADGE[disc] ?? ""}`}>
+              {disc}
+            </Badge>
+            <div className="flex items-center gap-3 text-xs opacity-70 flex-wrap">
+              <span className="font-semibold">{count} source{count !== 1 ? "s" : ""}</span>
+              <span>·</span>
+              <span className="flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" />
+                {importanceScore.toFixed(1)}
+              </span>
+              {avgRelevancyScore != null && (
+                <>
+                  <span>·</span>
+                  <span>avg {avgRelevancyScore.toFixed(1)}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </button>
+    );
+  }
 
   return (
     <button
@@ -109,17 +175,17 @@ function TopicCard({ topic, count, importanceScore, avgRelevancyScore, disciplin
           <Badge variant="outline" className={`text-[10px] mb-2 ${DISC_BADGE[disc] ?? ""}`}>
             {disc}
           </Badge>
-          <div className="flex items-center gap-3 text-xs opacity-70 mt-1 flex-wrap">
-            <span>{count} article{count !== 1 ? "s" : ""}</span>
+          <div className="flex items-center gap-3 text-xs opacity-70 flex-wrap">
+            <span>{count} source{count !== 1 ? "s" : ""}</span>
             <span>·</span>
             <span className="flex items-center gap-1">
               <TrendingUp className="h-3 w-3" />
-              {importanceScore.toFixed(1)} importance
+              {importanceScore.toFixed(1)}
             </span>
             {avgRelevancyScore != null && (
               <>
                 <span>·</span>
-                <span>avg {avgRelevancyScore.toFixed(1)} relevance</span>
+                <span>avg {avgRelevancyScore.toFixed(1)}</span>
               </>
             )}
           </div>
@@ -132,18 +198,25 @@ function TopicCard({ topic, count, importanceScore, avgRelevancyScore, disciplin
 // ─── Article Drill-Down ───────────────────────────────────────────────────────
 interface TopicDrillDownProps {
   topic: string;
+  dashboardCount: number;
+  contentWindowStart?: string;
   onBack: () => void;
 }
 
-function TopicDrillDown({ topic, onBack }: TopicDrillDownProps) {
+function TopicDrillDown({ topic, dashboardCount, contentWindowStart, onBack }: TopicDrillDownProps) {
   const [sort, setSort] = useState<SortMode>("relevance");
-  const [minScore, setMinScore] = useState("0");
+  // Default to MIN_TOPIC_SCORE so this view matches the dashboard count exactly.
+  const [minScore, setMinScore] = useState(String(MIN_TOPIC_SCORE));
   const [sourceType, setSourceType] = useState("all");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  // When true, restricts to the same time window as the dashboard for exact count matching.
+  const [restrictWindow, setRestrictWindow] = useState(true);
 
+  // Fetch ALL articles for this topic (no score filter at API level) so the user
+  // can freely change the score threshold locally without re-fetching.
   const { data: articles = [], isLoading, isError, refetch } = useListArticles({
     topicTag: topic,
-    limit: 200,
+    limit: 500,
   });
 
   const generate = useGenerateDigestArticle();
@@ -153,10 +226,22 @@ function TopicDrillDown({ topic, onBack }: TopicDrillDownProps) {
   const disc = inferDiscipline(topic);
   const Icon = DISC_ICON[disc] ?? Compass;
 
+  const windowCutoff = contentWindowStart ? new Date(contentWindowStart).getTime() : 0;
+
+  // Count articles matching the exact dashboard criteria (time window + score threshold).
+  const dashboardThresholdCount = (articles as Article[]).filter((a) => {
+    const scorePasses = a.relevancyScore >= MIN_TOPIC_SCORE;
+    const timePasses = windowCutoff === 0 || new Date(a.scrapedAt).getTime() >= windowCutoff;
+    return scorePasses && timePasses;
+  }).length;
+
   const filtered = useMemo(() => {
     let items = articles as Article[];
     const minS = parseFloat(minScore) || 0;
     if (minS > 0) items = items.filter((a) => a.relevancyScore >= minS);
+    if (restrictWindow && windowCutoff > 0) {
+      items = items.filter((a) => new Date(a.scrapedAt).getTime() >= windowCutoff);
+    }
     if (sourceType !== "all") items = items.filter((a) => (a.platform ?? "news") === sourceType);
 
     if (sort === "newest") {
@@ -198,7 +283,6 @@ function TopicDrillDown({ topic, onBack }: TopicDrillDownProps) {
 
   return (
     <div className="space-y-5">
-      {/* Back + Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="gap-2 text-muted-foreground">
           <ArrowLeft className="h-4 w-4" />
@@ -213,13 +297,36 @@ function TopicDrillDown({ topic, onBack }: TopicDrillDownProps) {
             <h1 className="text-3xl font-serif tracking-tight">{topic}</h1>
           </div>
           <Badge variant="outline" className={`text-xs ${DISC_BADGE[disc] ?? ""}`}>{disc}</Badge>
+
           {!isLoading && (
-            <p className="text-sm text-muted-foreground mt-2">
-              {filtered.length} article{filtered.length !== 1 ? "s" : ""} today
-              {selectedIds.length > 0 && <> · <span className="text-primary font-medium">{selectedIds.length} selected</span></>}
-            </p>
+            <div className="mt-2 space-y-0.5">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">{filtered.length}</span>
+                {" "}article{filtered.length !== 1 ? "s" : ""} shown
+                {parseFloat(minScore) > 0 && (
+                  <span className="text-xs ml-1">(score {minScore}+)</span>
+                )}
+                {selectedIds.length > 0 && (
+                  <> · <span className="text-primary font-medium">{selectedIds.length} selected</span></>
+                )}
+              </p>
+              {/* Transparency note comparing to the topic card's count */}
+              {!isLoading && dashboardCount > 0 && dashboardThresholdCount !== dashboardCount && parseFloat(minScore) === MIN_TOPIC_SCORE && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Info className="h-3 w-3 shrink-0" />
+                  Topic card showed {dashboardCount} — counts update live; new articles may have arrived.
+                </p>
+              )}
+              {!isLoading && dashboardCount > 0 && dashboardThresholdCount === dashboardCount && parseFloat(minScore) === MIN_TOPIC_SCORE && (
+                <p className="text-xs text-emerald-600 flex items-center gap-1">
+                  <Info className="h-3 w-3 shrink-0" />
+                  Matches topic count exactly — both use score {MIN_TOPIC_SCORE}+ threshold.
+                </p>
+              )}
+            </div>
           )}
         </div>
+
         {selectedIds.length >= 2 && (
           <Button onClick={handleGenerate} disabled={generate.isPending} data-testid="btn-generate-topic-brief">
             {generate.isPending ? "Generating..." : `Generate Brief (${selectedIds.length})`}
@@ -229,7 +336,6 @@ function TopicDrillDown({ topic, onBack }: TopicDrillDownProps) {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Sort */}
         <div className="flex items-center gap-1 p-1 rounded-lg border border-border bg-card">
           {([
             { value: "relevance", icon: BarChart2, label: "Relevance" },
@@ -252,22 +358,20 @@ function TopicDrillDown({ topic, onBack }: TopicDrillDownProps) {
           ))}
         </div>
 
-        {/* Min score */}
         <Select value={minScore} onValueChange={setMinScore}>
-          <SelectTrigger className="w-[150px] h-9 text-xs" data-testid="select-min-score">
+          <SelectTrigger className="w-[160px] h-9 text-xs" data-testid="select-min-score">
             <SelectValue placeholder="Min score" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="0">All scores</SelectItem>
             <SelectItem value="5">Score 5+</SelectItem>
             <SelectItem value="6">Score 6+</SelectItem>
-            <SelectItem value="7">Score 7+</SelectItem>
+            <SelectItem value="7">Score 7+ (dashboard)</SelectItem>
             <SelectItem value="8">Score 8+</SelectItem>
             <SelectItem value="9">Score 9+</SelectItem>
           </SelectContent>
         </Select>
 
-        {/* Source type */}
         <Select value={sourceType} onValueChange={setSourceType}>
           <SelectTrigger className="w-[160px] h-9 text-xs" data-testid="select-source-type">
             <SelectValue placeholder="Source type" />
@@ -283,12 +387,26 @@ function TopicDrillDown({ topic, onBack }: TopicDrillDownProps) {
           </SelectContent>
         </Select>
 
+        {contentWindowStart && (
+          <button
+            onClick={() => setRestrictWindow((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-all ${
+              restrictWindow
+                ? "bg-primary/10 text-primary border-primary/30"
+                : "text-muted-foreground border-border hover:text-foreground"
+            }`}
+            title={restrictWindow ? "Showing only articles from the dashboard time window" : "Showing all historical articles"}
+          >
+            <Clock className="h-3 w-3" />
+            {restrictWindow ? "Window" : "All history"}
+          </button>
+        )}
+
         <Button variant="outline" size="sm" className="h-9 text-xs" onClick={() => refetch()}>
           Refresh
         </Button>
       </div>
 
-      {/* Article list */}
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
@@ -302,8 +420,8 @@ function TopicDrillDown({ topic, onBack }: TopicDrillDownProps) {
         <div className="py-16 text-center text-muted-foreground">
           <p className="text-base font-medium mb-1">No articles match your filters</p>
           <p className="text-sm">
-            {(articles as Article[]).length === 0
-              ? "No articles tagged with this topic today. Run a scrape to fetch new content."
+            {totalTagged === 0
+              ? "No articles tagged with this topic. Run a scrape to fetch new content."
               : "Try lowering the minimum score or changing the source filter."}
           </p>
         </div>
@@ -324,29 +442,51 @@ function TopicDrillDown({ topic, onBack }: TopicDrillDownProps) {
   );
 }
 
-// ─── Topic Overview Grid ──────────────────────────────────────────────────────
-function TopicOverview({ onSelectTopic }: { onSelectTopic: (topic: string) => void }) {
+// ─── Main page ────────────────────────────────────────────────────────────────
+export default function Topics() {
+  const [activeTopic, setActiveTopic] = useState<string | null>(null);
+  const [activeTopicCount, setActiveTopicCount] = useState(0);
+  const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = useState(false);
   const { data: summary, isLoading, isError, refetch } = useGetDashboardSummary();
 
   const topicIntelligence = summary?.topicIntelligence ?? [];
-  const articlesByTag = summary?.articlesByTag ?? [];
+  const contentWindowStart = summary?.contentWindowStart;
 
-  // Build display list: use topicIntelligence for ranked topics, fall back to articlesByTag
-  const displayTopics = topicIntelligence.length > 0
-    ? topicIntelligence
-    : articlesByTag.slice(0, 12).map((t, i) => ({
-        topic: t.tag,
-        articleCount: t.count,
-        importanceScore: t.count * 2,
-        discipline: inferDiscipline(t.tag),
-        significance: `${t.count} articles today`,
-        hasEmergingSignal: false,
-      }));
+  const handleSelectTopic = (topic: string, count: number) => {
+    setActiveTopic(topic);
+    setActiveTopicCount(count);
+  };
+
+  if (activeTopic) {
+    return (
+      <TopicDrillDown
+        topic={activeTopic}
+        dashboardCount={activeTopicCount}
+        contentWindowStart={contentWindowStart}
+        onBack={() => { setActiveTopic(null); setActiveTopicCount(0); }}
+      />
+    );
+  }
+
+  const filtered = search.trim()
+    ? topicIntelligence.filter((t) => t.topic.toLowerCase().includes(search.toLowerCase()))
+    : topicIntelligence;
+
+  const topFive = filtered.slice(0, 5);
+  const remaining = filtered.slice(5);
+  const totalArticles = topicIntelligence.reduce((sum, t) => sum + t.articleCount, 0);
 
   if (isLoading) {
     return (
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+      <div className="space-y-6">
+        <div>
+          <div className="h-8 w-48 bg-muted rounded animate-pulse mb-2" />
+          <div className="h-4 w-72 bg-muted rounded animate-pulse" />
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+        </div>
       </div>
     );
   }
@@ -360,59 +500,16 @@ function TopicOverview({ onSelectTopic }: { onSelectTopic: (topic: string) => vo
     );
   }
 
-  if (displayTopics.length === 0) {
-    return (
-      <div className="py-16 text-center text-muted-foreground">
-        <p className="text-base font-medium mb-1">No topic data yet</p>
-        <p className="text-sm">Run a scrape from the Dashboard to populate today's intelligence.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-      {displayTopics.map((t, i) => (
-        <TopicCard
-          key={t.topic}
-          topic={t.topic}
-          count={t.articleCount}
-          importanceScore={t.importanceScore}
-          avgRelevancyScore={t.avgRelevancyScore}
-          hasEmergingSignal={t.hasEmergingSignal}
-          discipline={t.discipline}
-          significance={t.significance}
-          rank={i + 1}
-          onClick={() => onSelectTopic(t.topic)}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ─── Main page ────────────────────────────────────────────────────────────────
-export default function Topics() {
-  const [activeTopic, setActiveTopic] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const { data: summary } = useGetDashboardSummary();
-
-  if (activeTopic) {
-    return <TopicDrillDown topic={activeTopic} onBack={() => setActiveTopic(null)} />;
-  }
-
-  const topicIntelligence = summary?.topicIntelligence ?? [];
-  const totalArticles = topicIntelligence.reduce((sum, t) => sum + t.articleCount, 0);
-
-  const filtered = search.trim()
-    ? topicIntelligence.filter((t) => t.topic.toLowerCase().includes(search.toLowerCase()))
-    : topicIntelligence;
-
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-serif tracking-tight text-foreground">Today's Topics</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            {topicIntelligence.length} topic areas across {totalArticles} articles — click any topic to explore
+            {topicIntelligence.length} active topic{topicIntelligence.length !== 1 ? "s" : ""}
+            {" "}across {totalArticles} high-relevance source{totalArticles !== 1 ? "s" : ""}
+            {" "}— click any topic to explore
           </p>
         </div>
       </div>
@@ -429,7 +526,7 @@ export default function Topics() {
         })}
       </div>
 
-      {/* Search */}
+      {/* Search — show when there are enough topics to warrant it */}
       {topicIntelligence.length > 6 && (
         <div className="relative max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -442,26 +539,104 @@ export default function Topics() {
         </div>
       )}
 
-      {/* Topic grid */}
-      {filtered.length > 0 ? (
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((t, i) => (
-            <TopicCard
-              key={t.topic}
-              topic={t.topic}
-              count={t.articleCount}
-              importanceScore={t.importanceScore}
-              avgRelevancyScore={t.avgRelevancyScore}
-              hasEmergingSignal={t.hasEmergingSignal}
-              discipline={t.discipline}
-              significance={t.significance}
-              rank={i + 1}
-              onClick={() => setActiveTopic(t.topic)}
-            />
-          ))}
+      {topicIntelligence.length === 0 ? (
+        <div className="py-16 text-center text-muted-foreground">
+          <p className="text-base font-medium mb-1">No topic data yet</p>
+          <p className="text-sm">Run a scrape from the Dashboard to populate today's intelligence.</p>
         </div>
       ) : (
-        <TopicOverview onSelectTopic={setActiveTopic} />
+        <>
+          {/* ── Top 5 Topics ───────────────────────────────────────────── */}
+          {!search && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                Top {Math.min(5, topFive.length)} Topics Today
+              </p>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {topFive.map((t, i) => (
+                  <TopicCard
+                    key={t.topic}
+                    topic={t.topic}
+                    count={t.articleCount}
+                    importanceScore={t.importanceScore}
+                    avgRelevancyScore={t.avgRelevancyScore}
+                    hasEmergingSignal={t.hasEmergingSignal}
+                    discipline={t.discipline}
+                    significance={t.significance}
+                    rank={i + 1}
+                    featured
+                    onClick={() => handleSelectTopic(t.topic, t.articleCount)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Search results ─────────────────────────────────────────── */}
+          {search && filtered.length > 0 && (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((t, i) => (
+                <TopicCard
+                  key={t.topic}
+                  topic={t.topic}
+                  count={t.articleCount}
+                  importanceScore={t.importanceScore}
+                  avgRelevancyScore={t.avgRelevancyScore}
+                  hasEmergingSignal={t.hasEmergingSignal}
+                  discipline={t.discipline}
+                  significance={t.significance}
+                  rank={i + 1}
+                  onClick={() => handleSelectTopic(t.topic, t.articleCount)}
+                />
+              ))}
+            </div>
+          )}
+
+          {search && filtered.length === 0 && (
+            <p className="text-sm text-muted-foreground py-8 text-center">No topics match "{search}"</p>
+          )}
+
+          {/* ── All Topics toggle ──────────────────────────────────────── */}
+          {!search && remaining.length > 0 && (
+            <div>
+              <button
+                onClick={() => setShowAll((v) => !v)}
+                className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mb-3"
+              >
+                {showAll ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {showAll ? "Hide" : "Show all"} {remaining.length} more topic{remaining.length !== 1 ? "s" : ""}
+              </button>
+
+              {showAll && (
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {remaining.map((t, i) => (
+                    <TopicCard
+                      key={t.topic}
+                      topic={t.topic}
+                      count={t.articleCount}
+                      importanceScore={t.importanceScore}
+                      avgRelevancyScore={t.avgRelevancyScore}
+                      hasEmergingSignal={t.hasEmergingSignal}
+                      discipline={t.discipline}
+                      significance={t.significance}
+                      rank={i + 6}
+                      onClick={() => handleSelectTopic(t.topic, t.articleCount)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Scoring note ───────────────────────────────────────────── */}
+          {!search && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
+              <Info className="h-3 w-3 shrink-0" />
+              Counts reflect high-relevance sources (score {MIN_TOPIC_SCORE}+) only.
+              Clicking a topic defaults to the same threshold so counts always match.
+            </p>
+          )}
+        </>
       )}
     </div>
   );

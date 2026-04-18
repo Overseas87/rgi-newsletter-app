@@ -1,0 +1,63 @@
+Fix the internal consistency of the topic system so that topic counts always exactly match the underlying articles. If a topic says it has 7 related articles or sources, then when I click on that topic, I must be able to see all 7 corresponding items. There must never be a mismatch between the topic count shown on the dashboard and the number of actual articles displayed in the topic view.
+
+Make the topic counting logic deterministic and transparent. The count shown for each topic must be based on the exact number of currently stored and visible articles that are tagged to that topic within the active time window. Do not count hidden, filtered out, duplicate, inactive, or clustered-away items unless those same items are also visible when I open the topic. The topic count and the topic detail page must always use the same dataset and the same filtering rules.
+
+Also improve topic clustering and display so that if multiple sources are grouped into one story cluster, the UI clearly explains that. For example, if a topic has 7 source items but only 3 story clusters, show that distinction clearly instead of making it look inconsistent. If the dashboard says 7, the detail view must either show 7 individual source items or explicitly show 3 grouped stories confirmed by 7 sources. It must never look like the number is wrong.
+
+Expand the topic system significantly. Add a much broader range of high-signal topics that could be relevant to RGI internal use. The topic system should cover everything that could realistically matter for business, leadership, global systems, innovation, markets, technology, operations, power, and institutions.
+
+Add and support a broader set of topics such as:
+
+Geopolitics
+Global Politics
+Wars & Crisis
+Policy & Regulation
+Governance
+Macroeconomics
+Finance & Markets
+Banking
+Currency & Dollar System
+Trade
+Supply Chains
+Logistics
+Business Strategy
+Leadership
+Organizations
+Corporate Governance
+Operations
+Manufacturing
+Industrial Policy
+Energy
+Oil & Gas
+Commodities
+Climate Change
+Sustainability
+Environmental Health
+Technology
+Artificial Intelligence
+Digital Innovation
+Robotics
+Automation
+Machines & Industrial Technology
+Cybersecurity
+Future of Work
+Labor Markets
+Infrastructure
+Innovation
+Venture & Startups
+Public Health
+Education
+Demographics
+Real Estate
+Defense & Security
+Food Systems
+Agriculture
+Mobility & Transportation
+
+Do not display all of these topics equally on the homepage. Keep the homepage focused on the top five most important topics of the day, but add a complete “All Topics” view where all active topics can be seen along with their counts and scores.
+
+Make sure topic assignment is intelligent and based on article meaning, not only keywords. Allow one article to belong to multiple topics if it genuinely fits them, but avoid loose over-tagging. The topic system should be broad, but still disciplined and relevant to the RGI lens.
+
+Also ensure that only topics that are actually relevant to RGI are emphasized. Topics should matter because they affect leadership, business, institutions, power, systems, innovation, or decision-making. Remove weak, random, or low-value categories.
+
+The goal is to make the topic system broad enough to capture all relevant developments, but internally consistent, transparent, and trustworthy. When I see a topic count, I should be able to click it and see exactly why that count exists.

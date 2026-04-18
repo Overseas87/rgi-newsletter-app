@@ -285,6 +285,10 @@ export interface DashboardSummary {
   activeSources: number;
   socialSignalsCount: number;
   emergingSignalsCount: number;
+  /** ISO date string — start of the time window used to count topic articles */
+  contentWindowStart?: string;
+  /** Minimum relevancy score used when counting topic articles (e.g. 7.0) */
+  minTopicScore?: number;
 }
 
 export interface Settings {

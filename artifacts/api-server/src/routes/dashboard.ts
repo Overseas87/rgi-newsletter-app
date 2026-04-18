@@ -6,15 +6,34 @@ import { getScrapeStatus } from "../lib/scraper";
 
 const DISCIPLINE_KEYWORDS: Record<string, string[]> = {
   "Strategic Foresight": [
+    // Canonical tags (new articles)
     "Technology & AI", "Innovation & Digital Transformation", "Geopolitics & Global Power",
     "Economics & Macroeconomics", "Supply Chains & Global Trade", "Future of Work & Society",
+    "Wars, Conflict & Security", "Defense & Military", "Currency & Monetary Policy",
+    "Trade & Tariffs", "Cybersecurity", "Robotics & Automation", "Industrial Policy",
+    // Legacy / informal tags (existing articles in DB)
+    "Geopolitics", "Global Politics", "Wars & Crisis", "Macroeconomics",
+    "AI & Artificial Intelligence", "Future of Work", "Supply Chains & Trade",
+    "Defense & Security", "Trade", "Technology", "Cybersecurity & Digital Security",
   ],
   "System Vitality": [
+    // Canonical tags
     "Business Strategy & Corporations", "Leadership & Organizations",
-    "Finance & Markets", "Energy & Resources",
+    "Finance & Markets", "Energy & Resources", "Banking & Credit", "Oil & Gas",
+    "Commodities", "Operations & Manufacturing", "Corporate Governance",
+    "Venture & Startups", "Labor Markets", "Real Estate",
+    // Legacy / informal tags
+    "Energy & Oil", "Energy", "Finance", "Banking", "Business Strategy",
+    "Leadership", "Organizations", "Manufacturing", "Startups & Venture",
   ],
   "Civic Stewardship": [
+    // Canonical tags
     "Policy, Regulation & Governance", "Climate & Environmental Systems",
+    "Public Health", "Education", "Agriculture & Food Systems", "Mobility & Infrastructure",
+    // Legacy / informal tags
+    "Policy & Regulation", "Climate & Environmental Health", "Climate Change",
+    "Governance", "Regulation", "Sustainability", "Environmental",
+    "Health", "Infrastructure",
   ],
 };
 
@@ -209,6 +228,10 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
     activeSources: activeSourcesResult[0]?.count ?? 0,
     socialSignalsCount,
     emergingSignalsCount,
+    // Expose the time window start so the topic drill-down can apply the same filter,
+    // ensuring the article count in the drill-down always matches the topic card count.
+    contentWindowStart: contentWindow.toISOString(),
+    minTopicScore: MIN_TOPIC_SCORE,
   });
 });
 

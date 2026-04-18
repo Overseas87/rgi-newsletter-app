@@ -93,20 +93,30 @@ Sentence 2: State one concrete forward-looking implication for senior leaders. U
 Format: "RGI [agrees/partially agrees/disagrees]: [reason]. [Forward implication for leaders]."
 If the article is low-relevance (score 1-4), write: "RGI notes this item falls outside the core strategic lens — limited implications for senior leadership."
 
-TOPIC TAGS — choose only from this exact list (12 topics):
-"Geopolitics & Global Power", "Economics & Macroeconomics", "Finance & Markets",
-"Technology & AI", "Innovation & Digital Transformation", "Business Strategy & Corporations",
-"Leadership & Organizations", "Energy & Resources", "Supply Chains & Global Trade",
-"Policy, Regulation & Governance", "Climate & Environmental Systems", "Future of Work & Society"
+TOPIC TAGS — choose only from this exact canonical list (31 topics):
 
-TAGGING RULES:
-1. 1-3 tags maximum — be selective based on PRIMARY content focus, never tag tangentially
-2. "Technology & AI" → for AI breakthroughs, AI policy, semiconductor geopolitics, cybersecurity; "Innovation & Digital Transformation" → for digital strategy, fintech, crypto, startups, tech-driven business change
-3. "Geopolitics & Global Power" covers wars, sanctions, great-power competition, international relations
-4. "Economics & Macroeconomics" covers GDP, inflation, central banks, trade balances; "Finance & Markets" covers equities, bonds, commodities, banking
-5. AI regulation → "Technology & AI" + "Policy, Regulation & Governance"; climate policy → "Climate & Environmental Systems" + "Policy, Regulation & Governance"
-6. NEVER use "Business Strategy & Corporations" or "Leadership & Organizations" as catch-alls — only when corporate strategy or leadership is the PRIMARY story focus
-7. Use the full tag string exactly as listed above — no abbreviations or partial matches
+GEOPOLITICS & POWER: "Geopolitics & Global Power", "Wars, Conflict & Security", "Defense & Military"
+POLICY & GOVERNANCE: "Policy, Regulation & Governance", "Industrial Policy"
+ECONOMICS: "Economics & Macroeconomics", "Currency & Monetary Policy", "Trade & Tariffs"
+FINANCE: "Finance & Markets", "Banking & Credit"
+BUSINESS: "Business Strategy & Corporations", "Leadership & Organizations", "Corporate Governance", "Operations & Manufacturing", "Venture & Startups"
+SUPPLY CHAIN: "Supply Chains & Global Trade"
+ENERGY & RESOURCES: "Energy & Resources", "Oil & Gas", "Commodities"
+CLIMATE: "Climate & Environmental Systems"
+TECHNOLOGY: "Technology & AI", "Cybersecurity", "Innovation & Digital Transformation", "Robotics & Automation"
+SOCIETY: "Future of Work & Society", "Labor Markets", "Public Health", "Education", "Real Estate", "Agriculture & Food Systems", "Mobility & Infrastructure"
+
+TAGGING RULES — be precise, never tag tangentially:
+1. 1-3 tags maximum, chosen by PRIMARY content focus only
+2. "Geopolitics & Global Power" → great-power competition, sanctions, diplomatic relations; "Wars, Conflict & Security" → active armed conflicts, military operations, terrorism; "Defense & Military" → defense budgets, weapons systems, military strategy
+3. "Technology & AI" → AI breakthroughs, AI policy, semiconductors, LLMs; "Cybersecurity" → attacks, data breaches, digital warfare, security standards; "Robotics & Automation" → physical automation, manufacturing robots, autonomous systems; "Innovation & Digital Transformation" → digital strategy, fintech, crypto, startups, tech-driven business change
+4. "Economics & Macroeconomics" → GDP, inflation, central bank policy, trade balances; "Finance & Markets" → equities, bonds, asset prices, investment flows; "Banking & Credit" → banks, lending, credit conditions, financial stability; "Currency & Monetary Policy" → exchange rates, Fed policy, dollar system, interest rates; "Trade & Tariffs" → tariffs, trade agreements, import/export policy
+5. "Energy & Resources" → energy markets and transition broadly; "Oil & Gas" → petroleum specifically; "Commodities" → metals, grains, raw materials pricing
+6. "Supply Chains & Global Trade" → logistics networks, sourcing strategy, trade flows; distinct from "Trade & Tariffs" (policy)
+7. "Business Strategy & Corporations" → only when corporate strategy IS the primary story; "Leadership & Organizations" → only when leadership effectiveness or organizational culture is primary; "Corporate Governance" → board decisions, executive accountability, shareholder activism; "Operations & Manufacturing" → factory operations, industrial production; "Industrial Policy" → government-driven industrial programs (chips act, subsidies)
+8. "Venture & Startups" → VC funding, startup ecosystem, entrepreneurship; "Labor Markets" → employment data, wages, workforce trends
+9. "Future of Work & Society" → broad workforce transformation, automation impact on jobs; "Public Health" → disease, healthcare systems, pharmaceutical policy; "Education" → universities, skills training, learning systems; "Real Estate" → property markets, housing policy, commercial real estate; "Agriculture & Food Systems" → farming, food supply, agricultural policy; "Mobility & Infrastructure" → transportation, logistics infrastructure, urban mobility
+10. Use the EXACT tag string — no abbreviations, no partial matches, no invented tags
 
 Return ONLY valid JSON with exactly these keys:
 - strategicImpact: integer 0-3
