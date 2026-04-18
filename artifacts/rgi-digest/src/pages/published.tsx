@@ -1,14 +1,16 @@
-import { useListDigestArticles, DigestArticle } from "@workspace/api-client-react";
+import { useListDigestArticles, useDeleteDigestArticle, DigestArticle } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { format, formatDistanceToNow } from "date-fns";
 import { useState } from "react";
-import { ExternalLink, Globe, Tag, Download, FileDown, Loader2 } from "lucide-react";
+import { ExternalLink, Globe, Tag, Download, FileDown, Loader2, Trash2 } from "lucide-react";
 import { usePdfDownload } from "@/hooks/use-pdf-download";
 import { stripMarkdown } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
 
 function ArticleTypeBadge({ articleType }: { articleType: string }) {
   if (articleType === "daily_brief") {
@@ -237,8 +239,18 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
 }
 
 export default function Published() {
+  const queryClient = useQueryClient();
   const { data: articles = [], isLoading } = useListDigestArticles({ status: "approved" });
   const [selectedRead, setSelectedRead] = useState<DigestArticle | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DigestArticle | null>(null);
+  const { mutate: deleteArticle, isPending: isDeleting } = useDeleteDigestArticle({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["listDigestArticles"] });
+        setDeleteTarget(null);
+      },
+    },
+  });
 
   const dailyBriefs = (articles as DigestArticle[]).filter((a) => a.articleType === "daily_brief");
   const topicArticles = (articles as DigestArticle[]).filter((a) => a.articleType === "topic_article");
@@ -314,16 +326,26 @@ export default function Published() {
                               {article.discipline && (
                                 <Badge variant="outline" className="text-xs">{article.discipline}</Badge>
                               )}
-                              <div className="ml-auto flex flex-col items-end gap-0.5">
-                                <span className="text-[11px] text-muted-foreground">
-                                  <span className="font-medium">Generated:</span> {format(new Date(article.createdAt), "MMM d, yyyy")} — {format(new Date(article.createdAt), "HH:mm")}
-                                  {" "}<span className="text-muted-foreground/50">({formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })})</span>
-                                </span>
-                                {article.publishedAt && (
-                                  <span className="text-[10px] text-muted-foreground/55">
-                                    <span className="font-medium">Approved:</span> {format(new Date(article.publishedAt), "MMM d, yyyy")} — {format(new Date(article.publishedAt), "HH:mm")}
+                              <div className="ml-auto flex items-center gap-3">
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <span className="text-[11px] text-muted-foreground">
+                                    <span className="font-medium">Generated:</span> {format(new Date(article.createdAt), "MMM d, yyyy")} — {format(new Date(article.createdAt), "HH:mm")}
+                                    {" "}<span className="text-muted-foreground/50">({formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })})</span>
                                   </span>
-                                )}
+                                  {article.publishedAt && (
+                                    <span className="text-[10px] text-muted-foreground/55">
+                                      <span className="font-medium">Approved:</span> {format(new Date(article.publishedAt), "MMM d, yyyy")} — {format(new Date(article.publishedAt), "HH:mm")}
+                                    </span>
+                                  )}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 shrink-0"
+                                  onClick={(e) => { e.stopPropagation(); setDeleteTarget(article); }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
                               </div>
                             </div>
                             <CardTitle className="text-xl font-serif leading-snug">{article.headline}</CardTitle>
@@ -395,16 +417,26 @@ export default function Published() {
                               {article.discipline && (
                                 <Badge variant="outline" className="text-xs">{article.discipline}</Badge>
                               )}
-                              <div className="ml-auto flex flex-col items-end gap-0.5">
-                                <span className="text-[11px] text-muted-foreground">
-                                  <span className="font-medium">Generated:</span> {format(new Date(article.createdAt), "MMM d, yyyy")} — {format(new Date(article.createdAt), "HH:mm")}
-                                  {" "}<span className="text-muted-foreground/50">({formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })})</span>
-                                </span>
-                                {article.publishedAt && (
-                                  <span className="text-[10px] text-muted-foreground/55">
-                                    <span className="font-medium">Approved:</span> {format(new Date(article.publishedAt), "MMM d, yyyy")} — {format(new Date(article.publishedAt), "HH:mm")}
+                              <div className="ml-auto flex items-center gap-3">
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <span className="text-[11px] text-muted-foreground">
+                                    <span className="font-medium">Generated:</span> {format(new Date(article.createdAt), "MMM d, yyyy")} — {format(new Date(article.createdAt), "HH:mm")}
+                                    {" "}<span className="text-muted-foreground/50">({formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })})</span>
                                   </span>
-                                )}
+                                  {article.publishedAt && (
+                                    <span className="text-[10px] text-muted-foreground/55">
+                                      <span className="font-medium">Approved:</span> {format(new Date(article.publishedAt), "MMM d, yyyy")} — {format(new Date(article.publishedAt), "HH:mm")}
+                                    </span>
+                                  )}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 shrink-0"
+                                  onClick={(e) => { e.stopPropagation(); setDeleteTarget(article); }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
                               </div>
                             </div>
                             <CardTitle className="text-xl font-serif leading-snug">{article.headline}</CardTitle>
@@ -444,6 +476,28 @@ export default function Published() {
         open={!!selectedRead}
         onClose={() => setSelectedRead(null)}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this article?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove <span className="font-medium text-foreground">"{deleteTarget?.headline}"</span> from the archive. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+              onClick={() => deleteTarget && deleteArticle({ id: deleteTarget.id })}
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
