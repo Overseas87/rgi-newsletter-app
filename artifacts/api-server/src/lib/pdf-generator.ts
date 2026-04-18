@@ -226,9 +226,9 @@ function bulletList(
 
   items.forEach((item) => {
     const text = item.trim();
-    // Estimate actual text height so ensureSpace reserves enough room for the
-    // full bullet — not just a fixed 28pt — preventing mid-bullet page breaks.
-    doc.fontSize(size);
+    // Set font + size explicitly so heightOfString uses the same metrics as
+    // the actual text render — mismatched fonts skew the height estimate.
+    doc.font("Helvetica").fontSize(size);
     const textH = doc.heightOfString(text, { width: textW, lineGap: 3 });
     ensureSpace(doc, textH + 10, articleType);
     const y = doc.y;
@@ -254,16 +254,20 @@ function bulletList(
 
 // ── RGI Take box ───────────────────────────────────────────────────────────────
 function rgiTakeBox(doc: PDFKit.PDFDocument, text: string, articleType: string) {
-  const PAD_V = 12;
+  const PAD_V = 14;
   const PAD_H = 16;
   const BOX_X = ML + 1;
   const BOX_W = CW - 1;
   const TEXT_X = BOX_X + PAD_H + 4;
   const TEXT_W = BOX_W - PAD_H - 8;
 
-  // Measure text height first
+  // Measure with the EXACT font and size the text will be rendered in.
+  // Using the wrong font/size here causes the box background to be too short,
+  // making overflow text land on top of the next section.
+  doc.font("Helvetica-Oblique").fontSize(10.5);
   const textHeight = doc.heightOfString(text, { width: TEXT_W, lineGap: 3.5 });
-  const boxH = textHeight + PAD_V * 2;
+  // Add a small safety buffer (8pt) for sub-pixel rendering variance.
+  const boxH = textHeight + PAD_V * 2 + 8;
 
   ensureSpace(doc, boxH + 20, articleType);
 
@@ -292,6 +296,9 @@ function rgiTakeBox(doc: PDFKit.PDFDocument, text: string, articleType: string) 
   doc.restore();
 
   doc.y = boxY + boxH;
+  // Reset to the default body font so subsequent heightOfString calls use
+  // correct metrics — leaving Helvetica-Oblique/10.5 would skew measurements.
+  doc.font("Helvetica").fontSize(10);
   doc.moveDown(0.9);
 }
 
@@ -542,26 +549,32 @@ export function generateArticlePdf(
 
     doc.moveDown(0.8);
 
-    // ── Text caps — keep PDF executive-readable; full text is in the web app ──
-    // Cap individual sentences/bullets at sensible lengths for scanning.
-    function cap(text: string, max: number): string {
-      const t = text.trim();
-      return t.length > max ? t.slice(0, max - 1) + "\u2026" : t;
+    // Helper: strip markdown bold markers and trim
+    function cleanText(t: string): string {
+      return t.replace(/\*\*/g, "").replace(/\*/g, "").trim();
+    }
+
+    // Helper: reserve space for a section heading (≈20pt) + a minimum first line
+    // so headings are never stranded alone at the bottom of a page.
+    function sectionGuard(neededAfterHeading = 40) {
+      ensureSpace(doc, 20 + neededAfterHeading, articleType);
     }
 
     // ── Executive Summary ───────────────────────────────────────────────────
     if (execSummary.length > 0) {
-      ensureSpace(doc, 60, articleType);
+      sectionGuard(30);
       sectionHeading(doc, "Executive Summary");
 
       execSummary.forEach((sentence, i) => {
-        const text = cap(sentence, 220);
-        doc.fontSize(i === 0 ? 10.5 : 10);
+        const text = cleanText(sentence);
+        const size = i === 0 ? 10.5 : 10;
+        // Match font + size exactly to get an accurate height measurement.
+        doc.font(i === 0 ? "Helvetica-Bold" : "Helvetica").fontSize(size);
         const textH = doc.heightOfString(text, { width: CW, lineGap: 3 });
-        ensureSpace(doc, textH + 6, articleType);
+        ensureSpace(doc, textH + 4, articleType);
         para(doc, text, {
           font: i === 0 ? "Helvetica-Bold" : "Helvetica",
-          size: i === 0 ? 10.5 : 10,
+          size,
           color: C.ink,
           lineGap: 3,
         });
@@ -574,24 +587,21 @@ export function generateArticlePdf(
     }
 
     // ── Key Developments ────────────────────────────────────────────────────
-    // Cap each bullet at ~280 chars so the PDF stays executive-readable.
-    // The full text is always available in the web app; the PDF is for
-    // rapid scanning and sharing, not as a verbatim transcript.
-    const MAX_BULLET_CHARS = 280;
-    function capBullet(text: string): string {
-      const t = text.replace(/\*\*/g, "").replace(/\*/g, "").trim();
-      return t.length > MAX_BULLET_CHARS ? t.slice(0, MAX_BULLET_CHARS - 1) + "\u2026" : t;
-    }
+    // Split body by single newline so each point gets its own space check —
+    // both for structured (bullet) and non-structured (paragraph) briefs.
+    const bodyPoints = article.body.split("\n").filter(Boolean).map(cleanText);
 
-    ensureSpace(doc, 50, articleType);
+    sectionGuard(40);
     sectionHeading(doc, isStructured ? "Key Developments" : "Analysis");
 
-    if (isStructured && keyDevelopments) {
-      bulletList(doc, keyDevelopments.map(capBullet), articleType, { dotColor: C.navy, size: 10 });
+    if (isStructured && bodyPoints.length > 0) {
+      bulletList(doc, bodyPoints, articleType, { dotColor: C.navy, size: 10 });
     } else {
-      article.body.split("\n\n").filter(Boolean).forEach((p) => {
-        ensureSpace(doc, 36, articleType);
-        para(doc, capBullet(p), { size: 10, lineGap: 3 });
+      bodyPoints.forEach((p) => {
+        doc.font("Helvetica").fontSize(10);
+        const textH = doc.heightOfString(p, { width: CW, lineGap: 3 });
+        ensureSpace(doc, textH + 6, articleType);
+        para(doc, p, { size: 10, lineGap: 3 });
         doc.moveDown(0.5);
       });
     }
@@ -602,9 +612,9 @@ export function generateArticlePdf(
 
     // ── Why It Matters ──────────────────────────────────────────────────────
     if (keyTakeaways.length > 0) {
-      ensureSpace(doc, 50, articleType);
+      sectionGuard(40);
       sectionHeading(doc, isStructured ? "Why It Matters" : "Key Takeaways", C.navy);
-      bulletList(doc, keyTakeaways.map((t) => cap(t, 240)), articleType, { dotColor: C.gold, size: 10 });
+      bulletList(doc, keyTakeaways.map(cleanText), articleType, { dotColor: C.gold, size: 10 });
       doc.moveDown(0.3);
       hRule(doc, doc.y, C.hairline, 0.4);
       doc.moveDown(0.6);
@@ -612,18 +622,18 @@ export function generateArticlePdf(
 
     // ── RGI Take ────────────────────────────────────────────────────────────
     if (article.rgiTake) {
-      ensureSpace(doc, 70, articleType);
+      sectionGuard(60);
       sectionHeading(doc, "RGI Take", C.gold);
-      rgiTakeBox(doc, cap(article.rgiTake, 650), articleType);
+      rgiTakeBox(doc, cleanText(article.rgiTake), articleType);
       hRule(doc, doc.y, C.hairline, 0.4);
       doc.moveDown(0.6);
     }
 
     // ── What to Watch ───────────────────────────────────────────────────────
     if (whatToWatch.length > 0) {
-      ensureSpace(doc, 50, articleType);
+      sectionGuard(40);
       sectionHeading(doc, "What to Watch Next", C.navy);
-      bulletList(doc, whatToWatch.map((t) => cap(t, 200)), articleType, { dotColor: C.navy, size: 10 });
+      bulletList(doc, whatToWatch.map(cleanText), articleType, { dotColor: C.navy, size: 10 });
       doc.moveDown(0.4);
     }
 
