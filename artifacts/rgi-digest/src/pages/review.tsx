@@ -17,8 +17,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { stripMarkdown } from "@/lib/utils";
-import { CheckCircle, XCircle, RefreshCw, Edit3, Save, X, Eye, ExternalLink, Globe, Tag } from "lucide-react";
-import { format } from "date-fns";
+import { CheckCircle, XCircle, RefreshCw, Edit3, Save, X, Eye, ExternalLink, Globe, Tag, Clock } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
 
 function ArticleTypeBadge({ articleType }: { articleType: string }) {
   if (articleType === "daily_brief") {
@@ -50,6 +50,16 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
             </Badge>
           </div>
           <DialogTitle className="text-2xl font-serif leading-tight text-left">{article.headline}</DialogTitle>
+          <div className="flex items-center gap-4 pt-2 flex-wrap">
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3 shrink-0" />
+              <span className="font-medium">RGI generated:</span>
+              {format(new Date(article.createdAt), "MMMM d, yyyy")}
+              {" — "}
+              {format(new Date(article.createdAt), "HH:mm")}
+              <span className="text-muted-foreground/50">({formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })})</span>
+            </span>
+          </div>
         </DialogHeader>
         <div className="space-y-6 mt-2">
           {isDailyBrief && article.executiveSummary && article.executiveSummary.length > 0 && (
@@ -237,6 +247,12 @@ function DigestCard({ article }: { article: DigestArticle }) {
               ) : (
                 <CardTitle className="text-xl font-serif leading-snug">{article.headline}</CardTitle>
               )}
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70 pt-0.5">
+                <Clock className="h-3 w-3 shrink-0" />
+                <span className="font-medium">RGI generated:</span>
+                <span>{format(new Date(article.createdAt), "MMMM d, yyyy")} — {format(new Date(article.createdAt), "HH:mm")}</span>
+                <span className="text-muted-foreground/40">({formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })})</span>
+              </div>
             </div>
             <div className="flex gap-2 shrink-0">
               <Button size="sm" variant="ghost" onClick={() => setViewOpen(true)} data-testid="btn-preview">

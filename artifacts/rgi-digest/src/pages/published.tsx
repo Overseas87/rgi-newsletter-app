@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { ExternalLink, Globe, Tag } from "lucide-react";
 import { stripMarkdown } from "@/lib/utils";
@@ -38,9 +38,18 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
             <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
               Score: {article.relevancyScore?.toFixed(1)}/10
             </Badge>
-            <span className="text-xs text-muted-foreground ml-auto">
-              Published {format(new Date(article.updatedAt), "MMMM d, yyyy")}
-            </span>
+            <div className="ml-auto flex flex-col items-end gap-0.5">
+              <span className="text-[11px] text-muted-foreground">
+                <span className="font-medium">RGI generated:</span> {format(new Date(article.createdAt), "MMMM d, yyyy")} — {format(new Date(article.createdAt), "HH:mm")}
+                {" "}
+                <span className="text-muted-foreground/50">({formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })})</span>
+              </span>
+              {article.publishedAt && (
+                <span className="text-[11px] text-muted-foreground/60">
+                  <span className="font-medium">Approved:</span> {format(new Date(article.publishedAt), "MMMM d, yyyy")} — {format(new Date(article.publishedAt), "HH:mm")}
+                </span>
+              )}
+            </div>
           </div>
           <DialogTitle className="text-2xl font-serif leading-tight text-left">{article.headline}</DialogTitle>
         </DialogHeader>
@@ -169,9 +178,17 @@ export default function Published() {
                               {article.discipline && (
                                 <Badge variant="outline" className="text-xs">{article.discipline}</Badge>
                               )}
-                              <span className="text-xs text-muted-foreground ml-auto">
-                                {format(new Date(article.updatedAt), "MMMM d, yyyy")}
-                              </span>
+                              <div className="ml-auto flex flex-col items-end gap-0.5">
+                                <span className="text-[11px] text-muted-foreground">
+                                  <span className="font-medium">Generated:</span> {format(new Date(article.createdAt), "MMM d, yyyy")} — {format(new Date(article.createdAt), "HH:mm")}
+                                  {" "}<span className="text-muted-foreground/50">({formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })})</span>
+                                </span>
+                                {article.publishedAt && (
+                                  <span className="text-[10px] text-muted-foreground/55">
+                                    <span className="font-medium">Approved:</span> {format(new Date(article.publishedAt), "MMM d, yyyy")} — {format(new Date(article.publishedAt), "HH:mm")}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <CardTitle className="text-xl font-serif leading-snug">{article.headline}</CardTitle>
                           </div>
@@ -242,9 +259,17 @@ export default function Published() {
                               {article.discipline && (
                                 <Badge variant="outline" className="text-xs">{article.discipline}</Badge>
                               )}
-                              <span className="text-xs text-muted-foreground ml-auto">
-                                {format(new Date(article.updatedAt), "MMMM d, yyyy")}
-                              </span>
+                              <div className="ml-auto flex flex-col items-end gap-0.5">
+                                <span className="text-[11px] text-muted-foreground">
+                                  <span className="font-medium">Generated:</span> {format(new Date(article.createdAt), "MMM d, yyyy")} — {format(new Date(article.createdAt), "HH:mm")}
+                                  {" "}<span className="text-muted-foreground/50">({formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })})</span>
+                                </span>
+                                {article.publishedAt && (
+                                  <span className="text-[10px] text-muted-foreground/55">
+                                    <span className="font-medium">Approved:</span> {format(new Date(article.publishedAt), "MMM d, yyyy")} — {format(new Date(article.publishedAt), "HH:mm")}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <CardTitle className="text-xl font-serif leading-snug">{article.headline}</CardTitle>
                           </div>

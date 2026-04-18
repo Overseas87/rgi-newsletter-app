@@ -12,8 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { format } from "date-fns";
-import { ExternalLink, Edit3, Save, X, Eye, RotateCcw, Trash2 } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
+import { ExternalLink, Edit3, Save, X, Eye, RotateCcw, Trash2, Clock } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { stripMarkdown } from "@/lib/utils";
@@ -87,9 +87,14 @@ function FullArticleDialog({ article, open, onClose, onRestore, onDelete, restor
             <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/20">
               Rejected
             </Badge>
-            <span className="text-xs text-muted-foreground ml-auto">
-              {format(new Date(article.updatedAt), "MMMM d, yyyy")}
-            </span>
+            <div className="ml-auto flex flex-col items-end gap-0.5">
+              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Clock className="h-3 w-3 shrink-0" />
+                <span className="font-medium">Generated:</span>
+                {format(new Date(article.createdAt), "MMMM d, yyyy")} — {format(new Date(article.createdAt), "HH:mm")}
+                <span className="text-muted-foreground/50">({formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })})</span>
+              </span>
+            </div>
           </div>
           <DialogTitle className="text-2xl font-serif leading-tight text-left">{article.headline}</DialogTitle>
         </DialogHeader>
@@ -242,8 +247,11 @@ function RejectedCard({ article }: { article: DigestArticle }) {
                 <Badge variant="outline" className="text-xs text-muted-foreground">
                   Score {article.relevancyScore?.toFixed(1)}/10
                 </Badge>
-                <span className="text-xs text-muted-foreground">
-                  {format(new Date(article.updatedAt), "MMM d, yyyy")}
+                <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
+                  <Clock className="h-3 w-3 shrink-0" />
+                  <span className="font-medium">Generated:</span>
+                  {format(new Date(article.createdAt), "MMM d, yyyy")} — {format(new Date(article.createdAt), "HH:mm")}
+                  <span className="text-muted-foreground/40">({formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })})</span>
                 </span>
               </div>
               {isEditing ? (

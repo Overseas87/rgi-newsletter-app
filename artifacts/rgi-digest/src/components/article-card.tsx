@@ -225,12 +225,29 @@ export function ArticleCard({ article, selectable, selected, onSelect, onTopicCl
                 </>
               )}
               <span className="text-muted-foreground/40 text-xs">·</span>
-              <span className="text-xs text-muted-foreground" title={format(new Date(publishTime), "MMMM d, yyyy 'at' h:mm a")}>
-                {format(new Date(publishTime), "MMM d, yyyy")}
-                <span className="text-muted-foreground/50"> — </span>
-                {format(new Date(publishTime), "h:mm a")}
-                <span className="text-muted-foreground/50"> · </span>
-                {formatDistanceToNow(new Date(publishTime), { addSuffix: true })}
+              <span className="text-xs text-muted-foreground flex flex-col gap-0.5">
+                {article.publishedAt ? (
+                  <span title={format(new Date(article.publishedAt), "MMMM d, yyyy 'at' h:mm a")}>
+                    <span className="text-muted-foreground/50 font-medium">Source published: </span>
+                    {format(new Date(article.publishedAt), "MMM d, yyyy")}
+                    <span className="text-muted-foreground/40"> — </span>
+                    {format(new Date(article.publishedAt), "h:mm a")}
+                    <span className="text-muted-foreground/40"> · </span>
+                    {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
+                  </span>
+                ) : null}
+                <span title={format(new Date(article.scrapedAt), "MMMM d, yyyy 'at' h:mm a")}>
+                  <span className="text-muted-foreground/50 font-medium">RGI ingested: </span>
+                  {format(new Date(article.scrapedAt), "MMM d, yyyy")}
+                  <span className="text-muted-foreground/40"> — </span>
+                  {format(new Date(article.scrapedAt), "h:mm a")}
+                  {!article.publishedAt && (
+                    <>
+                      <span className="text-muted-foreground/40"> · </span>
+                      {formatDistanceToNow(new Date(article.scrapedAt), { addSuffix: true })}
+                    </>
+                  )}
+                </span>
               </span>
               <div className="ml-auto flex items-center gap-1.5 flex-wrap justify-end">
                 {article.isPrimarySignal && (
