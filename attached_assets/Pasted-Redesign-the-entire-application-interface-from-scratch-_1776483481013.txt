@@ -1,0 +1,29 @@
+Redesign the entire application interface from scratch to make it look like a high-end, professional internal intelligence platform for the Rick Goings Institute (RGI). The current design looks like a prototype and is not acceptable for presentation or real use.
+
+The application must be fully restructured with a clean, modern, and premium layout. Use a consistent design system across all pages. Implement a professional dashboard structure with a top navigation bar, a left sidebar for navigation, and a well-organized main content area.
+
+The top bar must include the RGI logo in the top left corner, followed by “Rick Goings Institute” and a subtitle “Newsletter Generator.” This should look minimal, clean, and high-end. The branding must be consistent across the entire application.
+
+Update the entire color scheme to look professional and visually appealing. Use a white or very light background for readability. Use dark text (navy or near-black) and apply RGI-style accent colors (such as navy, gold, or subtle gradients) for highlights, buttons, and active states. Avoid harsh colors like bright red or anything that looks like a prototype.
+
+Completely redesign all UI components including cards, buttons, typography, spacing, and layout. Add proper spacing, alignment, and hierarchy so the interface feels structured and easy to navigate. Use rounded corners, subtle shadows, and clean card designs to create a modern SaaS-style interface.
+
+Ensure that the Dashboard is clean and focused:
+
+Top Stories Today should be the main central section with well-designed article cards
+What Matters Today should be a smaller panel on the right with a maximum of five topics
+No duplicate or unnecessary sections should exist
+
+All pages (Dashboard, Intelligence Feed, Generate, Pending, Published, Rejected, Sources, Settings) must follow the same design system and feel consistent.
+
+The article view must be redesigned to look like a professional editorial page, with a clean reading layout, strong typography, and clear structure for headline, summary, RGI Take, and key takeaways.
+
+Improve all interactions:
+
+buttons should look clean and modern
+hover states should be subtle and smooth
+clickable elements should feel responsive
+
+Remove anything that looks unfinished, cluttered, or unnecessary. The entire application should feel minimal, structured, and intentional.
+
+The final result must look like a production-ready platform used by professionals, not a prototype.

@@ -596,18 +596,6 @@ export default function Dashboard() {
 
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           <Button
-            onClick={handleScrape}
-            disabled={triggerScrape.isPending || scrapeStatus?.isRunning}
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-xs h-9 border-foreground/20 text-foreground/70 hover:text-foreground hover:border-foreground/40"
-            data-testid="btn-trigger-scrape-dashboard"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${scrapeStatus?.isRunning || triggerScrape.isPending ? "animate-spin" : ""}`} />
-            {scrapeStatus?.isRunning ? "Scraping..." : triggerScrape.isPending ? "Starting..." : "Scrape Now"}
-          </Button>
-
-          <Button
             onClick={handleGenerateDailyBrief}
             disabled={briefLoading || !hasArticles}
             size="sm"
