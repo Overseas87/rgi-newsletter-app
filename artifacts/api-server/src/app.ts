@@ -6,6 +6,7 @@ import { logger } from "./lib/logger";
 import { startScheduler } from "./lib/scheduler";
 import { initializeScrapeStatus, runScrape } from "./lib/scraper";
 import { seedDefaultSources } from "./lib/seed-sources";
+import { seedProductionData } from "./lib/seed-production-data";
 import { db, articlesTable } from "@workspace/db";
 import { sourcesTable, digestArticlesTable as digestTable } from "@workspace/db/schema";
 import { gte, count, sql } from "drizzle-orm";
@@ -48,7 +49,12 @@ async function initializeApp() {
     logger.warn({ err }, "Could not run persistence audit — continuing startup");
   }
 
-  // Step 3 — seed default sources only if the table is empty (first-ever run or fresh DB)
+  // Step 3 — seed all production data (articles, digest_articles, sources, settings)
+  // on first run of a fresh database. No-op if any data already exists.
+  await seedProductionData();
+
+  // Step 3b — seed default sources only if the table is still empty
+  // (covers the case where seedProductionData was skipped and only sources are needed)
   await seedDefaultSources();
 
   // Step 4 — restore in-memory scrape state from DB timestamps
