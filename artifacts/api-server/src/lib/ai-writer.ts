@@ -157,7 +157,7 @@ OUTPUT — STRUCTURED ARTICLE FORMAT
 ═══════════════════════════════════════════════════════
 Total article: 300–500 words. Highly scannable. No long prose blocks. Every sentence is analysis, not description.
 
-HEADLINE: One declarative sentence. A causal claim — not a topic label. Foreign Affairs / HBR style. Must state what happened AND why.
+HEADLINE: 8–12 words maximum. Lead with the key actor and action. Use a dash or colon to add the sharpest consequence. Must be scannable in 3 seconds — no subordinate clauses, no jargon. Think Bloomberg/Reuters, not Foreign Affairs. Format: "[Actor] [Action] [What] — [Consequence]" or "[Event]: [Impact]". Examples: "Trump Threatens Iran — Hormuz Deal at Risk" / "Fed Holds Rates as Trade War Pressure Builds" / "China Dumps Treasuries: Dollar Risk Returns".
 
 EXECUTIVE SUMMARY (2–3 sentences): The core development and its most important implication. Direct, no hedging. Must not repeat the headline — each sentence adds new information.
 
@@ -186,7 +186,7 @@ ABSOLUTE RULES:
 OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble
 ═══════════════════════════════════════════════════════
 {
-  "headline": "string — one declarative causal sentence stating what happened and why",
+  "headline": "string — 8 to 12 words, actor + action + consequence, scannable in 3 seconds, Bloomberg/Reuters style",
   "executiveSummary": ["sentence 1", "sentence 2", "sentence 3"],
   "keyDevelopments": ["development 1", "development 2", "development 3", "development 4"],
   "whyItMatters": ["second-order implication 1", "second-order implication 2", "second-order implication 3"],
@@ -230,7 +230,7 @@ INTERNAL REASONING (silent — do not output)
 STRICT FORMAT — 9 sections, ~300–500 words total
 ═══════════════════════════════════════════════════════
 
-HEADLINE: One declarative causal sentence. Names the development AND its driver. Not a topic label.
+HEADLINE: 8–12 words maximum. Lead with the key actor and action. Use a dash or colon to add the sharpest consequence. Must be scannable in 3 seconds — no subordinate clauses, no jargon. Think Bloomberg/Reuters, not Foreign Affairs. Format: "[Actor] [Action] [What] — [Consequence]" or "[Event]: [Impact]". Examples: "Trump Threatens Iran — Hormuz Deal at Risk" / "Fed Holds Rates as Trade War Pressure Builds" / "China Dumps Treasuries: Dollar Risk Returns".
 
 EXECUTIVE SUMMARY (2–3 sentences): Core development + most important implication. No hedging. Each sentence adds distinct information — never repeat the headline.
 
@@ -265,7 +265,7 @@ ABSOLUTE RULES:
 OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble
 ═══════════════════════════════════════════════════════
 {
-  "headline": "string",
+  "headline": "string — 8 to 12 words, actor + action + consequence, scannable in 3 seconds, Bloomberg/Reuters style",
   "executiveSummary": ["sentence 1", "sentence 2"],
   "keyDevelopments": ["bullet 1", "bullet 2", "bullet 3", "bullet 4"],
   "whyItMatters": ["implication 1", "implication 2", "implication 3"],
