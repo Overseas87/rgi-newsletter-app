@@ -36,7 +36,7 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
             <ArticleTypeBadge articleType={article.articleType} />
             <Badge variant="outline" className="text-xs">{article.discipline}</Badge>
             <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
-              Score: {article.relevancyScore}
+              Score: {article.relevancyScore?.toFixed(1)}/10
             </Badge>
             <span className="text-xs text-muted-foreground ml-auto">
               Published {format(new Date(article.updatedAt), "MMMM d, yyyy")}

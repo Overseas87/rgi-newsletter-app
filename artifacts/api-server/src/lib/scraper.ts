@@ -48,6 +48,14 @@ AUTOMATIC LOW SCORES (1-3) — these content types are ALWAYS low relevance rega
 - Routine earnings beats with no strategic signal
 - Press releases announcing minor hires or product updates with no market significance
 
+SCORING DISTRIBUTION — you must use the full 1-10 range with realistic spread. The expected distribution across any batch of articles is approximately:
+- Scores 1-4 (noise/low relevance): ~20% of articles — routine developments with no strategic signal
+- Scores 4.5-6.4 (moderate interest): ~45% of articles — solid reporting on relevant topics but incremental in nature
+- Scores 6.5-7.9 (notable): ~25% of articles — meaningful developments with real leadership implications, worth reading
+- Scores 8.0-8.9 (significant): ~8% of articles — major systemic shifts, important geopolitical/economic developments, primary signals
+- Scores 9.0-10.0 (exceptional): ~2% of articles — RARE. Reserve for historic events, major market-moving announcements, extraordinary primary signals from the world's most consequential leaders
+If you find yourself assigning 8+ to more than 1 in 8 articles, recalibrate downward. A score of 7.5 on a solid, relevant article is correct.
+
 HIGH SCORES (8-10) REQUIRE ALL of the following:
 - Systemic or market-level shifts (not one company's quarterly result)
 - Geopolitical developments affecting global business or security
@@ -59,10 +67,8 @@ HIGH SCORES (8-10) REQUIRE ALL of the following:
 MULTI-FACTOR RELEVANCY SCORING — evaluate each factor:
 1. Strategic Importance (40%): How fundamentally does this reshape leadership, markets, or governance?
 2. Impact Scope (25%): Local/individual = low. National = mid. Global/systemic = high.
-3. Source Authority (20%): Anonymous/minor outlet = low. Major publication = mid. Direct primary signal = high (+1 to +2 points).
+3. Source Authority (20%): Anonymous/minor outlet = low. Major publication = mid. Direct primary signal = high.
 4. Innovation/Disruption Level (15%): Incremental = low. Paradigm-shifting = high.
-
-PRIMARY SIGNAL BONUS: If a high-authority figure directly communicates something significant — add up to +2 points on top of the base score.
 
 RECENCY RULE: Do NOT adjust relevancyScore based on publication date. Score purely on strategic merit.
 
@@ -144,9 +150,9 @@ async function scoreArticle(
     const parsed = JSON.parse(cleanText);
     result = { ...result, ...parsed };
 
-    // Apply tier + authority bonus to relevancy
-    const tierBonus = sourceTier === 1 ? 0.5 : sourceTier === 2 ? 0.2 : 0;
-    const authorityBonus = (authorityLevel - 3) * 0.3; // authority 1-5, baseline 3
+    // Small tier + authority nudge — kept conservative so the AI's own distribution guidance drives scores
+    const tierBonus = sourceTier === 1 ? 0.2 : sourceTier === 2 ? 0.1 : 0;
+    const authorityBonus = (authorityLevel - 3) * 0.1; // authority 1-5, baseline 3; max ±0.2
     result.relevancyScore = Math.min(10, Math.max(1, result.relevancyScore + tierBonus + authorityBonus));
     result.relevancyScore = Math.round(result.relevancyScore * 10) / 10;
 

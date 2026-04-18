@@ -1,0 +1,21 @@
+Improve the application so it becomes a reliable, fast, and trustworthy daily intelligence tool rather than a prototype.
+
+First, fix the ranking and scoring logic completely. The order of Top Stories must always strictly follow the relevancy score in descending order. The highest score must always be rank 1, the second-highest rank 2, and so on. No other factor may override the ranking order. Ensure that scores are distributed realistically so that not all articles or topics receive similar high scores. Avoid assigning maximum values like 10 out of 10 unless truly exceptional.
+
+Second, ensure full consistency between Top Stories and What Matters Today. The topics shown must be derived directly from the top-ranked articles. A topic should only appear if it is supported by strong articles, and topics must reflect the same underlying logic as the Top Stories. There must never be contradictions between topics and articles.
+
+Third, fix the data persistence issue. All sources, scraped articles, generated articles, and article states must be stored in persistent storage and must not be lost when the app is republished or restarted. On startup, the system must load previously stored data so the dashboard is never empty. If no data exists, initialize the system with default high-quality sources.
+
+Fourth, improve scraping performance. Implement parallel and asynchronous scraping so that all sources are fetched at the same time instead of sequentially. Add timeouts to skip slow sources. Cache recent results and reuse them if scraping was done recently. Limit the number of articles per source to a small high-quality set. Scraping must run in the background without clearing existing data.
+
+Fifth, optimize AI generation speed and efficiency. Do not send full articles to the AI. Instead, send only short summaries of the top relevant sources. Limit the number of inputs to a small set of high-quality articles. Use asynchronous generation so the UI is not blocked. Optionally generate a quick draft first and refine it afterward.
+
+Sixth, improve the intelligence and reasoning quality of generated content. The AI must not summarize articles but analyze them. Every article must clearly explain what happened, why it happened, what it means, and what is likely to happen next. The RGI Take must always take a clear position (agree, disagree, or mixed) and explain why, with a forward-looking perspective.
+
+Seventh, simplify and clean the user interface. The dashboard should focus on a single Top Stories section in the center and a smaller What Matters Today section on the right with a maximum of five topics. Remove duplicate article sections and any unnecessary or confusing elements. Replace the relevancy score bar with a clean numeric badge (for example “8.7 / 10”) using professional colors.
+
+Eighth, improve user control over content generation. For topic articles, allow users to select one or more topics. For the general brief, include all topics by default but allow users to exclude specific topics before generation. Ensure the AI strictly follows the selected or excluded topics.
+
+Ninth, fix all interaction issues. Editing must persist changes immediately. Clicking on topics must open relevant articles. Clicking on an article must always open the original source in a new tab. Remove or fix any UI elements that do not have a clear function.
+
+The overall goal is to make the system fast, stable, logically consistent, and valuable for daily use. The user should trust the ranking, understand what matters, and be able to generate high-quality insights quickly and reliably

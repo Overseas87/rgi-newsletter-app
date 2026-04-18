@@ -82,7 +82,7 @@ function FullArticleDialog({ article, open, onClose, onRestore, onDelete, restor
               {article.discipline}
             </Badge>
             <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
-              Score {article.relevancyScore}
+              Score {article.relevancyScore?.toFixed(1)}/10
             </Badge>
             <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/20">
               Rejected
@@ -240,7 +240,7 @@ function RejectedCard({ article }: { article: DigestArticle }) {
                   {article.discipline}
                 </Badge>
                 <Badge variant="outline" className="text-xs text-muted-foreground">
-                  Score {article.relevancyScore}
+                  Score {article.relevancyScore?.toFixed(1)}/10
                 </Badge>
                 <span className="text-xs text-muted-foreground">
                   {format(new Date(article.updatedAt), "MMM d, yyyy")}

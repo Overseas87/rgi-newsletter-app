@@ -46,7 +46,7 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
             <ArticleTypeBadge articleType={article.articleType} />
             <Badge variant="outline" className="text-xs">{article.discipline}</Badge>
             <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
-              Score: {article.relevancyScore}
+              Score: {article.relevancyScore?.toFixed(1)}/10
             </Badge>
           </div>
           <DialogTitle className="text-2xl font-serif leading-tight text-left">{article.headline}</DialogTitle>
@@ -221,7 +221,7 @@ function DigestCard({ article }: { article: DigestArticle }) {
                 <ArticleTypeBadge articleType={article.articleType} />
                 <Badge variant="outline" className="text-xs">{article.discipline}</Badge>
                 <Badge variant="outline" className="text-xs text-muted-foreground">
-                  Score: {article.relevancyScore}
+                  Score: {article.relevancyScore?.toFixed(1)}/10
                 </Badge>
                 {article.topicTags?.map((tag) => (
                   <Badge key={tag} variant="secondary" className="text-xs font-normal">{tag}</Badge>
