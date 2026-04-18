@@ -105,10 +105,9 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
   // immediately after a restart or redeploy — never requiring a fresh scrape first.
   const contentWindow = todayCount >= 5 ? today : sevenDaysAgo;
 
-  const [topArticles, allArticlesWindow, sourcesResult, activeSourcesResult] = await Promise.all([
-    // Top Stories: articles scoring 7.0+ ranked strictly by relevancyScore descending.
-    // authenticityScore is used only as a tiebreaker when two articles share the same relevancy score.
-    // No other factor may override rank — higher relevancy score always means higher position.
+  const [topCandidates, allArticlesWindow, sourcesResult, activeSourcesResult] = await Promise.all([
+    // Top Stories candidates: fetch a larger pool so the diversity algorithm has
+    // enough options to fill every topic's proportional slot allocation.
     db
       .select()
       .from(articlesTable)
@@ -121,7 +120,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
         desc(sql`COALESCE(${articlesTable.authenticityScore}, 5.0)`),
         desc(articlesTable.publishedAt)
       )
-      .limit(10),
+      .limit(50),
     db
       .select({
         topicTags: articlesTable.topicTags,
@@ -136,6 +135,84 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
   ]);
 
   const allArticlesToday = allArticlesWindow;
+
+  // ── Proportional Topic Diversity ────────────────────────────────────────────
+  // Goal: no single topic dominates the top stories list beyond its fair share
+  // of the day's actual news coverage.
+  //
+  // Algorithm:
+  //   1. Count how many articles (across the whole day's window) belong to each
+  //      primary topic tag — this is the "coverage proportion" for that topic.
+  //   2. Allocate TOP_STORY_SLOTS (10) proportionally:
+  //        slots_for_topic = max(1, round(proportion × slots))
+  //      Cap at remaining available slots; ensure total ≤ TOP_STORY_SLOTS.
+  //   3. For each topic (ordered by coverage desc), pick the highest-scored
+  //      candidates up to its slot allocation.
+  //   4. Fill any leftover slots with the next best candidates regardless of topic.
+  //   5. Sort the final list by relevancy score for display.
+  //
+  // Example: if Trade covers 40 % of today's articles it gets ≈ 4 of 10 slots
+  // (and ≈ 2 of the 5 shown by default). A topic covering 10 % gets 1 slot.
+  // ────────────────────────────────────────────────────────────────────────────
+  const TOP_STORY_SLOTS = 10;
+
+  // Tally coverage per primary topic tag across the full content window
+  const topicCoverage: Record<string, number> = {};
+  let totalCovered = 0;
+  for (const article of allArticlesToday) {
+    const primaryTag = article.topicTags?.[0];
+    if (!primaryTag) continue;
+    topicCoverage[primaryTag] = (topicCoverage[primaryTag] ?? 0) + 1;
+    totalCovered++;
+  }
+
+  // Compute proportional slot allocation per topic (at least 1 if any candidate exists)
+  const topicSlots: Record<string, number> = {};
+  if (totalCovered > 0) {
+    let remaining = TOP_STORY_SLOTS;
+    const sortedTopics = Object.entries(topicCoverage).sort((a, b) => b[1] - a[1]);
+    for (const [topic, count] of sortedTopics) {
+      if (remaining <= 0) break;
+      const proportion = count / totalCovered;
+      const raw = Math.round(proportion * TOP_STORY_SLOTS);
+      const slots = Math.min(Math.max(raw, 1), remaining);
+      topicSlots[topic] = slots;
+      remaining -= slots;
+    }
+  }
+
+  // First pass: pick top candidates per topic up to each topic's slot allocation
+  const pickedIds = new Set<number>();
+  const topArticles: typeof topCandidates = [];
+
+  const topicOrder = Object.entries(topicSlots).sort((a, b) => (topicCoverage[b[0]] ?? 0) - (topicCoverage[a[0]] ?? 0));
+  for (const [topic, slots] of topicOrder) {
+    if (topArticles.length >= TOP_STORY_SLOTS) break;
+    let picked = 0;
+    for (const article of topCandidates) {
+      if (picked >= slots || topArticles.length >= TOP_STORY_SLOTS) break;
+      if (pickedIds.has(article.id)) continue;
+      if (!article.topicTags?.includes(topic)) continue;
+      topArticles.push(article);
+      pickedIds.add(article.id);
+      picked++;
+    }
+  }
+
+  // Second pass: fill remaining slots with the next highest-scored candidates
+  for (const article of topCandidates) {
+    if (topArticles.length >= TOP_STORY_SLOTS) break;
+    if (pickedIds.has(article.id)) continue;
+    topArticles.push(article);
+    pickedIds.add(article.id);
+  }
+
+  // Final sort by relevancy score so the display order still feels ranked
+  topArticles.sort((a, b) =>
+    b.relevancyScore - a.relevancyScore ||
+    ((b.authenticityScore ?? 5) - (a.authenticityScore ?? 5))
+  );
+  // ────────────────────────────────────────────────────────────────────────────
 
   // Build a set of tags that appear in Top Stories for weighted ranking
   const topStoryTagCounts: Record<string, number> = {};
