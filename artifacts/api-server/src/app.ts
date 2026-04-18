@@ -5,6 +5,7 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { startScheduler } from "./lib/scheduler";
 import { initializeScrapeStatus, runScrape } from "./lib/scraper";
+import { runDailyBriefJob } from "./lib/daily-brief-scheduler";
 import { seedDefaultSources } from "./lib/seed-sources";
 import { seedProductionData } from "./lib/seed-production-data";
 import { db, articlesTable } from "@workspace/db";
@@ -73,6 +74,16 @@ async function initializeApp() {
     runScrape().catch((err) => logger.error({ err }, "Startup scrape failed"));
   } else {
     logger.info({ recentCount }, "Recent articles found — skipping startup scrape, dashboard ready");
+  }
+
+  // Step 6 — daily brief catch-up: if the server starts after 11:00 UTC (6 AM EST) and no brief
+  // exists yet for today, generate one now. This covers the common case where the Replit dev
+  // environment was paused when the cron fired. runDailyBriefJob() is internally duplicate-guarded,
+  // so it silently skips if a brief was already generated today.
+  const utcHour = new Date().getUTCHours();
+  if (utcHour >= 11) {
+    logger.info({ utcHour }, "Past 11:00 UTC on startup — checking for missed daily brief");
+    runDailyBriefJob().catch((err) => logger.error({ err }, "Startup daily brief catch-up failed"));
   }
 }
 
