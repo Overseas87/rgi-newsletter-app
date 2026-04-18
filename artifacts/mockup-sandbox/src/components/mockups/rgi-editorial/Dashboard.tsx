@@ -89,12 +89,15 @@ export function Dashboard() {
         {/* Logo Area */}
         <div className="h-16 flex items-center px-6 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded bg-[#C09A3A] flex items-center justify-center text-[#0B1F3A] font-['Playfair_Display'] font-bold text-xl">
-              R
+            <img src="/__mockup/images/rgi-logo.svg" alt="RGI Logo" className="w-9 h-9 object-contain" />
+            <div className="flex flex-col">
+              <span className="text-white font-['Playfair_Display'] font-semibold tracking-wide text-base leading-tight">
+                Rick Goings Institute
+              </span>
+              <span className="text-white/50 text-[10px] uppercase tracking-widest leading-tight">
+                Strategic Intelligence
+              </span>
             </div>
-            <span className="text-white font-['Playfair_Display'] font-semibold tracking-wide text-lg">
-              RGI Intel
-            </span>
           </div>
         </div>
 
