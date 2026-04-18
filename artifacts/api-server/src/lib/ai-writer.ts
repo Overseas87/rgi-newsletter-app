@@ -3,6 +3,38 @@ import { db, articlesTable, digestArticlesTable, newsletterSubscribersTable } fr
 import { inArray, gte, desc, eq } from "drizzle-orm";
 import { logger } from "./logger";
 
+// ── Generation cache ──────────────────────────────────────────────────────────
+// Key: date-string + sorted excludedTopics → cached result + timestamp
+interface CachedBrief { result: DailyBriefResult; generatedAt: number }
+const dailyBriefCache = new Map<string, CachedBrief>();
+const BRIEF_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+interface DailyBriefResult {
+  headline: string; executiveSummary: string[]; body: string;
+  rgiTake: string; keyTakeaways: string[]; topicTags: string[];
+  discipline: string; relevancyScore: number; sourceArticleIds: number[];
+}
+
+function dailyBriefCacheKey(date: string, excludedTopics: string[]): string {
+  return `${date}:${[...excludedTopics].sort().join(",")}`;
+}
+
+// Compact source format — headline + viewpoint + short summary (no full content dump)
+function compactSource(a: Record<string, unknown>, i: number): string {
+  const isPrimary = a.isPrimarySignal as boolean | undefined;
+  const auth = (a.authenticityScore as number | null | undefined) ?? 5;
+  const credLabel = auth >= 8 ? "HIGH" : auth >= 6 ? "MED" : "LOW";
+  const signalTag = isPrimary ? " [PRIMARY SIGNAL]" : "";
+  const viewpoint = (a.viewpoint as string | null | undefined) || "";
+  const summary = ((a.teaserSummary || a.content || a.headline) as string).slice(0, 600);
+  return [
+    `S${i + 1}${signalTag}: ${a.headline}`,
+    `Source: ${a.sourceName}${a.author ? ` · ${a.author}` : ""} | Relevancy: ${a.relevancyScore}/10 | Auth: ${auth}/10 (${credLabel})`,
+    viewpoint ? `RGI viewpoint: ${viewpoint}` : null,
+    `Summary: ${summary}`,
+  ].filter(Boolean).join("\n");
+}
+
 const RGI_SYSTEM_PROMPT = `You are the senior intelligence editor for the Rick Goings Institute (RGI) at Rollins College — an institution dedicated to equipping leaders to build organizations that last, contribute, and stay vital in demanding times.
 
 RGI's three core disciplines:
@@ -208,7 +240,7 @@ export async function generateDigestArticle(
   discipline: string;
   relevancyScore: number;
 }> {
-  const articles = await db
+  let articles = await db
     .select()
     .from(articlesTable)
     .where(inArray(articlesTable.id, articleIds));
@@ -217,19 +249,13 @@ export async function generateDigestArticle(
     throw new Error("No articles found with provided IDs");
   }
 
+  // Cap to 7 highest-scoring articles to keep prompt tight and generation fast
+  articles = [...articles]
+    .sort((a, b) => b.relevancyScore - a.relevancyScore)
+    .slice(0, 7);
+
   const sourcesText = articles
-    .map(
-      (a, i) => {
-        const isPrimary = (a as any).isPrimarySignal;
-        const authenticityScore = (a as any).authenticityScore ?? 5;
-        const viewpoint = (a as any).viewpoint;
-        const signalType = isPrimary
-          ? `[PRIMARY SIGNAL — direct ${a.platform === "twitter" ? "post on X" : a.platform === "linkedin" ? "post on LinkedIn" : "statement"}${a.author ? ` from ${a.author}${a.authorType ? `, ${a.authorType}` : ""}` : ""}]`
-          : "";
-        const credibilityLabel = authenticityScore >= 8 ? "HIGH" : authenticityScore >= 6 ? "MODERATE" : "LOW";
-        return `SOURCE ${i + 1}${signalType ? " " + signalType : ""}:\nHeadline: ${a.headline}\nPublication: ${a.sourceName}${a.author ? `\nAuthor: ${a.author}${a.authorType ? ` (${a.authorType})` : ""}` : ""}${a.platform && a.platform !== "news" ? `\nPlatform: ${a.platform}` : ""}\nAuthenticity: ${authenticityScore}/10 (${credibilityLabel} credibility)${viewpoint ? `\nViewpoint: ${viewpoint}` : ""}\nURL: ${a.url}\nContent: ${(a.content || a.teaserSummary || a.headline).slice(0, 4000)}`;
-      }
-    )
+    .map((a, i) => compactSource(a as unknown as Record<string, unknown>, i))
     .join("\n\n---\n\n");
 
   const notesText = editorNotes?.trim()
@@ -239,7 +265,7 @@ export async function generateDigestArticle(
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 8192,
+    max_tokens: 3000,
     system: RGI_SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
   });
@@ -469,6 +495,20 @@ export async function generateDailyBrief(
   relevancyScore: number;
   sourceArticleIds: number[];
 }> {
+  // ── Cache check (auto-brief only — specific articleIds always regenerate) ────
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dateKey = today.toISOString().slice(0, 10);
+
+  if (!articleIds || articleIds.length === 0) {
+    const cacheKey = dailyBriefCacheKey(dateKey, excludedTopics ?? []);
+    const cached = dailyBriefCache.get(cacheKey);
+    if (cached && Date.now() - cached.generatedAt < BRIEF_CACHE_TTL_MS) {
+      logger.info({ cacheKey }, "Returning cached daily brief");
+      return cached.result;
+    }
+  }
+
   let articles;
 
   if (articleIds && articleIds.length > 0) {
@@ -476,16 +516,16 @@ export async function generateDailyBrief(
       .select()
       .from(articlesTable)
       .where(inArray(articlesTable.id, articleIds));
+    // Cap to top 7 by score
+    articles = [...articles].sort((a, b) => b.relevancyScore - a.relevancyScore).slice(0, 7);
   } else {
-    // Auto-select: today's articles with score >= 6.5, up to 20 by relevance
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Auto-select: today's top 7 articles with score >= 6.5
     articles = await db
       .select()
       .from(articlesTable)
       .where(gte(articlesTable.scrapedAt, today))
       .orderBy(desc(articlesTable.relevancyScore))
-      .limit(20);
+      .limit(7);
 
     // Filter to minimum quality threshold
     articles = articles.filter((a) => a.relevancyScore >= 6.0);
@@ -508,14 +548,7 @@ export async function generateDailyBrief(
   }
 
   const sourcesText = articles
-    .map(
-      (a, i) => {
-        const authenticityScore = (a as any).authenticityScore ?? 5;
-        const viewpoint = (a as any).viewpoint;
-        const credibilityLabel = authenticityScore >= 8 ? "HIGH" : authenticityScore >= 6 ? "MODERATE" : "LOW";
-        return `SOURCE ${i + 1}:\nHeadline: ${a.headline}\nPublication: ${a.sourceName}${a.author ? `\nAuthor: ${a.author}` : ""}${a.platform && a.platform !== "news" ? `\nPlatform: ${a.platform}` : ""}\nTopics: ${a.topicTags.join(", ")}\nRelevancy: ${a.relevancyScore}/10 | Authenticity: ${authenticityScore}/10 (${credibilityLabel})${a.isEmergingSignal ? "\n[EMERGING SIGNAL]" : ""}${viewpoint ? `\nViewpoint: ${viewpoint}` : ""}\nURL: ${a.url}\nContent: ${(a.content || a.teaserSummary || a.headline).slice(0, 3000)}`;
-      }
-    )
+    .map((a, i) => compactSource(a as unknown as Record<string, unknown>, i))
     .join("\n\n---\n\n");
 
   const editorialSuffix = editorNotes?.trim()
@@ -529,7 +562,7 @@ export async function generateDailyBrief(
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 16384,
+    max_tokens: 4096,
     system: RGI_SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
   });
@@ -541,7 +574,7 @@ export async function generateDailyBrief(
     const cleanText = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
     const parsed = JSON.parse(cleanText);
 
-    return {
+    const result: DailyBriefResult = {
       headline: parsed.headline || "RGI Daily Strategic Intelligence Brief",
       executiveSummary: Array.isArray(parsed.executiveSummary) ? parsed.executiveSummary : [],
       body: parsed.body || "",
@@ -552,6 +585,14 @@ export async function generateDailyBrief(
       relevancyScore: parsed.relevancyScore || 8,
       sourceArticleIds: articles.map((a) => a.id),
     };
+
+    // Cache auto-brief results (not articleId-driven ones)
+    if (!articleIds || articleIds.length === 0) {
+      const cacheKey = dailyBriefCacheKey(dateKey, excludedTopics ?? []);
+      dailyBriefCache.set(cacheKey, { result, generatedAt: Date.now() });
+    }
+
+    return result;
   } catch (e) {
     logger.error({ err: e, text }, "Failed to parse daily brief response");
     throw new Error("Failed to parse AI-generated daily brief");

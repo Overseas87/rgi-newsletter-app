@@ -82,6 +82,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
   const [excludedTopics, setExcludedTopics] = useState<Set<string>>(new Set());
   const [editorNotes, setEditorNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingStage, setLoadingStage] = useState(0);
   const [generatedArticle, setGeneratedArticle] = useState<GeneratedArticle | null>(null);
   const [refineInstruction, setRefineInstruction] = useState("");
   const [refining, setRefining] = useState(false);
@@ -98,6 +99,21 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
   const [, navigate] = useLocation();
 
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  const LOADING_STAGES = [
+    "Analyzing sources...",
+    "Mapping intelligence signals...",
+    "Building narrative thread...",
+    "Generating brief...",
+  ];
+
+  const startProgressAnimation = () => {
+    setLoadingStage(0);
+    const t1 = setTimeout(() => setLoadingStage(1), 3000);
+    const t2 = setTimeout(() => setLoadingStage(2), 8000);
+    const t3 = setTimeout(() => setLoadingStage(3), 14000);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  };
 
   const toggleTopic = (topic: string) => {
     const next = new Set(selectedTopics);
@@ -189,6 +205,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
 
   const handleGenerateDailyBrief = async () => {
     setLoading(true);
+    const stopAnimation = startProgressAnimation();
     try {
       const res = await fetch(`${base}/api/digest/daily-brief`, {
         method: "POST",
@@ -216,6 +233,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
     } catch (e) {
       toast({ title: "Generation failed", description: String(e instanceof Error ? e.message : e), variant: "destructive" });
     } finally {
+      stopAnimation();
       setLoading(false);
     }
   };
@@ -227,6 +245,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
       return;
     }
     setLoading(true);
+    const stopAnimation = startProgressAnimation();
     try {
       const res = await fetch(`${base}/api/digest/generate`, {
         method: "POST",
@@ -254,6 +273,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
     } catch (e) {
       toast({ title: "Generation failed", description: String(e instanceof Error ? e.message : e), variant: "destructive" });
     } finally {
+      stopAnimation();
       setLoading(false);
     }
   };
@@ -423,11 +443,11 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
             <Button
               onClick={handleGenerateFromSelection}
               disabled={loading || selectedArticleIds.size === 0}
-              className="gap-2 min-w-52"
+              className="gap-2 min-w-56"
               data-testid="btn-generate-from-selection"
             >
               {loading
-                ? <><Loader2 className="h-4 w-4 animate-spin" />Generating…</>
+                ? <><Loader2 className="h-4 w-4 animate-spin" />{LOADING_STAGES[loadingStage]}</>
                 : <><Wand2 className="h-4 w-4" />Generate from {selectedArticleIds.size} Article{selectedArticleIds.size !== 1 ? "s" : ""}</>
               }
             </Button>
@@ -745,10 +765,26 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
                 Automatically selects today's top articles (score 6.0+) across all included topics. You can refine the output after generation.
               </div>
 
+              {loading && (
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    {LOADING_STAGES.map((s, i) => (
+                      <span key={s} className={i === loadingStage ? "text-primary font-medium" : i < loadingStage ? "text-primary/50" : ""}>{i + 1}</span>
+                    ))}
+                  </div>
+                  <div className="h-1 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-[2000ms] ease-in-out"
+                      style={{ width: `${((loadingStage + 1) / LOADING_STAGES.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between pt-1">
                 <Button variant="ghost" onClick={handleClose} disabled={loading}>Cancel</Button>
-                <Button onClick={handleGenerateDailyBrief} disabled={loading} className="gap-2 min-w-44" data-testid="btn-generate-daily-brief">
-                  {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Generating…</> : <><Globe className="h-4 w-4" />Generate Daily Brief</>}
+                <Button onClick={handleGenerateDailyBrief} disabled={loading} className="gap-2 min-w-52" data-testid="btn-generate-daily-brief">
+                  {loading ? <><Loader2 className="h-4 w-4 animate-spin" />{LOADING_STAGES[loadingStage]}</> : <><Globe className="h-4 w-4" />Generate Daily Brief</>}
                 </Button>
               </div>
             </div>
