@@ -167,7 +167,7 @@ function SourceRow({ source }: { source: Source }) {
   const remove = useDeleteSource();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["listSources"] });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/sources"] });
 
   const { score, credibility, explanation, shortLabel } = computeCredibility(source);
   const sourceWeight = source.weight ?? 1.0;
@@ -414,7 +414,7 @@ export default function Sources() {
         onSuccess: () => {
           setNewName(""); setNewUrl(""); setNewTier("1"); setNewType("rss");
           setShowAdd(false);
-          queryClient.invalidateQueries({ queryKey: ["listSources"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/sources"] });
         },
       }
     );
