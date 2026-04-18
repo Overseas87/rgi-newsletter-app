@@ -113,10 +113,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-3">
                 <img src="/rgi-logo-transparent.png" alt="RGI" className="h-8 w-8 object-contain shrink-0" />
                 <div className="flex flex-col leading-tight">
-                  <span className="text-white text-sm font-semibold font-serif">Rick Goings Institute</span>
-                  <span className="text-[9px] uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
-                    Strategic Intelligence
-                  </span>
+                  <span className="text-white/50 text-[10px] font-medium">The</span>
+                  <span className="text-white text-sm font-semibold tracking-wide font-serif leading-none">Rick Goings</span>
+                  <span className="text-white text-sm font-semibold tracking-wide font-serif leading-none">Institute</span>
                 </div>
               </div>
             </div>
@@ -138,12 +137,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           >
             <img src="/rgi-logo-transparent.png" alt="RGI" className="h-8 w-8 object-contain shrink-0" />
             <div className="flex flex-col leading-tight">
-              <span className="text-white text-[13px] font-semibold tracking-wide font-serif">
-                Rick Goings Institute
-              </span>
-              <span className="text-[9px] uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
-                Strategic Intelligence
-              </span>
+              <span className="text-white/50 text-[10px] font-medium">The</span>
+              <span className="text-white text-sm font-semibold tracking-wide font-serif leading-none">Rick Goings</span>
+              <span className="text-white text-sm font-semibold tracking-wide font-serif leading-none">Institute</span>
             </div>
           </div>
         </Link>
