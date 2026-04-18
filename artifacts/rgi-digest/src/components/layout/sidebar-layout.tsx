@@ -127,10 +127,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         {/* Brand */}
         <Link href="/">
           <div
-            className="px-5 h-16 flex items-center gap-3 cursor-pointer"
+            className="h-20 flex items-center justify-center cursor-pointer"
             style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
           >
-            <img src="/rgi-logo-transparent.png" alt="RGI" className="h-12 w-12 object-contain shrink-0" style={{ filter: "brightness(0) invert(1)" }} />
+            <img src="/rgi-logo-transparent.png" alt="RGI" className="h-16 w-16 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
           </div>
         </Link>
 
