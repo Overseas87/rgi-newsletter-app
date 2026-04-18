@@ -175,19 +175,23 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         {/* Brand section — aligns with sidebar width */}
         <Link href="/">
           <div
-            className="flex items-center gap-3 h-14 px-4 w-56 shrink-0 cursor-pointer hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2.5 h-14 px-4 w-56 shrink-0 cursor-pointer hover:bg-gray-50 transition-colors"
             style={{ borderRight: "1px solid #E5E7EB" }}
           >
             <img
-              src="/rgi-logo-transparent.png"
+              src="/rgi-logo-new.png"
               alt="RGI"
-              className="h-7 w-7 object-contain shrink-0"
+              className="h-8 w-8 object-contain shrink-0"
+              style={{
+                filter:
+                  "brightness(0) saturate(100%) invert(11%) sepia(46%) saturate(900%) hue-rotate(183deg) brightness(97%) contrast(105%)",
+              }}
             />
             <div className="min-w-0">
-              <p className="text-[11px] font-bold leading-tight truncate" style={{ color: NAVY }}>
+              <p className="text-[12px] font-bold leading-snug truncate" style={{ color: NAVY }}>
                 Rick Goings Institute
               </p>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.18em] leading-tight" style={{ color: GOLD }}>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.1em] leading-tight whitespace-nowrap" style={{ color: GOLD }}>
                 Newsletter Generator
               </p>
             </div>
@@ -210,13 +214,21 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               </SheetTrigger>
               <SheetContent side="left" className="w-64 p-0 bg-white border-r border-gray-100">
                 <div
-                  className="flex items-center gap-3 h-14 px-4"
+                  className="flex items-center gap-2.5 h-14 px-4"
                   style={{ borderBottom: "1px solid #E5E7EB" }}
                 >
-                  <img src="/rgi-logo-transparent.png" alt="RGI" className="h-7 w-7 object-contain" />
+                  <img
+                    src="/rgi-logo-new.png"
+                    alt="RGI"
+                    className="h-8 w-8 object-contain shrink-0"
+                    style={{
+                      filter:
+                        "brightness(0) saturate(100%) invert(11%) sepia(46%) saturate(900%) hue-rotate(183deg) brightness(97%) contrast(105%)",
+                    }}
+                  />
                   <div>
-                    <p className="text-[11px] font-bold" style={{ color: NAVY }}>Rick Goings Institute</p>
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: GOLD }}>Newsletter Generator</p>
+                    <p className="text-[12px] font-bold leading-snug" style={{ color: NAVY }}>Rick Goings Institute</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.18em] leading-tight" style={{ color: GOLD }}>Newsletter Generator</p>
                   </div>
                 </div>
                 <SidebarNav onClose={() => setMobileOpen(false)} />
