@@ -11,23 +11,23 @@ export interface ArticleWithSources extends DigestArticle {
 
 // ── Palette ────────────────────────────────────────────────────────────────────
 const C = {
-  navy:     "#0F2B4C" as string,
-  ink:      "#1A1A2E" as string,
-  body:     "#2D3142" as string,
-  mid:      "#4A5568" as string,
-  muted:    "#718096" as string,
-  hairline: "#D1D5DB" as string,
+  navy:     "#0F2B4C" as string,   // header & section labels
+  ink:      "#111111" as string,   // title, bold emphasis
+  body:     "#1A1A1A" as string,   // body text — near-black for readability
+  mid:      "#555555" as string,   // secondary text
+  muted:    "#888888" as string,   // footer, captions
+  hairline: "#CCCCCC" as string,   // horizontal rules
   white:    "#FFFFFF" as string,
 };
 
 // ── Layout constants ───────────────────────────────────────────────────────────
-const W = 612;           // LETTER width
-const H = 792;           // LETTER height
-const ML = 72;           // left margin  (wider for consulting-doc feel)
-const MR = 72;           // right margin
+const W = 612;           // LETTER width  (8.5 in)
+const H = 792;           // LETTER height (11 in)
+const ML = 72;           // left margin  — exactly 1 inch
+const MR = 72;           // right margin — exactly 1 inch
 const MT = 56;           // top margin (body start, after header)
-const MB = 58;           // bottom margin
-const CW = W - ML - MR; // content width = 468
+const MB = 62;           // bottom margin
+const CW = W - ML - MR; // content width = 468 pt
 
 // ── Page state ─────────────────────────────────────────────────────────────────
 let currentPage = 0;
@@ -130,26 +130,25 @@ function newPage(doc: PDFKit.PDFDocument): number {
 }
 
 function ensureSpace(doc: PDFKit.PDFDocument, needed: number) {
-  if (doc.y + needed > H - MB - 20) {
+  if (doc.y + needed > H - MB - 36) {
     newPage(doc);
   }
 }
 
-// ── Section label ──────────────────────────────────────────────────────────────
+// ── Section heading — 13pt bold, consulting-grade weight ──────────────────────
 function sectionHeading(doc: PDFKit.PDFDocument, label: string) {
   doc.save();
   hex(doc, C.navy)
     .font("Helvetica-Bold")
-    .fontSize(7.5)
-    .text(label.toUpperCase(), ML, doc.y, {
-      characterSpacing: 1.8,
-      width: CW,
-    });
+    .fontSize(13)
+    .text(label, ML, doc.y, { width: CW });
   doc.restore();
-  doc.moveDown(0.55);
+  // ~10pt of space below heading before body text starts
+  doc.moveDown(0.6);
 }
 
 // ── Body paragraph ─────────────────────────────────────────────────────────────
+// lineGap=5 at 10.5pt gives 10.5+5=15.5pt line height → ratio 1.48 (spec: 1.4–1.6)
 function para(doc: PDFKit.PDFDocument, text: string, opts: {
   color?: string;
   font?: string;
@@ -161,7 +160,7 @@ function para(doc: PDFKit.PDFDocument, text: string, opts: {
     color = C.body,
     font = "Helvetica",
     size = 10.5,
-    lineGap = 4,
+    lineGap = 5,
     width = CW,
   } = opts;
   doc.save();
@@ -171,27 +170,29 @@ function para(doc: PDFKit.PDFDocument, text: string, opts: {
 }
 
 // ── Bullet list ────────────────────────────────────────────────────────────────
+// 10.5pt body size, lineGap 5 → 1.48× line height (spec: 1.4–1.6)
 function bulletList(
   doc: PDFKit.PDFDocument,
   items: string[],
   opts: { size?: number } = {}
 ) {
-  const { size = 10 } = opts;
-  const indent = 14;
+  const { size = 10.5 } = opts;
+  const LGAP = 5;
+  const indent = 16;
   const textX = ML + indent;
   const textW = CW - indent;
 
   items.forEach((item) => {
     const text = item.trim();
     doc.font("Helvetica").fontSize(size);
-    const textH = doc.heightOfString(text, { width: textW, lineGap: 3.5 });
-    ensureSpace(textH + 10);
+    const textH = doc.heightOfString(text, { width: textW, lineGap: LGAP });
+    ensureSpace(doc, textH + 56);
     const y = doc.y;
 
-    // Bullet dot — small filled circle
+    // Bullet dot — drawn after ensureSpace so it's always on the same page as text
     doc.save();
-    hex(doc, C.navy)
-      .circle(ML + 4, y + (size * 0.72) / 2 + 1, 1.8)
+    hex(doc, C.body)
+      .rect(ML + 2, y + size * 0.35, 3.5, 3.5)
       .fill();
     doc.restore();
 
@@ -199,49 +200,50 @@ function bulletList(
     hex(doc, C.body)
       .font("Helvetica")
       .fontSize(size)
-      .text(text, textX, y, { width: textW, lineGap: 3.5, align: "left" });
+      .text(text, textX, y, { width: textW, lineGap: LGAP, align: "left" });
     doc.restore();
 
-    doc.moveDown(0.45);
+    doc.y += 8;
   });
 }
 
 // ── RGI Take — clean italic paragraph, no box ──────────────────────────────────
 function rgiTakePara(doc: PDFKit.PDFDocument, text: string) {
+  const LGAP = 5;
   doc.font("Helvetica-Oblique").fontSize(10.5);
-  const textH = doc.heightOfString(text, { width: CW, lineGap: 4 });
-  ensureSpace(textH + 8);
+  // Reserve space for 3 lines only — PDFKit auto-pages the rest of the text
+  ensureSpace(doc, 50);
 
   doc.save();
-  hex(doc, C.ink)
+  hex(doc, C.body)
     .font("Helvetica-Oblique")
     .fontSize(10.5)
-    .text(text, ML, doc.y, { width: CW, lineGap: 4 });
+    .text(text, ML, doc.y, { width: CW, lineGap: LGAP });
   doc.restore();
 
   // Reset font so subsequent measurements use correct metrics
-  doc.font("Helvetica").fontSize(10);
+  doc.font("Helvetica").fontSize(10.5);
 }
 
 // ── Sources section ────────────────────────────────────────────────────────────
 function sourcesSection(doc: PDFKit.PDFDocument, sources: Article[]) {
   if (sources.length === 0) return;
 
-  ensureSpace(48);
+  ensureSpace(doc, 56);
   hRule(doc, doc.y, C.hairline, 0.5);
-  doc.moveDown(0.8);
+  doc.moveDown(1.2);
 
   sectionHeading(doc, "References");
 
   sources.forEach((src, i) => {
-    ensureSpace(20);
+    ensureSpace(doc, 22);
 
     let domain = "";
     try { domain = new URL(src.url ?? "").hostname.replace(/^www\./, ""); } catch {}
 
     const rawHeadline = src.headline ?? "Untitled";
-    const shortHeadline = rawHeadline.length > 95
-      ? rawHeadline.slice(0, 92) + "\u2026"
+    const shortHeadline = rawHeadline.length > 100
+      ? rawHeadline.slice(0, 97) + "\u2026"
       : rawHeadline;
 
     const lineParts = [
@@ -251,14 +253,15 @@ function sourcesSection(doc: PDFKit.PDFDocument, sources: Article[]) {
       domain || null,
     ].filter(Boolean).join("  —  ");
 
-    doc.fillColor(C.mid).font("Helvetica").fontSize(7.5)
+    // 8.5pt references — readable but clearly subordinate to body text
+    doc.fillColor(C.mid).font("Helvetica").fontSize(8.5)
       .text(lineParts, ML, doc.y, {
         width: CW,
-        lineGap: 2,
+        lineGap: 3,
         link: src.url ?? undefined,
       });
 
-    doc.moveDown(0.35);
+    doc.moveDown(0.4);
   });
 }
 
@@ -378,54 +381,54 @@ export function generateArticlePdf(
 
     newPage(doc);
 
-    // Helper: reserve space for a heading + minimum first line
-    function sectionGuard(neededAfterHeading = 40) {
-      ensureSpace(20 + neededAfterHeading);
+    // Helper: reserve space for a 13pt heading (~16pt tall) + minimum body content
+    function sectionGuard(neededAfterHeading = 48) {
+      ensureSpace(doc, 24 + neededAfterHeading);
     }
 
-    // ── Headline ──────────────────────────────────────────────────────────────
+    // ── Headline — 22pt bold, prominent ───────────────────────────────────────
     doc.save();
     hex(doc, C.ink)
       .font("Helvetica-Bold")
-      .fontSize(19)
-      .text(article.headline, ML, doc.y, { width: CW, lineGap: 3.5 });
+      .fontSize(22)
+      .text(article.headline, ML, doc.y, { width: CW, lineGap: 5 });
     doc.restore();
-    doc.moveDown(0.55);
+    // ~14pt gap between headline and rule
+    doc.moveDown(0.7);
 
     hRule(doc, doc.y, C.hairline, 0.5);
-    doc.moveDown(0.9);
+
+    // ~22pt gap between rule and first section (spec: 20–30pt)
+    doc.y += 22;
 
     // ── Executive Analysis ────────────────────────────────────────────────────
     if (execSummary.length > 0) {
-      sectionGuard(30);
+      sectionGuard(36);
       sectionHeading(doc, "Executive Analysis");
 
       execSummary.forEach((sentence, i) => {
         const text = cleanText(sentence);
-        const size = i === 0 ? 10.5 : 10;
-        doc.font(i === 0 ? "Helvetica-Bold" : "Helvetica").fontSize(size);
-        const textH = doc.heightOfString(text, { width: CW, lineGap: 4 });
-        ensureSpace(textH + 4);
-        para(doc, text, {
-          font: i === 0 ? "Helvetica-Bold" : "Helvetica",
-          size,
-          color: C.ink,
-          lineGap: 4,
-        });
-        if (i < execSummary.length - 1) doc.moveDown(0.3);
+        const size = 10.5;
+        const font = i === 0 ? "Helvetica-Bold" : "Helvetica";
+        doc.font(font).fontSize(size);
+        const textH = doc.heightOfString(text, { width: CW, lineGap: 5 });
+        ensureSpace(doc, textH + 4);
+        para(doc, text, { font, size, color: C.ink, lineGap: 5 });
+        // ~9pt paragraph spacing (spec: 8–12pt)
+        if (i < execSummary.length - 1) doc.moveDown(0.6);
       });
 
-      doc.moveDown(0.9);
+      // ~24pt between sections
+      doc.moveDown(1.1);
       hRule(doc, doc.y, C.hairline, 0.4);
-      doc.moveDown(0.8);
+      doc.y += 22;
     }
 
     // ── Analysis ──────────────────────────────────────────────────────────────
-    // Encompasses key developments, why it matters, and what to watch —
-    // all presented as one unified analytical section.
+    // Key developments + why it matters + what to watch — unified section
     const bodyPoints = article.body.split("\n").filter(Boolean).map(cleanText);
 
-    sectionGuard(40);
+    sectionGuard(120);
     sectionHeading(doc, "Analysis");
 
     if (isStructured) {
@@ -433,35 +436,37 @@ export function generateArticlePdf(
         bulletList(doc, bodyPoints);
       }
       if (keyTakeaways.length > 0) {
-        doc.moveDown(0.5);
+        doc.moveDown(0.6);
         bulletList(doc, keyTakeaways.map(cleanText));
       }
       if (whatToWatch.length > 0) {
-        doc.moveDown(0.5);
+        doc.moveDown(0.6);
         bulletList(doc, whatToWatch.map(cleanText));
       }
     } else {
       bodyPoints.forEach((p) => {
-        doc.font("Helvetica").fontSize(10);
-        const textH = doc.heightOfString(p, { width: CW, lineGap: 4 });
-        ensureSpace(textH + 6);
-        para(doc, p, { size: 10, lineGap: 4 });
-        doc.moveDown(0.55);
+        doc.font("Helvetica").fontSize(10.5);
+        const textH = doc.heightOfString(p, { width: CW, lineGap: 5 });
+        ensureSpace(doc, textH + 6);
+        para(doc, p, { size: 10.5, lineGap: 5 });
+        // ~9pt paragraph spacing
+        doc.moveDown(0.6);
       });
     }
 
-    doc.moveDown(0.5);
+    // ~24pt between sections
+    doc.moveDown(1.1);
     hRule(doc, doc.y, C.hairline, 0.4);
-    doc.moveDown(0.8);
+    doc.y += 22;
 
     // ── RGI Take ──────────────────────────────────────────────────────────────
     if (article.rgiTake) {
-      sectionGuard(60);
+      sectionGuard(80);
       sectionHeading(doc, "RGI Take");
       rgiTakePara(doc, cleanText(article.rgiTake));
-      doc.moveDown(0.9);
+      doc.moveDown(1.1);
       hRule(doc, doc.y, C.hairline, 0.4);
-      doc.moveDown(0.8);
+      doc.y += 22;
     }
 
     // ── References ────────────────────────────────────────────────────────────
