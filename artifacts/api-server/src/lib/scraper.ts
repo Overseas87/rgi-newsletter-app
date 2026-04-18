@@ -95,16 +95,17 @@ If the article is low-relevance (score 1-4), write: "RGI notes this item falls o
 
 TOPIC TAGS — choose only from this exact list:
 "AI & Artificial Intelligence", "Technology & Digital Innovation", "Geopolitics", "Global Politics",
-"Wars & Crisis", "Finance & Markets", "Fintech", "Macroeconomics", "Business & Strategy",
+"Wars & Crisis", "Finance & Markets", "Macroeconomics", "Business & Strategy",
 "Leadership & Organizations", "Energy & Oil", "Climate & Environmental Health",
-"Supply Chains & Trade", "Policy & Regulation", "Future of Work"
+"Supply Chains & Trade", "Policy & Regulation", "Future of Work", "Innovation & Startups"
 
 TAGGING RULES:
 1. 1-3 tags maximum — be selective based on PRIMARY content focus, never tag tangentially
 2. NEVER use "Business & Strategy" or "Leadership & Organizations" as catch-alls — only if the PRIMARY focus is strategy/leadership itself
 3. AI regulation articles → "AI & Artificial Intelligence" + "Policy & Regulation" only
 4. Economic policy → "Macroeconomics" + "Policy & Regulation"; climate policy → "Climate & Environmental Health" + "Policy & Regulation"
-5. Use the full tag string exactly as listed above — no abbreviations or partial matches
+5. "Innovation & Startups" — use only when the primary focus is venture funding, startup ecosystems, or early-stage innovation
+6. Use the full tag string exactly as listed above — no abbreviations or partial matches
 
 Return ONLY valid JSON with exactly these keys:
 - strategicImpact: integer 0-3

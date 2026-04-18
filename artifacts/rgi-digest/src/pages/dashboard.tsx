@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useGetDashboardSummary, useGetScrapeStatus, useTriggerScrape, useListArticles, type Article } from "@workspace/api-client-react";
+import { useGetDashboardSummary, useGetScrapeStatus, useTriggerScrape, useListArticles, type Article, type TopicIntelligence } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -500,6 +500,138 @@ function TopicArticlesModal({
   );
 }
 
+function WhatMattersTodayPanel({
+  topicIntelligence,
+  onTopicClick,
+  onViewAll,
+}: {
+  topicIntelligence: TopicIntelligence[];
+  onTopicClick: (topic: string) => void;
+  onViewAll: () => void;
+}) {
+  const [allTopicsOpen, setAllTopicsOpen] = useState(false);
+  const top5 = topicIntelligence.slice(0, 5);
+  const rest = topicIntelligence.slice(5);
+
+  return (
+    <div
+      className="w-72 shrink-0 flex flex-col gap-4 pl-8"
+      style={{ borderLeft: "2px solid #C09A3A" }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between" style={{ borderBottom: "1px solid #F0F0F0", paddingBottom: "12px" }}>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          What Matters Today
+        </h2>
+        <button
+          className="text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5"
+          onClick={onViewAll}
+          data-testid="btn-go-to-topics"
+        >
+          All Topics <ChevronRight className="h-3 w-3" />
+        </button>
+      </div>
+
+      <p className="text-xs text-muted-foreground leading-relaxed -mt-1">
+        Top themes clustering across high-reliability sources in the past 24 hours.
+      </p>
+
+      {/* Top 5 */}
+      <div className="flex flex-col gap-0.5">
+        {top5.length > 0 ? (
+          top5.map((ti, i) => (
+            <button
+              key={ti.topic}
+              onClick={() => onTopicClick(ti.topic)}
+              className="w-full text-left flex items-center gap-3 px-3 py-3 rounded-lg transition-all group hover:bg-muted/30 border border-transparent hover:border-border"
+            >
+              <span
+                className="text-sm font-black w-5 text-right shrink-0 tabular-nums leading-none"
+                style={{ color: "#C09A3A" }}
+              >
+                {i + 1}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-[13px] leading-snug group-hover:text-primary transition-colors">
+                    {ti.topic}
+                  </span>
+                  {ti.hasEmergingSignal && (
+                    <Zap className="h-2.5 w-2.5 shrink-0" style={{ color: "#C09A3A" }} />
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                  {ti.articleCount} {ti.articleCount === 1 ? "article" : "articles"}
+                  {ti.avgRelevancyScore != null && (
+                    <> · avg {ti.avgRelevancyScore.toFixed(1)}</>
+                  )}
+                </p>
+              </div>
+              <ScoreBadge score={ti.importanceScore} size="sm" />
+            </button>
+          ))
+        ) : (
+          <div className="text-center py-8 text-muted-foreground text-xs">
+            <p className="font-medium mb-0.5">No data yet</p>
+            <p>Scrape to populate.</p>
+          </div>
+        )}
+      </div>
+
+      {/* All Active Topics (expandable) */}
+      {rest.length > 0 && (
+        <div style={{ borderTop: "1px solid #F0F0F0" }} className="pt-3">
+          <button
+            onClick={() => setAllTopicsOpen((v) => !v)}
+            className="w-full flex items-center justify-between text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors py-1 mb-2"
+          >
+            <span className="uppercase tracking-wider">All Active Topics</span>
+            <span className="flex items-center gap-1">
+              <span className="tabular-nums">{rest.length} more</span>
+              {allTopicsOpen
+                ? <ChevronUp className="h-3 w-3" />
+                : <ChevronDown className="h-3 w-3" />}
+            </span>
+          </button>
+
+          {allTopicsOpen && (
+            <div className="flex flex-col gap-0.5">
+              {rest.map((ti, i) => (
+                <button
+                  key={ti.topic}
+                  onClick={() => onTopicClick(ti.topic)}
+                  className="w-full text-left flex items-center gap-2.5 px-2.5 py-2 rounded-md transition-all group hover:bg-muted/30 border border-transparent hover:border-border/50"
+                >
+                  <span className="text-[10px] font-bold w-4 text-right shrink-0 tabular-nums text-muted-foreground/50">
+                    {i + 6}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[12px] font-medium group-hover:text-primary transition-colors leading-snug">
+                      {ti.topic}
+                    </span>
+                    <p className="text-[9px] text-muted-foreground/50 mt-0.5">
+                      {ti.articleCount} {ti.articleCount === 1 ? "article" : "articles"}
+                      {ti.avgRelevancyScore != null && (
+                        <> · avg {ti.avgRelevancyScore.toFixed(1)}</>
+                      )}
+                    </p>
+                  </div>
+                  <span
+                    className="text-[10px] font-semibold tabular-nums shrink-0"
+                    style={{ color: ti.importanceScore >= 8 ? "#C09A3A" : ti.importanceScore >= 6.5 ? "#3B82F6" : "#9CA3AF" }}
+                  >
+                    {ti.importanceScore.toFixed(1)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [briefLoading, setBriefLoading] = useState(false);
   const [topicModalOpen, setTopicModalOpen] = useState(false);
@@ -636,62 +768,11 @@ export default function Dashboard() {
         </div>
 
         {/* Right: What Matters Today */}
-        <div
-          className="w-72 shrink-0 flex flex-col gap-5 pl-8"
-          style={{ borderLeft: "2px solid #C09A3A" }}
-        >
-          <div className="flex items-center justify-between" style={{ borderBottom: "1px solid #F0F0F0", paddingBottom: "12px" }}>
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              What Matters Today
-            </h2>
-            <button
-              className="text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5"
-              onClick={() => navigate("/topics")}
-              data-testid="btn-go-to-topics"
-            >
-              All <ChevronRight className="h-3 w-3" />
-            </button>
-          </div>
-
-          <p className="text-xs text-muted-foreground leading-relaxed -mt-2">
-            Key themes clustering across high-reliability sources over the past 24 hours.
-          </p>
-
-          <div className="flex flex-col gap-1">
-            {summary.topicIntelligence && summary.topicIntelligence.length > 0 ? (
-              summary.topicIntelligence.slice(0, 5).map((ti, i) => (
-                <button
-                  key={ti.topic}
-                  onClick={() => handleTopicClick(ti.topic)}
-                  className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group hover:bg-muted/30 border border-transparent hover:border-border"
-                >
-                  <span className="text-xs font-bold w-4 text-right shrink-0 tabular-nums" style={{ color: "#C09A3A" }}>
-                    {i + 1}.
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-medium text-[13px] leading-snug group-hover:text-primary transition-colors truncate">
-                        {ti.topic}
-                      </span>
-                      {ti.hasEmergingSignal && (
-                        <Zap className="h-2.5 w-2.5 shrink-0" style={{ color: "#C09A3A" }} />
-                      )}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                      {ti.articleCount} {ti.articleCount === 1 ? "source" : "sources"}
-                    </p>
-                  </div>
-                  <ScoreBadge score={ti.importanceScore} size="sm" />
-                </button>
-              ))
-            ) : (
-              <div className="text-center py-8 text-muted-foreground text-xs">
-                <p className="font-medium mb-0.5">No data yet</p>
-                <p>Scrape to populate.</p>
-              </div>
-            )}
-          </div>
-        </div>
+        <WhatMattersTodayPanel
+          topicIntelligence={summary.topicIntelligence ?? []}
+          onTopicClick={handleTopicClick}
+          onViewAll={() => navigate("/topics")}
+        />
       </div>
 
       {/* ── Compact Stats Strip ── */}

@@ -8,10 +8,10 @@ const DISCIPLINE_KEYWORDS: Record<string, string[]> = {
   "Strategic Foresight": [
     "AI & Artificial Intelligence", "Technology & Digital Innovation", "Geopolitics",
     "Global Politics", "Wars & Crisis", "Macroeconomics", "Supply Chains & Trade", "Future of Work",
+    "Innovation & Startups",
   ],
   "System Vitality": [
-    "Business & Strategy", "Leadership & Organizations", "Finance & Markets",
-    "Fintech", "Energy & Oil",
+    "Business & Strategy", "Leadership & Organizations", "Finance & Markets", "Energy & Oil",
   ],
   "Civic Stewardship": [
     "Policy & Regulation", "Climate & Environmental Health",
@@ -184,14 +184,15 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
       return {
         topic,
         articleCount: data.count,
+        avgRelevancyScore: Math.round(avgScore * 10) / 10,
         importanceScore: Math.round(importanceScore * 10) / 10,
         significance: describeSignificance(topic, data.count, avgScore),
         discipline: inferDiscipline([topic]),
         hasEmergingSignal: data.hasEmergingSignal,
       };
     })
-    .sort((a, b) => b.importanceScore - a.importanceScore)
-    .slice(0, 5); // limit to top 5 for a clean, focused panel
+    .sort((a, b) => b.importanceScore - a.importanceScore);
+  // All active topics are returned; consumers decide how many to display
 
   const scrapeStatus = getScrapeStatus();
 

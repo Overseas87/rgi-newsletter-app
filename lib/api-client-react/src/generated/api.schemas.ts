@@ -262,6 +262,7 @@ export interface TagCount {
 export interface TopicIntelligence {
   topic: string;
   articleCount: number;
+  avgRelevancyScore?: number;
   importanceScore: number;
   significance: string;
   discipline: string;

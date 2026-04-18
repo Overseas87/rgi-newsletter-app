@@ -32,10 +32,10 @@ const DISCIPLINE_KEYWORDS: Record<string, string[]> = {
   "Strategic Foresight": [
     "AI & Artificial Intelligence", "Technology & Digital Innovation", "Geopolitics",
     "Global Politics", "Wars & Crisis", "Macroeconomics", "Supply Chains & Trade", "Future of Work",
+    "Innovation & Startups",
   ],
   "System Vitality": [
-    "Business & Strategy", "Leadership & Organizations", "Finance & Markets",
-    "Fintech", "Energy & Oil",
+    "Business & Strategy", "Leadership & Organizations", "Finance & Markets", "Energy & Oil",
   ],
   "Civic Stewardship": [
     "Policy & Regulation", "Climate & Environmental Health",
@@ -78,6 +78,7 @@ interface TopicCardProps {
   topic: string;
   count: number;
   importanceScore: number;
+  avgRelevancyScore?: number;
   hasEmergingSignal: boolean;
   discipline: string;
   significance: string;
@@ -85,7 +86,7 @@ interface TopicCardProps {
   onClick: () => void;
 }
 
-function TopicCard({ topic, count, importanceScore, discipline, rank, onClick }: TopicCardProps) {
+function TopicCard({ topic, count, importanceScore, avgRelevancyScore, discipline, rank, onClick }: TopicCardProps) {
   const disc = discipline in DISC_COLOR ? discipline : inferDiscipline(topic);
   const colorClass = DISC_COLOR[disc] ?? DISC_COLOR["Strategic Foresight"];
   const Icon = DISC_ICON[disc] ?? Compass;
@@ -108,13 +109,19 @@ function TopicCard({ topic, count, importanceScore, discipline, rank, onClick }:
           <Badge variant="outline" className={`text-[10px] mb-2 ${DISC_BADGE[disc] ?? ""}`}>
             {disc}
           </Badge>
-          <div className="flex items-center gap-3 text-xs opacity-70 mt-1">
-            <span>{count} article{count !== 1 ? "s" : ""} today</span>
+          <div className="flex items-center gap-3 text-xs opacity-70 mt-1 flex-wrap">
+            <span>{count} article{count !== 1 ? "s" : ""}</span>
             <span>·</span>
             <span className="flex items-center gap-1">
               <TrendingUp className="h-3 w-3" />
               {importanceScore.toFixed(1)} importance
             </span>
+            {avgRelevancyScore != null && (
+              <>
+                <span>·</span>
+                <span>avg {avgRelevancyScore.toFixed(1)} relevance</span>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -370,6 +377,7 @@ function TopicOverview({ onSelectTopic }: { onSelectTopic: (topic: string) => vo
           topic={t.topic}
           count={t.articleCount}
           importanceScore={t.importanceScore}
+          avgRelevancyScore={t.avgRelevancyScore}
           hasEmergingSignal={t.hasEmergingSignal}
           discipline={t.discipline}
           significance={t.significance}
@@ -443,6 +451,7 @@ export default function Topics() {
               topic={t.topic}
               count={t.articleCount}
               importanceScore={t.importanceScore}
+              avgRelevancyScore={t.avgRelevancyScore}
               hasEmergingSignal={t.hasEmergingSignal}
               discipline={t.discipline}
               significance={t.significance}
