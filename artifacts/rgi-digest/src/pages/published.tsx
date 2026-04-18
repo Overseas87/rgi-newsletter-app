@@ -246,7 +246,7 @@ export default function Published() {
   const { mutate: rejectArticle, isPending: isDeleting } = useUpdateDigestArticle({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["listDigestArticles"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/digest"] });
         setDeleteTarget(null);
       },
     },

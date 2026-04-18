@@ -181,8 +181,8 @@ function RejectedCard({ article }: { article: DigestArticle }) {
   const { toast } = useToast();
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["listDigestArticles"] });
-    queryClient.invalidateQueries({ queryKey: ["getDashboardSummary"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/digest"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
   };
 
   const handleSave = () => {
