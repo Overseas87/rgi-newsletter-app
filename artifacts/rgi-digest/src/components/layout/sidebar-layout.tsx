@@ -111,7 +111,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           <SheetContent side="left" className="w-64 p-0 bg-sidebar border-sidebar-border dark">
             <div className="px-5 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex items-center gap-3">
-                <img src="/rgi-logo-transparent.png" alt="RGI" className="h-8 w-8 object-contain shrink-0" />
+                <img src="/rgi-logo-transparent.png" alt="RGI" className="h-8 w-8 object-contain shrink-0" style={{ filter: "brightness(0) invert(1)" }} />
                 <span className="text-white text-sm font-semibold font-serif leading-snug">The Rick Goings Institute</span>
               </div>
             </div>
@@ -131,7 +131,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             className="px-5 h-16 flex items-center gap-3 cursor-pointer"
             style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
           >
-            <img src="/rgi-logo-transparent.png" alt="RGI" className="h-8 w-8 object-contain shrink-0" />
+            <img src="/rgi-logo-transparent.png" alt="RGI" className="h-8 w-8 object-contain shrink-0" style={{ filter: "brightness(0) invert(1)" }} />
             <span className="text-white text-sm font-semibold font-serif leading-snug">The Rick Goings Institute</span>
           </div>
         </Link>
