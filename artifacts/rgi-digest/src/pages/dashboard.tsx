@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useGetDashboardSummary, useGetScrapeStatus, useTriggerScrape, useListArticles, type Article } from "@workspace/api-client-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -12,7 +12,6 @@ import {
   Clock,
   RefreshCw,
   Zap,
-  AlertCircle,
   ChevronRight,
   Globe,
   Tag,
@@ -23,6 +22,7 @@ import {
   BookOpen,
   MessageSquareQuote,
   BarChart2,
+  ArrowRight,
 } from "lucide-react";
 import { GenerateModal } from "@/components/generate-modal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,16 +39,28 @@ const DISCIPLINE_COLORS: Record<string, string> = {
 function ScoreBadge({ score, size = "md" }: { score: number; size?: "sm" | "md" }) {
   const isHigh = score >= 8;
   const isMid = score >= 6.5;
-  const colorClass = isHigh
-    ? "bg-amber-50 text-amber-800 border-amber-300"
-    : isMid
-    ? "bg-blue-50 text-blue-800 border-blue-200"
-    : "bg-slate-100 text-slate-600 border-slate-200";
+
+  if (isHigh) {
+    return (
+      <span
+        className={`inline-flex items-center justify-center rounded font-bold tabular-nums leading-none shrink-0 ${
+          size === "sm" ? "text-[10px] px-1.5 py-0.5 min-w-[3.4rem]" : "text-xs px-2.5 py-1 min-w-[4rem]"
+        }`}
+        style={{ backgroundColor: "#C09A3A", color: "#1A1A2E" }}
+      >
+        {score.toFixed(1)}<span className="opacity-50 font-normal ml-0.5">/10</span>
+      </span>
+    );
+  }
+
+  const colorClass = isMid
+    ? "bg-blue-50 text-blue-800 border-blue-200 border"
+    : "bg-slate-100 text-slate-600 border-slate-200 border";
   const sizeClass = size === "sm"
-    ? "text-[10px] px-1.5 py-0.5 min-w-[3.6rem]"
-    : "text-xs px-2 py-1 min-w-[4rem]";
+    ? "text-[10px] px-1.5 py-0.5 min-w-[3.4rem]"
+    : "text-xs px-2.5 py-1 min-w-[4rem]";
   return (
-    <span className={`inline-flex items-center justify-center rounded border font-semibold tabular-nums leading-none shrink-0 ${colorClass} ${sizeClass}`}>
+    <span className={`inline-flex items-center justify-center rounded font-semibold tabular-nums leading-none shrink-0 ${colorClass} ${sizeClass}`}>
       {score.toFixed(1)}<span className="opacity-50 font-normal ml-0.5">/10</span>
     </span>
   );
@@ -181,7 +193,6 @@ function TopStoryModal({ article, open, onClose }: { article: TopArticle | null;
             );
           })()}
 
-          {/* RGI Relevance Explanation */}
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
             <div className="flex items-center gap-2 mb-2">
               <BookOpen className="h-3.5 w-3.5 text-primary" />
@@ -234,135 +245,162 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
   return (
     <>
       <TopStoryModal article={selected} open={modalOpen} onClose={() => setModalOpen(false)} />
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-primary" />
-              <CardTitle>Top Stories Today</CardTitle>
-            </div>
+
+      {/* Section Header */}
+      <div className="flex items-center justify-between pb-3 mb-2" style={{ borderBottom: "1px solid #F0F0F0" }}>
+        <h2 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+          Top Stories Today
+        </h2>
+        <button
+          className="text-xs font-medium text-primary flex items-center gap-1 hover:text-foreground transition-colors"
+          onClick={onNavigateFeed}
+          data-testid="btn-go-to-feed-2"
+        >
+          Full feed <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <p className="text-xs text-muted-foreground mb-5">
+        Highest-scoring articles from today's scrape, filtered through the RGI strategic lens
+      </p>
+
+      {articles.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground">
+          <p className="text-base font-medium mb-1">No articles yet</p>
+          <p className="text-sm">Click "Scrape Now" to fetch today's intelligence feed.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          {displayed.map((article, i) => {
+            const rank = i + 1;
+            return (
+              <div
+                key={article.id}
+                className="group flex gap-5 py-7 transition-colors -mx-2 px-2 rounded-lg hover:bg-muted/30 cursor-pointer"
+                style={{ borderBottom: "1px solid #F0F0F0" }}
+                onClick={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.closest("a") || target.closest("button")) return;
+                  if (article.url) window.open(article.url, "_blank", "noopener,noreferrer");
+                }}
+              >
+                {/* Rank */}
+                <div
+                  className="shrink-0 w-10 pt-1 text-3xl font-light tabular-nums font-serif leading-none text-right"
+                  style={{ color: "#E5E7EB" }}
+                >
+                  {rank}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0 flex flex-col gap-2">
+                  {/* Tags + Signal */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {article.isEmergingSignal && (
+                      <span
+                        className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide shrink-0"
+                        style={{ backgroundColor: "#FEF3C7", color: "#92400E", border: "1px solid #FCD34D" }}
+                      >
+                        <Zap className="h-2.5 w-2.5" />Signal
+                      </span>
+                    )}
+                    {article.topicTags.slice(0, 2).map((t) => (
+                      <span
+                        key={t}
+                        className="text-[10px] px-2 py-0.5 rounded font-medium"
+                        style={{ border: "1px solid #E5E7EB", color: "#6B7280" }}
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Headline + Score in same row */}
+                  <div className="flex items-start justify-between gap-4">
+                    <a
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-serif font-bold text-xl leading-snug text-foreground hover:text-primary transition-colors group/link"
+                    >
+                      {article.headline}
+                    </a>
+                    <div className="shrink-0 mt-0.5">
+                      <ScoreBadge score={article.relevancyScore} />
+                    </div>
+                  </div>
+
+                  {/* Source + time */}
+                  <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground/75 uppercase tracking-wider text-[10px]">
+                      {article.sourceName}
+                    </span>
+                    {article.author && (
+                      <>
+                        <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/30" />
+                        <span>{article.author}</span>
+                      </>
+                    )}
+                    {article.publishedAt && (
+                      <>
+                        <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/30" />
+                        <span>{format(new Date(article.publishedAt), "h:mm a")}</span>
+                        <span className="text-muted-foreground/40">·</span>
+                        <span>{formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}</span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Summary */}
+                  {article.teaserSummary && (
+                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+                      {article.teaserSummary}
+                    </p>
+                  )}
+
+                  {/* RGI viewpoint teaser */}
+                  {article.viewpoint && (
+                    <p className="flex items-start gap-1 text-[11px] text-muted-foreground/55 italic leading-snug">
+                      <MessageSquareQuote className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground/30" />
+                      <span className="line-clamp-1">{article.viewpoint}</span>
+                    </p>
+                  )}
+
+                  {/* RGI Analysis link */}
+                  <div className="flex justify-end mt-1">
+                    <button
+                      onClick={() => open(article)}
+                      className="text-[11px] font-medium flex items-center gap-1 transition-colors"
+                      style={{ color: "rgba(11,31,58,0.45)" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = "#C09A3A")}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(11,31,58,0.45)")}
+                      title="View RGI analysis"
+                    >
+                      <BookOpen className="h-3 w-3" />
+                      RGI Analysis <ArrowRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {articles.length > 5 && (
             <Button
               variant="ghost"
               size="sm"
-              className="gap-1 text-xs"
-              onClick={onNavigateFeed}
-              data-testid="btn-go-to-feed-2"
+              className="w-full gap-2 text-xs mt-3"
+              onClick={() => setShowAll(!showAll)}
             >
-              Full feed <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-          <CardDescription>Highest-scoring articles from today's scrape, filtered through the RGI strategic lens</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2 p-3 pt-0">
-          {articles.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground text-sm">
-              <p className="text-base font-medium mb-1">No articles yet</p>
-              <p>Click "Scrape Now" to fetch today's intelligence feed.</p>
-            </div>
-          ) : (
-            <>
-              {displayed.map((article, i) => {
-                const rank = i + 1;
-                return (
-                  <div
-                    key={article.id}
-                    className="rounded-lg border border-border bg-background/50 hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm transition-all p-4 group cursor-pointer"
-                    onClick={(e) => {
-                      const target = e.target as HTMLElement;
-                      if (target.closest("a") || target.closest("button")) return;
-                      if (article.url) window.open(article.url, "_blank", "noopener,noreferrer");
-                    }}
-                  >
-                    <div className="flex items-start gap-4">
-                      {/* Rank */}
-                      <span className={`shrink-0 text-2xl font-bold tabular-nums w-7 text-right leading-none mt-0.5 ${rank === 1 ? "text-primary" : "text-muted-foreground/30"}`}>
-                        {rank}
-                      </span>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <div className="flex items-start gap-2 flex-wrap">
-                          {article.isEmergingSignal && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-300 uppercase tracking-wide shrink-0">
-                              <Zap className="h-2.5 w-2.5" />Signal
-                            </span>
-                          )}
-                          {article.topicTags.slice(0, 2).map((t) => (
-                            <Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0.5 h-auto shrink-0">{t}</Badge>
-                          ))}
-                        </div>
-
-                        {/* Headline — primary click = open source URL */}
-                        <a
-                          href={article.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-semibold text-sm leading-snug hover:text-primary transition-colors flex items-start gap-1.5 group/link"
-                        >
-                          {article.headline}
-                          <ExternalLink className="h-3 w-3 mt-0.5 shrink-0 opacity-0 group-hover/link:opacity-60 transition-opacity text-muted-foreground" />
-                        </a>
-
-                        {article.teaserSummary && (
-                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{article.teaserSummary}</p>
-                        )}
-
-                        {article.viewpoint && (
-                          <p className="flex items-start gap-1 text-[11px] text-muted-foreground/60 italic leading-snug">
-                            <MessageSquareQuote className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground/35" />
-                            <span className="line-clamp-1">{article.viewpoint}</span>
-                          </p>
-                        )}
-
-                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
-                          <span className="font-medium text-foreground/70">{article.sourceName}</span>
-                          {article.author && <span>· {article.author}</span>}
-                          {article.publishedAt && (
-                            <span>
-                              · {format(new Date(article.publishedAt), "h:mm a")}
-                              <span className="text-muted-foreground/40"> · </span>
-                              {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
-                            </span>
-                          )}
-                          {/* RGI Analysis button */}
-                          <button
-                            onClick={() => open(article)}
-                            className="ml-auto inline-flex items-center gap-1 text-[10px] font-medium text-primary/50 hover:text-primary transition-colors"
-                            title="View RGI analysis"
-                          >
-                            <BookOpen className="h-3 w-3" />
-                            RGI Analysis
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Score badge */}
-                      <div className="shrink-0 mt-0.5">
-                        <ScoreBadge score={article.relevancyScore} />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {articles.length > 5 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full gap-2 text-xs mt-1"
-                  onClick={() => setShowAll(!showAll)}
-                >
-                  {showAll ? (
-                    <><ChevronUp className="h-3.5 w-3.5" />Show fewer</>
-                  ) : (
-                    <><ChevronDown className="h-3.5 w-3.5" />Show top 10</>
-                  )}
-                </Button>
+              {showAll ? (
+                <><ChevronUp className="h-3.5 w-3.5" />Show fewer</>
+              ) : (
+                <><ChevronDown className="h-3.5 w-3.5" />Show top 10</>
               )}
-            </>
+            </Button>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </>
   );
 }
@@ -387,7 +425,6 @@ function TopicArticlesModal({
     { query: { enabled: open && !!topic } }
   );
 
-  // Filter to today only on the client side
   const articles = useMemo(() => {
     return (allArticles as Article[])
       .filter((a) => {
@@ -431,12 +468,9 @@ function TopicArticlesModal({
                   rel="noopener noreferrer"
                   className="flex items-start gap-3 rounded-lg border border-border bg-background/50 hover:bg-muted/40 hover:border-primary/30 transition-all p-3 group"
                 >
-                  {/* Score */}
                   <div className="shrink-0 mt-1">
                     <ScoreBadge score={article.relevancyScore} size="sm" />
                   </div>
-
-                  {/* Content */}
                   <div className="flex-1 min-w-0 space-y-1">
                     <p className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors">
                       {article.headline}
@@ -465,8 +499,6 @@ function TopicArticlesModal({
     </Dialog>
   );
 }
-
-
 
 export default function Dashboard() {
   const [briefLoading, setBriefLoading] = useState(false);
@@ -519,11 +551,10 @@ export default function Dashboard() {
     return (
       <div className="space-y-5">
         <Skeleton className="h-14 w-full" />
-        <div className="grid gap-5 lg:grid-cols-7">
-          <div className="lg:col-span-5"><Skeleton className="h-[480px] w-full" /></div>
-          <div className="lg:col-span-2"><Skeleton className="h-[480px] w-full" /></div>
+        <div className="flex gap-8">
+          <div className="flex-1"><Skeleton className="h-[480px] w-full" /></div>
+          <div className="w-80"><Skeleton className="h-[480px] w-full" /></div>
         </div>
-        <Skeleton className="h-12 w-full" />
       </div>
     );
   }
@@ -538,7 +569,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       <GenerateModal open={topicModalOpen} onOpenChange={setTopicModalOpen} initialMode="topic_article" />
       <TopicArticlesModal
         topic={selectedTopic}
@@ -546,39 +577,42 @@ export default function Dashboard() {
         onClose={() => { setTopicArticlesOpen(false); setSelectedTopic(null); }}
       />
 
-      {/* ── Action Bar ── */}
-      <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center gap-3 flex-wrap">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-base font-serif font-semibold text-foreground leading-none">Intelligence Dashboard</h1>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            {scrapeStatus?.lastScrapeAt ? (
-              <>Last scraped: <span className="font-medium text-foreground/70">{format(new Date(scrapeStatus.lastScrapeAt), "MMM d, yyyy 'at' h:mm a")}</span></>
-            ) : (
-              <span className="italic">No scrape has run yet</span>
-            )}
+      {/* ── Page Header ── */}
+      <div
+        className="flex items-start justify-between gap-4 flex-wrap pb-6"
+        style={{ borderBottom: "1px solid #F0F0F0" }}
+      >
+        <div>
+          <h1 className="font-serif text-3xl font-bold text-foreground leading-tight">
+            Intelligence Dashboard
+          </h1>
+          <p className="text-xs text-muted-foreground mt-1.5 uppercase tracking-wider">
+            {scrapeStatus?.lastScrapeAt
+              ? <>Last scraped: <span className="font-semibold text-foreground/60">{format(new Date(scrapeStatus.lastScrapeAt), "MMM d, yyyy 'at' h:mm a")}</span></>
+              : <span className="italic">No scrape has run yet</span>
+            }
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           <Button
             onClick={handleScrape}
             disabled={triggerScrape.isPending || scrapeStatus?.isRunning}
             variant="outline"
             size="sm"
-            className="gap-1.5 text-xs h-8"
+            className="gap-1.5 text-xs h-9 border-foreground/20 text-foreground/70 hover:text-foreground hover:border-foreground/40"
             data-testid="btn-trigger-scrape-dashboard"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${scrapeStatus?.isRunning || triggerScrape.isPending ? "animate-spin" : ""}`} />
             {scrapeStatus?.isRunning ? "Scraping..." : triggerScrape.isPending ? "Starting..." : "Scrape Now"}
           </Button>
 
-          <div className="w-px h-5 bg-border shrink-0" />
-
           <Button
             onClick={handleGenerateDailyBrief}
             disabled={briefLoading || !hasArticles}
             size="sm"
-            className="gap-1.5 text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white"
+            className="gap-1.5 text-xs h-9"
+            style={{ backgroundColor: "#0B1F3A", color: "white" }}
             data-testid="btn-generate-daily-brief"
           >
             {briefLoading ? (
@@ -591,9 +625,9 @@ export default function Dashboard() {
           <Button
             onClick={() => setTopicModalOpen(true)}
             disabled={!hasArticles}
-            variant="outline"
             size="sm"
-            className="gap-1.5 text-xs h-8 border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+            className="gap-1.5 text-xs h-9"
+            style={{ backgroundColor: "#0B1F3A", color: "white" }}
             data-testid="btn-generate-topic-article"
           >
             <Tag className="h-3.5 w-3.5" />
@@ -602,70 +636,78 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Main Grid: Top Stories (dominant) + What Matters Today (secondary panel) ── */}
-      <div className="grid gap-5 lg:grid-cols-7">
+      {/* ── Main: Top Stories + What Matters Today ── */}
+      <div className="flex gap-10 items-start">
 
-        {/* Top Stories — primary focus */}
-        <div className="lg:col-span-5">
+        {/* Left: Top Stories */}
+        <div className="flex-1 min-w-0">
           <TopStoriesSection
             articles={(summary.topArticles ?? []) as TopArticle[]}
             onNavigateFeed={() => navigate("/feed")}
           />
         </div>
 
-        {/* What Matters Today — compact secondary panel */}
-        <div className="lg:col-span-2">
-          <Card className="h-full border-border/60 bg-card/60">
-            <CardHeader className="pb-2 pt-4 px-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">What Matters Today</p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-1.5 text-[10px] text-muted-foreground hover:text-foreground gap-0.5"
-                  onClick={() => navigate("/topics")}
-                  data-testid="btn-go-to-topics"
+        {/* Right: What Matters Today */}
+        <div
+          className="w-72 shrink-0 flex flex-col gap-5 pl-8"
+          style={{ borderLeft: "2px solid #C09A3A" }}
+        >
+          <div className="flex items-center justify-between" style={{ borderBottom: "1px solid #F0F0F0", paddingBottom: "12px" }}>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              What Matters Today
+            </h2>
+            <button
+              className="text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5"
+              onClick={() => navigate("/topics")}
+              data-testid="btn-go-to-topics"
+            >
+              All <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+
+          <p className="text-xs text-muted-foreground leading-relaxed -mt-2">
+            Key themes clustering across high-reliability sources over the past 24 hours.
+          </p>
+
+          <div className="flex flex-col gap-1">
+            {summary.topicIntelligence && summary.topicIntelligence.length > 0 ? (
+              summary.topicIntelligence.slice(0, 5).map((ti, i) => (
+                <button
+                  key={ti.topic}
+                  onClick={() => handleTopicClick(ti.topic)}
+                  className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group hover:bg-muted/30 border border-transparent hover:border-border"
                 >
-                  All <ChevronRight className="h-3 w-3" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0 px-3 pb-4 space-y-1">
-              {summary.topicIntelligence && summary.topicIntelligence.length > 0 ? (
-                summary.topicIntelligence.slice(0, 5).map((ti, i) => (
-                  <button
-                    key={ti.topic}
-                    onClick={() => handleTopicClick(ti.topic)}
-                    className="w-full text-left flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-muted/40 hover:border-primary/10 border border-transparent transition-colors group cursor-pointer"
-                  >
-                    <span className="text-xs font-bold text-muted-foreground/30 w-4 text-right shrink-0 tabular-nums">
-                      {i + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-[13px] leading-snug group-hover:text-primary transition-colors truncate">{ti.topic}</span>
-                        {ti.hasEmergingSignal && (
-                          <Zap className="h-2.5 w-2.5 text-amber-600 shrink-0" />
-                        )}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground/60 mt-0.5">{ti.articleCount} {ti.articleCount === 1 ? "source" : "sources"}</p>
+                  <span className="text-xs font-bold w-4 text-right shrink-0 tabular-nums" style={{ color: "#C09A3A" }}>
+                    {i + 1}.
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-medium text-[13px] leading-snug group-hover:text-primary transition-colors truncate">
+                        {ti.topic}
+                      </span>
+                      {ti.hasEmergingSignal && (
+                        <Zap className="h-2.5 w-2.5 shrink-0" style={{ color: "#C09A3A" }} />
+                      )}
                     </div>
-                    <ScoreBadge score={ti.importanceScore} size="sm" />
-                  </button>
-                ))
-              ) : (
-                <div className="text-center py-8 text-muted-foreground text-xs">
-                  <p className="font-medium mb-0.5">No data yet</p>
-                  <p>Scrape to populate.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                      {ti.articleCount} {ti.articleCount === 1 ? "source" : "sources"}
+                    </p>
+                  </div>
+                  <ScoreBadge score={ti.importanceScore} size="sm" />
+                </button>
+              ))
+            ) : (
+              <div className="text-center py-8 text-muted-foreground text-xs">
+                <p className="font-medium mb-0.5">No data yet</p>
+                <p>Scrape to populate.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* ── Compact Stats Strip ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2" style={{ borderTop: "1px solid #F0F0F0" }}>
         {[
           { label: "Scraped Today", value: summary.totalArticlesToday, sub: "articles fetched", icon: <FileText className="h-3.5 w-3.5" /> },
           { label: "Pending Review", value: summary.pendingReview, sub: "drafts awaiting approval", icon: <Clock className="h-3.5 w-3.5" /> },

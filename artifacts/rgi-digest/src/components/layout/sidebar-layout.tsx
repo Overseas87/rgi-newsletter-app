@@ -33,19 +33,6 @@ const NAV_ITEMS = [
   { path: "/about", label: "About RGI", icon: Info },
 ];
 
-function RGILogoImg({ className }: { className?: string }) {
-  return (
-    <div className={`bg-white rounded-md px-2 py-1 flex items-center justify-center ${className ?? ""}`}>
-      <img
-        src="/rgi-logo.png"
-        alt="The Rick Goings Institute"
-        className="h-8 w-auto object-contain"
-        draggable={false}
-      />
-    </div>
-  );
-}
-
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -64,16 +51,20 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   };
 
   const NavLinks = ({ onClose }: { onClose?: () => void }) => (
-    <nav className="flex flex-col gap-0.5 mt-4 px-3">
-      {/* Generate Brief — primary action */}
+    <nav className="flex flex-col gap-0.5 mt-3 px-3">
       <button
         onClick={() => { setGenerateOpen(true); onClose?.(); }}
-        className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-semibold mb-2 transition-all bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+        className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-semibold mb-2 transition-colors"
+        style={{ backgroundColor: "#C09A3A", color: "#0B1F3A" }}
+        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#D4AF4E")}
+        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#C09A3A")}
         data-testid="nav-generate-brief"
       >
         <Wand2 className="h-4 w-4 shrink-0" />
         Generate Brief
       </button>
+
+      <div className="h-px my-1 mx-1" style={{ backgroundColor: "rgba(255,255,255,0.08)" }} />
 
       {NAV_ITEMS.map((item) => {
         const isActive = location === item.path;
@@ -81,15 +72,19 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           <Link
             key={item.path}
             href={item.path}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm font-medium border-l-2 ${
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-all text-sm font-medium border-l-2 ${
               isActive
-                ? "bg-primary/10 text-primary border-l-primary"
-                : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground border-l-transparent"
+                ? "bg-white/10 text-white"
+                : "border-l-transparent text-white/60 hover:bg-white/5 hover:text-white/90"
             }`}
+            style={isActive ? { borderLeftColor: "#C09A3A" } : {}}
             data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
             onClick={() => onClose?.()}
           >
-            <item.icon className="h-4 w-4 shrink-0" />
+            <item.icon
+              className="h-4 w-4 shrink-0"
+              style={{ color: isActive ? "#C09A3A" : "rgba(255,255,255,0.35)" }}
+            />
             {item.label}
           </Link>
         );
@@ -104,22 +99,26 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       <header className="md:hidden flex items-center justify-between p-4 border-b border-sidebar-border bg-sidebar dark">
         <Link href="/" className="flex items-center gap-2.5">
-          <RGILogoImg />
+          <img src="/rgi-logo-transparent.png" alt="RGI" className="h-8 w-auto object-contain" />
+          <span className="text-white font-semibold text-sm">Rick Goings Institute</span>
         </Link>
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" data-testid="btn-mobile-menu">
+            <Button variant="ghost" size="icon" className="text-white/70 hover:text-white" data-testid="btn-mobile-menu">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0 bg-sidebar border-sidebar-border dark">
-            <div className="px-5 py-6 border-b border-sidebar-border">
-              <Link href="/" onClick={() => setMobileOpen(false)}>
-                <RGILogoImg className="mb-3 w-full justify-start" />
-              </Link>
-              <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-widest font-semibold">
-                Strategic Intelligence Brief
-              </p>
+            <div className="px-5 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-center gap-3">
+                <img src="/rgi-logo-transparent.png" alt="RGI" className="h-8 w-8 object-contain shrink-0" />
+                <div className="flex flex-col leading-tight">
+                  <span className="text-white text-sm font-semibold font-serif">Rick Goings Institute</span>
+                  <span className="text-[9px] uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    Strategic Intelligence
+                  </span>
+                </div>
+              </div>
             </div>
             <NavLinks onClose={() => setMobileOpen(false)} />
           </SheetContent>
@@ -127,14 +126,25 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-60 border-r border-sidebar-border bg-sidebar shrink-0 dark">
-        {/* Brand mark */}
+      <aside
+        className="hidden md:flex flex-col w-60 bg-sidebar shrink-0 dark"
+        style={{ borderRight: "1px solid rgba(255,255,255,0.08)" }}
+      >
+        {/* Brand */}
         <Link href="/">
-          <div className="px-4 pt-5 pb-4 border-b border-sidebar-border cursor-pointer space-y-2">
-            <RGILogoImg />
-            <p className="text-[9px] text-sidebar-foreground/40 uppercase tracking-widest font-bold">
-              Strategic Intelligence Brief
-            </p>
+          <div
+            className="px-5 h-16 flex items-center gap-3 cursor-pointer"
+            style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <img src="/rgi-logo-transparent.png" alt="RGI" className="h-8 w-8 object-contain shrink-0" />
+            <div className="flex flex-col leading-tight">
+              <span className="text-white text-[13px] font-semibold tracking-wide font-serif">
+                Rick Goings Institute
+              </span>
+              <span className="text-[9px] uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
+                Strategic Intelligence
+              </span>
+            </div>
           </div>
         </Link>
 
@@ -142,11 +152,13 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           <NavLinks />
         </div>
 
-        {/* Bottom scrape status */}
-        <div className="p-4 border-t border-sidebar-border space-y-2.5">
+        {/* Bottom: scrape status */}
+        <div className="p-4 space-y-2.5" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           <div>
-            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-semibold mb-0.5">Last Scraped</p>
-            <p className="text-xs font-medium text-muted-foreground">
+            <p className="text-[10px] uppercase tracking-wider font-semibold mb-0.5" style={{ color: "rgba(255,255,255,0.28)" }}>
+              Last Scraped
+            </p>
+            <p className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.45)" }}>
               {scrapeStatus?.lastScrapeAt
                 ? format(new Date(scrapeStatus.lastScrapeAt), "MMM d 'at' h:mm a")
                 : "Never"}
@@ -155,9 +167,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           <Button
             onClick={handleScrape}
             disabled={triggerScrape.isPending || scrapeStatus?.isRunning}
-            className="w-full justify-start gap-2"
-            variant="secondary"
             size="sm"
+            className="w-full justify-start gap-2 text-xs border-0"
+            style={{ backgroundColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.65)" }}
             data-testid="btn-trigger-scrape"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${scrapeStatus?.isRunning ? "animate-spin" : ""}`} />
@@ -183,6 +195,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setGenerateOpen(true)}
               size="sm"
               className="gap-1.5"
+              style={{ backgroundColor: "#C09A3A", color: "#0B1F3A" }}
               data-testid="btn-generate-mobile"
             >
               <Wand2 className="h-3.5 w-3.5" />
@@ -200,7 +213,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             </Button>
           </div>
         </div>
-        <div className="p-6 md:p-10 max-w-5xl mx-auto">{children}</div>
+        <div className="p-6 md:p-8">{children}</div>
       </main>
     </div>
   );
