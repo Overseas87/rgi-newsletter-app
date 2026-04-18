@@ -11,29 +11,23 @@ export interface ArticleWithSources extends DigestArticle {
 
 // ── Palette ────────────────────────────────────────────────────────────────────
 const C = {
-  navy:        "#0F2B4C" as string,
-  navyLight:   "#1A3D6B" as string,
-  gold:        "#B8902C" as string,
-  goldLight:   "#D4A93A" as string,
-  ink:         "#1A1A2E" as string,
-  body:        "#2D3142" as string,
-  mid:         "#4A5568" as string,
-  muted:       "#718096" as string,
-  hairline:    "#E2E8F0" as string,
-  rgiTakeBg:   "#FAFAF7" as string,
-  rgiTakeBdr:  "#B8902C" as string,
-  white:       "#FFFFFF" as string,
-  linkBlue:    "#1D4ED8" as string,
+  navy:     "#0F2B4C" as string,
+  ink:      "#1A1A2E" as string,
+  body:     "#2D3142" as string,
+  mid:      "#4A5568" as string,
+  muted:    "#718096" as string,
+  hairline: "#D1D5DB" as string,
+  white:    "#FFFFFF" as string,
 };
 
 // ── Layout constants ───────────────────────────────────────────────────────────
-const W = 612;          // LETTER width
-const H = 792;          // LETTER height
-const ML = 62;          // left margin
-const MR = 62;          // right margin
-const MT = 56;          // top margin (body start, after header)
-const MB = 58;          // bottom margin
-const CW = W - ML - MR; // content width = 488
+const W = 612;           // LETTER width
+const H = 792;           // LETTER height
+const ML = 72;           // left margin  (wider for consulting-doc feel)
+const MR = 72;           // right margin
+const MT = 56;           // top margin (body start, after header)
+const MB = 58;           // bottom margin
+const CW = W - ML - MR; // content width = 468
 
 // ── Page state ─────────────────────────────────────────────────────────────────
 let currentPage = 0;
@@ -54,90 +48,61 @@ function hRule(doc: PDFKit.PDFDocument, y: number, color: string, weight = 0.5) 
   doc.restore();
 }
 
-function vLine(doc: PDFKit.PDFDocument, x: number, y1: number, y2: number, color: string, weight = 2.5) {
-  doc.save();
-  strokeHex(doc, color).lineWidth(weight)
-    .moveTo(x, y1).lineTo(x, y2).stroke();
-  doc.restore();
-}
-
-function filledRect(doc: PDFKit.PDFDocument, x: number, y: number, w: number, h: number, color: string) {
-  doc.save();
-  hex(doc, color).rect(x, y, w, h).fill();
-  doc.restore();
-}
-
 // ── Header ─────────────────────────────────────────────────────────────────────
-function drawPageHeader(doc: PDFKit.PDFDocument, articleType: string) {
-  const HEADER_H = 78;
+function drawPageHeader(doc: PDFKit.PDFDocument) {
+  const HEADER_H = 72;
 
-  // White background (document is already white; draw a border-bottom instead)
-  // RGI wordmark — institution name
+  // Institution wordmark
   doc.save();
   hex(doc, C.navy)
     .font("Helvetica-Bold")
-    .fontSize(16)
-    .text("RICK GOINGS INSTITUTE", ML, 24, { characterSpacing: 0.8, width: CW });
+    .fontSize(13)
+    .text("RGI-CRUMMER", ML, 22, { characterSpacing: 1.2, width: CW });
   doc.restore();
 
-  // Subtitle — brief type
-  const subtitle = articleType === "daily_brief"
-    ? "Daily Strategic Intelligence Brief"
-    : "Strategic Intelligence Analysis";
-
+  // Document type
   doc.save();
-  hex(doc, C.gold)
+  hex(doc, C.mid)
     .font("Helvetica")
-    .fontSize(9)
-    .text(subtitle, ML, 44, { characterSpacing: 0.3, width: CW });
+    .fontSize(8.5)
+    .text("Strategic Intelligence Analysis", ML, 40, { characterSpacing: 0.2, width: CW });
   doc.restore();
 
-  // Gold rule under header
-  hRule(doc, HEADER_H - 4, C.gold, 1);
-
-  // Very thin navy hairline just above gold rule
-  hRule(doc, HEADER_H - 6, C.navy, 0.3);
+  // Single thin rule under header
+  hRule(doc, HEADER_H, C.hairline, 0.5);
 
   doc.x = ML;
-  doc.y = HEADER_H + 14;
+  doc.y = HEADER_H + 18;
 }
 
 // ── Footer ─────────────────────────────────────────────────────────────────────
 function drawPageFooter(doc: PDFKit.PDFDocument, pageNum: number) {
   const footerY = H - MB + 4;
 
-  // Temporarily remove the bottom margin so PDFKit's auto-paging doesn't fire
-  // when we draw footer text past the normal content boundary.
   const page = (doc as unknown as { page: { margins: { bottom: number } } }).page;
   const savedBottom = page.margins.bottom;
   page.margins.bottom = 0;
 
   hRule(doc, footerY, C.hairline, 0.5);
 
-  // Left: institution + classification
   doc.save();
   hex(doc, C.muted)
     .font("Helvetica")
     .fontSize(7)
-    .text("Rick Goings Institute  ·  Internal Use Only", ML, footerY + 10, {
+    .text("RGI-Crummer  ·  Confidential", ML, footerY + 10, {
       characterSpacing: 0.1,
       width: CW / 2,
       align: "left",
     });
   doc.restore();
 
-  // Center: page number
   doc.save();
   hex(doc, C.muted)
     .font("Helvetica")
     .fontSize(7)
-    .text(`${pageNum}`, ML, footerY + 10, {
-      width: CW,
-      align: "center",
-    });
+    .text(`${pageNum}`, ML, footerY + 10, { width: CW, align: "center" });
   doc.restore();
 
-  // Right: date
   if (publishDate) {
     doc.save();
     hex(doc, C.muted)
@@ -151,30 +116,29 @@ function drawPageFooter(doc: PDFKit.PDFDocument, pageNum: number) {
     doc.restore();
   }
 
-  // Restore original bottom margin
   page.margins.bottom = savedBottom;
 }
 
-function newPage(doc: PDFKit.PDFDocument, articleType: string): number {
+function newPage(doc: PDFKit.PDFDocument): number {
   currentPage++;
   doc.addPage();
-  drawPageHeader(doc, articleType);
+  drawPageHeader(doc);
   drawPageFooter(doc, currentPage);
   doc.x = ML;
-  doc.y = 92;
+  doc.y = 90;
   return currentPage;
 }
 
-function ensureSpace(doc: PDFKit.PDFDocument, needed: number, articleType: string) {
+function ensureSpace(doc: PDFKit.PDFDocument, needed: number) {
   if (doc.y + needed > H - MB - 20) {
-    newPage(doc, articleType);
+    newPage(doc);
   }
 }
 
 // ── Section label ──────────────────────────────────────────────────────────────
-function sectionHeading(doc: PDFKit.PDFDocument, label: string, color: string = C.navy) {
+function sectionHeading(doc: PDFKit.PDFDocument, label: string) {
   doc.save();
-  hex(doc, color)
+  hex(doc, C.navy)
     .font("Helvetica-Bold")
     .fontSize(7.5)
     .text(label.toUpperCase(), ML, doc.y, {
@@ -182,7 +146,7 @@ function sectionHeading(doc: PDFKit.PDFDocument, label: string, color: string = 
       width: CW,
     });
   doc.restore();
-  doc.moveDown(0.5);
+  doc.moveDown(0.55);
 }
 
 // ── Body paragraph ─────────────────────────────────────────────────────────────
@@ -191,20 +155,18 @@ function para(doc: PDFKit.PDFDocument, text: string, opts: {
   font?: string;
   size?: number;
   lineGap?: number;
-  x?: number;
   width?: number;
 } = {}) {
   const {
     color = C.body,
     font = "Helvetica",
     size = 10.5,
-    lineGap = 3.5,
-    x = ML,
+    lineGap = 4,
     width = CW,
   } = opts;
   doc.save();
   hex(doc, color).font(font).fontSize(size)
-    .text(text, x, doc.y, { width, lineGap, align: "left" });
+    .text(text, ML, doc.y, { width, lineGap, align: "left" });
   doc.restore();
 }
 
@@ -212,125 +174,79 @@ function para(doc: PDFKit.PDFDocument, text: string, opts: {
 function bulletList(
   doc: PDFKit.PDFDocument,
   items: string[],
-  articleType: string,
-  opts: { dotColor?: string; indent?: number; size?: number } = {}
+  opts: { size?: number } = {}
 ) {
-  const {
-    dotColor = C.navy,
-    indent = 14,
-    size = 10,
-  } = opts;
-
+  const { size = 10 } = opts;
+  const indent = 14;
   const textX = ML + indent;
   const textW = CW - indent;
 
   items.forEach((item) => {
     const text = item.trim();
-    // Set font + size explicitly so heightOfString uses the same metrics as
-    // the actual text render — mismatched fonts skew the height estimate.
     doc.font("Helvetica").fontSize(size);
-    const textH = doc.heightOfString(text, { width: textW, lineGap: 3 });
-    ensureSpace(doc, textH + 10, articleType);
+    const textH = doc.heightOfString(text, { width: textW, lineGap: 3.5 });
+    ensureSpace(textH + 10);
     const y = doc.y;
 
-    // Bullet dot
+    // Bullet dot — small filled circle
     doc.save();
-    hex(doc, dotColor)
-      .circle(ML + 5, y + (size * 0.72) / 2 + 1, 2)
+    hex(doc, C.navy)
+      .circle(ML + 4, y + (size * 0.72) / 2 + 1, 1.8)
       .fill();
     doc.restore();
 
-    // Item text
     doc.save();
     hex(doc, C.body)
       .font("Helvetica")
       .fontSize(size)
-      .text(text, textX, y, { width: textW, lineGap: 3, align: "left" });
+      .text(text, textX, y, { width: textW, lineGap: 3.5, align: "left" });
     doc.restore();
 
-    doc.moveDown(0.4);
+    doc.moveDown(0.45);
   });
 }
 
-// ── RGI Take box ───────────────────────────────────────────────────────────────
-function rgiTakeBox(doc: PDFKit.PDFDocument, text: string, articleType: string) {
-  const PAD_V = 14;
-  const PAD_H = 16;
-  const BOX_X = ML + 1;
-  const BOX_W = CW - 1;
-  const TEXT_X = BOX_X + PAD_H + 4;
-  const TEXT_W = BOX_W - PAD_H - 8;
-
-  // Measure with the EXACT font and size the text will be rendered in.
-  // Using the wrong font/size here causes the box background to be too short,
-  // making overflow text land on top of the next section.
+// ── RGI Take — clean italic paragraph, no box ──────────────────────────────────
+function rgiTakePara(doc: PDFKit.PDFDocument, text: string) {
   doc.font("Helvetica-Oblique").fontSize(10.5);
-  const textHeight = doc.heightOfString(text, { width: TEXT_W, lineGap: 3.5 });
-  // Add a small safety buffer (8pt) for sub-pixel rendering variance.
-  const boxH = textHeight + PAD_V * 2 + 8;
+  const textH = doc.heightOfString(text, { width: CW, lineGap: 4 });
+  ensureSpace(textH + 8);
 
-  ensureSpace(doc, boxH + 20, articleType);
-
-  const boxY = doc.y;
-
-  // Background
-  filledRect(doc, BOX_X, boxY, BOX_W, boxH, C.rgiTakeBg);
-
-  // Left accent border
-  filledRect(doc, BOX_X, boxY, 3, boxH, C.rgiTakeBdr);
-
-  // Top hairline
   doc.save();
-  strokeHex(doc, C.gold).lineWidth(0.4)
-    .moveTo(BOX_X + 3, boxY)
-    .lineTo(BOX_X + BOX_W, boxY)
-    .stroke();
-  doc.restore();
-
-  // Text
-  doc.save();
-  hex(doc, C.body)
+  hex(doc, C.ink)
     .font("Helvetica-Oblique")
     .fontSize(10.5)
-    .text(text, TEXT_X, boxY + PAD_V, { width: TEXT_W, lineGap: 3.5 });
+    .text(text, ML, doc.y, { width: CW, lineGap: 4 });
   doc.restore();
 
-  doc.y = boxY + boxH;
-  // Reset to the default body font so subsequent heightOfString calls use
-  // correct metrics — leaving Helvetica-Oblique/10.5 would skew measurements.
+  // Reset font so subsequent measurements use correct metrics
   doc.font("Helvetica").fontSize(10);
-  doc.moveDown(0.9);
 }
 
-// ── Sources section — compact 1-2 lines per source ────────────────────────────
-function sourcesSection(doc: PDFKit.PDFDocument, sources: Article[], articleType: string) {
+// ── Sources section ────────────────────────────────────────────────────────────
+function sourcesSection(doc: PDFKit.PDFDocument, sources: Article[]) {
   if (sources.length === 0) return;
 
-  ensureSpace(doc, 48, articleType);
+  ensureSpace(48);
   hRule(doc, doc.y, C.hairline, 0.5);
-  doc.moveDown(0.7);
+  doc.moveDown(0.8);
 
-  sectionHeading(doc, "Sources & References", C.muted);
+  sectionHeading(doc, "References");
 
   sources.forEach((src, i) => {
-    ensureSpace(doc, 22, articleType);
+    ensureSpace(20);
 
-    // Extract a short display domain for inline reference
     let domain = "";
-    try {
-      domain = new URL(src.url ?? "").hostname.replace(/^www\./, "");
-    } catch {}
+    try { domain = new URL(src.url ?? "").hostname.replace(/^www\./, ""); } catch {}
 
-    // Truncate headline to keep each entry to a single wrapped line at most
     const rawHeadline = src.headline ?? "Untitled";
-    const shortHeadline = rawHeadline.length > 90
-      ? rawHeadline.slice(0, 87) + "\u2026"
+    const shortHeadline = rawHeadline.length > 95
+      ? rawHeadline.slice(0, 92) + "\u2026"
       : rawHeadline;
 
-    // Inline reference: "N. Source Name — Headline — domain.com"
     const lineParts = [
       `${i + 1}.`,
-      src.sourceName ? src.sourceName : null,
+      src.sourceName ?? null,
       shortHeadline,
       domain || null,
     ].filter(Boolean).join("  —  ");
@@ -338,15 +254,15 @@ function sourcesSection(doc: PDFKit.PDFDocument, sources: Article[], articleType
     doc.fillColor(C.mid).font("Helvetica").fontSize(7.5)
       .text(lineParts, ML, doc.y, {
         width: CW,
-        lineGap: 1.5,
+        lineGap: 2,
         link: src.url ?? undefined,
       });
 
-    doc.moveDown(0.3);
+    doc.moveDown(0.35);
   });
 }
 
-// ── Combined brief cover page ──────────────────────────────────────────────────
+// ── Combined report cover page ─────────────────────────────────────────────────
 function drawCombinedCover(doc: PDFKit.PDFDocument, articles: ArticleWithSources[]) {
   currentPage++;
   doc.addPage();
@@ -355,38 +271,35 @@ function drawCombinedCover(doc: PDFKit.PDFDocument, articles: ArticleWithSources
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 
-  // Header band (full width, navy)
-  filledRect(doc, 0, 0, W, 120, C.navy);
-
-  // Gold accent bar
-  filledRect(doc, 0, 120, W, 3, C.gold);
+  // Navy header band
+  doc.save();
+  hex(doc, C.navy).rect(0, 0, W, 110).fill();
+  doc.restore();
 
   // Institution name
   doc.save();
   hex(doc, C.white)
     .font("Helvetica-Bold")
-    .fontSize(22)
-    .text("RICK GOINGS INSTITUTE", ML, 30, { characterSpacing: 1, width: CW });
+    .fontSize(18)
+    .text("RGI-CRUMMER", ML, 28, { characterSpacing: 1.2, width: CW });
   doc.restore();
 
-  // Report subtitle
-  doc.save();
-  hex(doc, C.goldLight)
-    .font("Helvetica")
-    .fontSize(11)
-    .text("Intelligence Brief — Combined Report", ML, 60, { characterSpacing: 0.3, width: CW });
-  doc.restore();
-
-  // Date
   doc.save();
   hex(doc, "#A0B4CC")
     .font("Helvetica")
-    .fontSize(9)
-    .text(today, ML, 85, { characterSpacing: 0.1, width: CW });
+    .fontSize(10)
+    .text("Strategic Intelligence Analysis — Combined Report", ML, 55, { characterSpacing: 0.2, width: CW });
+  doc.restore();
+
+  doc.save();
+  hex(doc, "#7A94B0")
+    .font("Helvetica")
+    .fontSize(8.5)
+    .text(today, ML, 78, { characterSpacing: 0.1, width: CW });
   doc.restore();
 
   // Table of contents
-  const tocY = 155;
+  const tocY = 148;
   doc.save();
   hex(doc, C.navy)
     .font("Helvetica-Bold")
@@ -394,43 +307,35 @@ function drawCombinedCover(doc: PDFKit.PDFDocument, articles: ArticleWithSources
     .text("CONTENTS", ML, tocY, { characterSpacing: 1.8, width: CW });
   doc.restore();
 
-  hRule(doc, tocY + 16, C.hairline, 0.5);
+  hRule(doc, tocY + 17, C.hairline, 0.5);
 
   articles.forEach((a, i) => {
-    const itemY = tocY + 26 + i * 38;
+    const itemY = tocY + 28 + i * 38;
     if (itemY > H - 100) return;
-
-    const typeLabel = a.articleType === "daily_brief" ? "Daily Brief" : "Topic Analysis";
 
     doc.save();
     hex(doc, C.muted)
       .font("Helvetica")
       .fontSize(7.5)
-      .text(`${String(i + 1).padStart(2, "0")}  ·  ${typeLabel}`, ML, itemY, { width: CW });
+      .text(`${String(i + 1).padStart(2, "0")}`, ML, itemY, { width: CW });
     doc.restore();
 
     doc.save();
     hex(doc, C.ink)
       .font("Helvetica-Bold")
       .fontSize(10)
-      .text(a.headline, ML + 20, itemY + 11, { width: CW - 20, lineGap: 2 });
+      .text(a.headline, ML + 20, itemY + 10, { width: CW - 20, lineGap: 2 });
     doc.restore();
 
     hRule(doc, itemY + 34, C.hairline, 0.3);
   });
 
-  // Footer
   drawPageFooter(doc, currentPage);
 }
 
-// ── Format helpers ─────────────────────────────────────────────────────────────
-function fmtDate(d: Date): string {
-  return d.toLocaleDateString("en-US", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric",
-  });
-}
-function fmtTime(d: Date): string {
-  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+// ── Strip markdown markers ─────────────────────────────────────────────────────
+function cleanText(t: string): string {
+  return t.replace(/\*\*/g, "").replace(/\*/g, "").trim();
 }
 
 // ── Main export ────────────────────────────────────────────────────────────────
@@ -449,10 +354,10 @@ export function generateArticlePdf(
     info: {
       Title: articles.length === 1
         ? articles[0].headline
-        : `RGI Intelligence Report — ${publishDate}`,
-      Author: "Rick Goings Institute",
-      Subject: "Strategic Intelligence Brief",
-      Keywords: "RGI, intelligence, strategy, leadership",
+        : `RGI-Crummer Intelligence Analysis — ${publishDate}`,
+      Author: "RGI-Crummer",
+      Subject: "Strategic Intelligence Analysis",
+      Keywords: "RGI, Crummer, intelligence, strategy, leadership",
       Creator: "RGI Intelligence Platform",
     },
     autoFirstPage: false,
@@ -466,179 +371,101 @@ export function generateArticlePdf(
     const isStructured =
       Array.isArray(article.whatToWatch) && (article.whatToWatch as string[]).length > 0;
 
-    const execSummary = (Array.isArray(article.executiveSummary) ? article.executiveSummary : []) as string[];
-    const keyDevelopments = isStructured ? article.body.split("\n").filter(Boolean) : null;
-    const keyTakeaways = (Array.isArray(article.keyTakeaways) ? article.keyTakeaways : []) as string[];
-    const whatToWatch = (Array.isArray(article.whatToWatch) ? article.whatToWatch : []) as string[];
-    const tags = (Array.isArray(article.topicTags) ? article.topicTags : []) as string[];
-    const sources = article.sourceArticles ?? [];
+    const execSummary  = (Array.isArray(article.executiveSummary) ? article.executiveSummary : []) as string[];
+    const keyTakeaways = (Array.isArray(article.keyTakeaways)    ? article.keyTakeaways    : []) as string[];
+    const whatToWatch  = (Array.isArray(article.whatToWatch)     ? article.whatToWatch     : []) as string[];
+    const sources      = article.sourceArticles ?? [];
 
-    const articleType = article.articleType;
-    newPage(doc, articleType);
+    newPage(doc);
 
-    // ── Article classification bar ──────────────────────────────────────────
-    const typeLabel = articleType === "daily_brief" ? "DAILY BRIEF" : "TOPIC ANALYSIS";
-    const discipline = article.discipline ?? "Strategic Intelligence";
-
-    doc.save();
-    hex(doc, C.navy)
-      .font("Helvetica-Bold")
-      .fontSize(7)
-      .text(typeLabel, ML, doc.y, { continued: true, characterSpacing: 1.5 });
-    hex(doc, C.muted)
-      .font("Helvetica")
-      .fontSize(7)
-      .text(`   ·   ${discipline}`, { characterSpacing: 0.2 });
-    doc.restore();
-
-    if (article.relevancyScore != null) {
-      doc.save();
-      hex(doc, C.muted)
-        .font("Helvetica")
-        .fontSize(7)
-        .text(`Relevance Score: ${article.relevancyScore.toFixed(1)} / 10`, ML, doc.y, {
-          width: CW, align: "right",
-        });
-      doc.restore();
-      doc.moveUp();
+    // Helper: reserve space for a heading + minimum first line
+    function sectionGuard(neededAfterHeading = 40) {
+      ensureSpace(20 + neededAfterHeading);
     }
-    doc.moveDown(0.8);
 
-    // ── Headline ────────────────────────────────────────────────────────────
+    // ── Headline ──────────────────────────────────────────────────────────────
     doc.save();
     hex(doc, C.ink)
       .font("Helvetica-Bold")
-      .fontSize(18)
-      .text(article.headline, ML, doc.y, { width: CW, lineGap: 3 });
+      .fontSize(19)
+      .text(article.headline, ML, doc.y, { width: CW, lineGap: 3.5 });
     doc.restore();
-    doc.moveDown(0.5);
+    doc.moveDown(0.55);
 
-    // ── Thin gold rule under headline ───────────────────────────────────────
-    hRule(doc, doc.y, C.gold, 0.8);
-    doc.moveDown(0.6);
+    hRule(doc, doc.y, C.hairline, 0.5);
+    doc.moveDown(0.9);
 
-    // ── Metadata ────────────────────────────────────────────────────────────
-    const createdAt = new Date(article.createdAt);
-    const metaLine = `Generated  ${fmtDate(createdAt)}  ·  ${fmtTime(createdAt)}`;
-
-    doc.save();
-    hex(doc, C.muted)
-      .font("Helvetica")
-      .fontSize(8)
-      .text(metaLine, ML, doc.y, { width: CW, characterSpacing: 0.1 });
-    doc.restore();
-
-    if (article.publishedAt) {
-      const pubAt = new Date(article.publishedAt);
-      doc.save();
-      hex(doc, C.muted)
-        .font("Helvetica")
-        .fontSize(8)
-        .text(`Approved for distribution  ${fmtDate(pubAt)}`, ML, doc.y, { width: CW });
-      doc.restore();
-    }
-
-    if (tags.length > 0) {
-      doc.save();
-      hex(doc, C.muted)
-        .font("Helvetica")
-        .fontSize(7.5)
-        .text(`Topics:  ${tags.join("  ·  ")}`, ML, doc.y, { width: CW, characterSpacing: 0.1 });
-      doc.restore();
-    }
-
-    doc.moveDown(0.8);
-
-    // Helper: strip markdown bold markers and trim
-    function cleanText(t: string): string {
-      return t.replace(/\*\*/g, "").replace(/\*/g, "").trim();
-    }
-
-    // Helper: reserve space for a section heading (≈20pt) + a minimum first line
-    // so headings are never stranded alone at the bottom of a page.
-    function sectionGuard(neededAfterHeading = 40) {
-      ensureSpace(doc, 20 + neededAfterHeading, articleType);
-    }
-
-    // ── Executive Summary ───────────────────────────────────────────────────
+    // ── Executive Analysis ────────────────────────────────────────────────────
     if (execSummary.length > 0) {
       sectionGuard(30);
-      sectionHeading(doc, "Executive Summary");
+      sectionHeading(doc, "Executive Analysis");
 
       execSummary.forEach((sentence, i) => {
         const text = cleanText(sentence);
         const size = i === 0 ? 10.5 : 10;
-        // Match font + size exactly to get an accurate height measurement.
         doc.font(i === 0 ? "Helvetica-Bold" : "Helvetica").fontSize(size);
-        const textH = doc.heightOfString(text, { width: CW, lineGap: 3 });
-        ensureSpace(doc, textH + 4, articleType);
+        const textH = doc.heightOfString(text, { width: CW, lineGap: 4 });
+        ensureSpace(textH + 4);
         para(doc, text, {
           font: i === 0 ? "Helvetica-Bold" : "Helvetica",
           size,
           color: C.ink,
-          lineGap: 3,
+          lineGap: 4,
         });
-        if (i < execSummary.length - 1) doc.moveDown(0.25);
+        if (i < execSummary.length - 1) doc.moveDown(0.3);
       });
 
-      doc.moveDown(0.7);
+      doc.moveDown(0.9);
       hRule(doc, doc.y, C.hairline, 0.4);
-      doc.moveDown(0.6);
+      doc.moveDown(0.8);
     }
 
-    // ── Key Developments ────────────────────────────────────────────────────
-    // Split body by single newline so each point gets its own space check —
-    // both for structured (bullet) and non-structured (paragraph) briefs.
+    // ── Analysis ──────────────────────────────────────────────────────────────
+    // Encompasses key developments, why it matters, and what to watch —
+    // all presented as one unified analytical section.
     const bodyPoints = article.body.split("\n").filter(Boolean).map(cleanText);
 
     sectionGuard(40);
-    sectionHeading(doc, isStructured ? "Key Developments" : "Analysis");
+    sectionHeading(doc, "Analysis");
 
-    if (isStructured && bodyPoints.length > 0) {
-      bulletList(doc, bodyPoints, articleType, { dotColor: C.navy, size: 10 });
+    if (isStructured) {
+      if (bodyPoints.length > 0) {
+        bulletList(doc, bodyPoints);
+      }
+      if (keyTakeaways.length > 0) {
+        doc.moveDown(0.5);
+        bulletList(doc, keyTakeaways.map(cleanText));
+      }
+      if (whatToWatch.length > 0) {
+        doc.moveDown(0.5);
+        bulletList(doc, whatToWatch.map(cleanText));
+      }
     } else {
       bodyPoints.forEach((p) => {
         doc.font("Helvetica").fontSize(10);
-        const textH = doc.heightOfString(p, { width: CW, lineGap: 3 });
-        ensureSpace(doc, textH + 6, articleType);
-        para(doc, p, { size: 10, lineGap: 3 });
-        doc.moveDown(0.5);
+        const textH = doc.heightOfString(p, { width: CW, lineGap: 4 });
+        ensureSpace(textH + 6);
+        para(doc, p, { size: 10, lineGap: 4 });
+        doc.moveDown(0.55);
       });
     }
 
-    doc.moveDown(0.3);
+    doc.moveDown(0.5);
     hRule(doc, doc.y, C.hairline, 0.4);
-    doc.moveDown(0.6);
+    doc.moveDown(0.8);
 
-    // ── Why It Matters ──────────────────────────────────────────────────────
-    if (keyTakeaways.length > 0) {
-      sectionGuard(40);
-      sectionHeading(doc, isStructured ? "Why It Matters" : "Key Takeaways", C.navy);
-      bulletList(doc, keyTakeaways.map(cleanText), articleType, { dotColor: C.gold, size: 10 });
-      doc.moveDown(0.3);
-      hRule(doc, doc.y, C.hairline, 0.4);
-      doc.moveDown(0.6);
-    }
-
-    // ── RGI Take ────────────────────────────────────────────────────────────
+    // ── RGI Take ──────────────────────────────────────────────────────────────
     if (article.rgiTake) {
       sectionGuard(60);
-      sectionHeading(doc, "RGI Take", C.gold);
-      rgiTakeBox(doc, cleanText(article.rgiTake), articleType);
+      sectionHeading(doc, "RGI Take");
+      rgiTakePara(doc, cleanText(article.rgiTake));
+      doc.moveDown(0.9);
       hRule(doc, doc.y, C.hairline, 0.4);
-      doc.moveDown(0.6);
+      doc.moveDown(0.8);
     }
 
-    // ── What to Watch ───────────────────────────────────────────────────────
-    if (whatToWatch.length > 0) {
-      sectionGuard(40);
-      sectionHeading(doc, "What to Watch Next", C.navy);
-      bulletList(doc, whatToWatch.map(cleanText), articleType, { dotColor: C.navy, size: 10 });
-      doc.moveDown(0.4);
-    }
-
-    // ── Sources ─────────────────────────────────────────────────────────────
-    sourcesSection(doc, sources, articleType);
+    // ── References ────────────────────────────────────────────────────────────
+    sourcesSection(doc, sources);
   }
 
   return doc;
