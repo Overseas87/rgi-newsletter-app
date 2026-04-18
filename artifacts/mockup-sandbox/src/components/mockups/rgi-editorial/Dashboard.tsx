@@ -270,14 +270,14 @@ export function Dashboard() {
               {/* Action Box */}
               <div className="mt-8 bg-[#0B1F3A] p-6 rounded-lg text-white">
                 <h3 className="font-['Playfair_Display'] text-xl font-bold mb-2">
-                  Draft Today's Digest
+                  Generate Strategic Brief
                 </h3>
                 <p className="text-sm text-white/70 mb-6 leading-relaxed">
                   Our AI has processed 142 articles and identified 3 primary strategic narratives for today.
                 </p>
                 <button className="w-full bg-[#C09A3A] text-[#1A1A2E] font-medium py-2.5 rounded hover:bg-[#D4AF4E] transition-colors flex items-center justify-center gap-2">
                   <PenTool className="w-4 h-4" />
-                  Initialize Draft
+                  Generate Brief
                 </button>
               </div>
             </div>
