@@ -109,9 +109,23 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0 bg-sidebar border-sidebar-border dark">
-            <div className="px-5 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-              <div className="flex items-center gap-3">
-                <img src="/rgi-logo-transparent.png" alt="RGI" className="h-12 w-12 object-contain shrink-0" style={{ filter: "brightness(0) invert(1)" }} />
+            <div
+              className="flex flex-col items-center justify-center gap-2 py-5"
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <img
+                src="/rgi-logo-transparent.png"
+                alt="RGI"
+                className="h-10 w-10 object-contain"
+                style={{ filter: "brightness(0) invert(1)" }}
+              />
+              <div className="flex flex-col items-center gap-0.5">
+                <span className="text-[9px] font-bold uppercase tracking-[0.25em]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  Rick Goings Institute
+                </span>
+                <span className="text-[11px] font-semibold uppercase" style={{ color: "#C09A3A", letterSpacing: "0.18em" }}>
+                  Intelligence
+                </span>
               </div>
             </div>
             <NavLinks onClose={() => setMobileOpen(false)} />
@@ -127,10 +141,29 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         {/* Brand */}
         <Link href="/">
           <div
-            className="h-20 flex items-center justify-center cursor-pointer"
+            className="flex flex-col items-center justify-center gap-2 py-5 cursor-pointer"
             style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
           >
-            <img src="/rgi-logo-transparent.png" alt="RGI" className="h-16 w-16 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
+            <img
+              src="/rgi-logo-transparent.png"
+              alt="RGI"
+              className="h-10 w-10 object-contain"
+              style={{ filter: "brightness(0) invert(1)" }}
+            />
+            <div className="flex flex-col items-center gap-0.5">
+              <span
+                className="text-[9px] font-bold uppercase tracking-[0.25em]"
+                style={{ color: "rgba(255,255,255,0.35)" }}
+              >
+                Rick Goings Institute
+              </span>
+              <span
+                className="text-[11px] font-semibold tracking-widest uppercase"
+                style={{ color: "#C09A3A", letterSpacing: "0.18em" }}
+              >
+                Intelligence
+              </span>
+            </div>
           </div>
         </Link>
 
