@@ -191,7 +191,13 @@ function SourceRow({ source }: { source: Source }) {
     update.mutate(
       { id: source.id, data: { isActive: next } },
       {
-        onSuccess: () => { setTogglePending(false); invalidate(); },
+        onSuccess: async () => {
+          // Wait for the refetch to land before clearing the pending flag.
+          // This prevents the useEffect from seeing stale source.isActive
+          // and snapping the switch back mid-flight.
+          await queryClient.invalidateQueries({ queryKey: ["/api/sources"] });
+          setTogglePending(false);
+        },
         onError: () => {
           setIsActive(!next);
           setTogglePending(false);
