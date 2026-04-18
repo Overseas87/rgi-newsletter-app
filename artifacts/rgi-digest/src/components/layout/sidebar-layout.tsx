@@ -179,7 +179,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             style={{ borderRight: "1px solid #E5E7EB" }}
           >
             <img
-              src="/rgi-logo-new.png"
+              src="/rgi-logo-mark.png"
               alt="RGI"
               className="h-8 w-8 object-contain shrink-0"
               style={{
@@ -218,7 +218,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                   style={{ borderBottom: "1px solid #E5E7EB" }}
                 >
                   <img
-                    src="/rgi-logo-new.png"
+                    src="/rgi-logo-mark.png"
                     alt="RGI"
                     className="h-8 w-8 object-contain shrink-0"
                     style={{
