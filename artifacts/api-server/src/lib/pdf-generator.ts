@@ -105,6 +105,13 @@ function drawPageHeader(doc: PDFKit.PDFDocument, articleType: string) {
 // ── Footer ─────────────────────────────────────────────────────────────────────
 function drawPageFooter(doc: PDFKit.PDFDocument, pageNum: number) {
   const footerY = H - MB + 4;
+
+  // Temporarily remove the bottom margin so PDFKit's auto-paging doesn't fire
+  // when we draw footer text past the normal content boundary.
+  const page = (doc as unknown as { page: { margins: { bottom: number } } }).page;
+  const savedBottom = page.margins.bottom;
+  page.margins.bottom = 0;
+
   hRule(doc, footerY, C.hairline, 0.5);
 
   // Left: institution + classification
@@ -143,6 +150,9 @@ function drawPageFooter(doc: PDFKit.PDFDocument, pageNum: number) {
       });
     doc.restore();
   }
+
+  // Restore original bottom margin
+  page.margins.bottom = savedBottom;
 }
 
 function newPage(doc: PDFKit.PDFDocument, articleType: string): number {
@@ -208,14 +218,19 @@ function bulletList(
   const {
     dotColor = C.navy,
     indent = 14,
-    size = 10.5,
+    size = 10,
   } = opts;
 
   const textX = ML + indent;
   const textW = CW - indent;
 
-  items.forEach((item, _i) => {
-    ensureSpace(doc, 28, articleType);
+  items.forEach((item) => {
+    const text = item.trim();
+    // Estimate actual text height so ensureSpace reserves enough room for the
+    // full bullet — not just a fixed 28pt — preventing mid-bullet page breaks.
+    doc.fontSize(size);
+    const textH = doc.heightOfString(text, { width: textW, lineGap: 3 });
+    ensureSpace(doc, textH + 10, articleType);
     const y = doc.y;
 
     // Bullet dot
@@ -230,10 +245,10 @@ function bulletList(
     hex(doc, C.body)
       .font("Helvetica")
       .fontSize(size)
-      .text(item.trim(), textX, y, { width: textW, lineGap: 3.5, align: "left" });
+      .text(text, textX, y, { width: textW, lineGap: 3, align: "left" });
     doc.restore();
 
-    doc.moveDown(0.5);
+    doc.moveDown(0.4);
   });
 }
 
@@ -280,50 +295,47 @@ function rgiTakeBox(doc: PDFKit.PDFDocument, text: string, articleType: string) 
   doc.moveDown(0.9);
 }
 
-// ── Sources section ────────────────────────────────────────────────────────────
+// ── Sources section — compact 1-2 lines per source ────────────────────────────
 function sourcesSection(doc: PDFKit.PDFDocument, sources: Article[], articleType: string) {
   if (sources.length === 0) return;
 
-  ensureSpace(doc, 60, articleType);
+  ensureSpace(doc, 48, articleType);
   hRule(doc, doc.y, C.hairline, 0.5);
-  doc.moveDown(0.8);
+  doc.moveDown(0.7);
 
   sectionHeading(doc, "Sources & References", C.muted);
 
   sources.forEach((src, i) => {
-    ensureSpace(doc, 52, articleType);
+    ensureSpace(doc, 22, articleType);
 
-    // Number + headline — single text call, no `continued` to avoid pdfkit flow bugs
-    const headline = src.headline ?? "Untitled";
-    doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(8.5)
-      .text(`${i + 1}.  ${headline}`, ML, doc.y, { width: CW, lineGap: 2 });
+    // Extract a short display domain for inline reference
+    let domain = "";
+    try {
+      domain = new URL(src.url ?? "").hostname.replace(/^www\./, "");
+    } catch {}
 
-    // Publication / author
-    const pubParts = [src.sourceName, src.author].filter(Boolean);
-    if (pubParts.length > 0) {
-      doc.fillColor(C.muted).font("Helvetica").fontSize(7.5)
-        .text(`    ${pubParts.join("  ·  ")}`, ML, doc.y, { width: CW, lineGap: 1.5 });
-    }
+    // Truncate headline to keep each entry to a single wrapped line at most
+    const rawHeadline = src.headline ?? "Untitled";
+    const shortHeadline = rawHeadline.length > 90
+      ? rawHeadline.slice(0, 87) + "\u2026"
+      : rawHeadline;
 
-    // URL — clean display, live hyperlink
-    if (src.url) {
-      let displayUrl = src.url;
-      try {
-        const u = new URL(src.url);
-        displayUrl = u.hostname.replace(/^www\./, "") + u.pathname;
-        if (displayUrl.length > 80) displayUrl = displayUrl.slice(0, 77) + "\u2026";
-      } catch {}
+    // Inline reference: "N. Source Name — Headline — domain.com"
+    const lineParts = [
+      `${i + 1}.`,
+      src.sourceName ? src.sourceName : null,
+      shortHeadline,
+      domain || null,
+    ].filter(Boolean).join("  —  ");
 
-      doc.fillColor(C.linkBlue).font("Helvetica").fontSize(7.5)
-        .text(`    ${displayUrl}`, ML, doc.y, {
-          width: CW,
-          lineGap: 1.5,
-          link: src.url,
-          underline: true,
-        });
-    }
+    doc.fillColor(C.mid).font("Helvetica").fontSize(7.5)
+      .text(lineParts, ML, doc.y, {
+        width: CW,
+        lineGap: 1.5,
+        link: src.url ?? undefined,
+      });
 
-    doc.moveDown(0.7);
+    doc.moveDown(0.3);
   });
 }
 
@@ -489,10 +501,10 @@ export function generateArticlePdf(
     doc.save();
     hex(doc, C.ink)
       .font("Helvetica-Bold")
-      .fontSize(22)
-      .text(article.headline, ML, doc.y, { width: CW, lineGap: 4 });
+      .fontSize(18)
+      .text(article.headline, ML, doc.y, { width: CW, lineGap: 3 });
     doc.restore();
-    doc.moveDown(0.7);
+    doc.moveDown(0.5);
 
     // ── Thin gold rule under headline ───────────────────────────────────────
     hRule(doc, doc.y, C.gold, 0.8);
@@ -528,72 +540,91 @@ export function generateArticlePdf(
       doc.restore();
     }
 
-    doc.moveDown(1.1);
+    doc.moveDown(0.8);
+
+    // ── Text caps — keep PDF executive-readable; full text is in the web app ──
+    // Cap individual sentences/bullets at sensible lengths for scanning.
+    function cap(text: string, max: number): string {
+      const t = text.trim();
+      return t.length > max ? t.slice(0, max - 1) + "\u2026" : t;
+    }
 
     // ── Executive Summary ───────────────────────────────────────────────────
     if (execSummary.length > 0) {
-      ensureSpace(doc, 80, articleType);
+      ensureSpace(doc, 60, articleType);
       sectionHeading(doc, "Executive Summary");
 
       execSummary.forEach((sentence, i) => {
-        ensureSpace(doc, 32, articleType);
-        para(doc, sentence.trim(), {
+        const text = cap(sentence, 220);
+        doc.fontSize(i === 0 ? 10.5 : 10);
+        const textH = doc.heightOfString(text, { width: CW, lineGap: 3 });
+        ensureSpace(doc, textH + 6, articleType);
+        para(doc, text, {
           font: i === 0 ? "Helvetica-Bold" : "Helvetica",
-          size: i === 0 ? 11 : 10.5,
+          size: i === 0 ? 10.5 : 10,
           color: C.ink,
-          lineGap: 3.5,
+          lineGap: 3,
         });
-        if (i < execSummary.length - 1) doc.moveDown(0.35);
+        if (i < execSummary.length - 1) doc.moveDown(0.25);
       });
 
-      doc.moveDown(1.1);
+      doc.moveDown(0.7);
       hRule(doc, doc.y, C.hairline, 0.4);
-      doc.moveDown(0.8);
+      doc.moveDown(0.6);
     }
 
     // ── Key Developments ────────────────────────────────────────────────────
-    ensureSpace(doc, 60, articleType);
+    // Cap each bullet at ~280 chars so the PDF stays executive-readable.
+    // The full text is always available in the web app; the PDF is for
+    // rapid scanning and sharing, not as a verbatim transcript.
+    const MAX_BULLET_CHARS = 280;
+    function capBullet(text: string): string {
+      const t = text.replace(/\*\*/g, "").replace(/\*/g, "").trim();
+      return t.length > MAX_BULLET_CHARS ? t.slice(0, MAX_BULLET_CHARS - 1) + "\u2026" : t;
+    }
+
+    ensureSpace(doc, 50, articleType);
     sectionHeading(doc, isStructured ? "Key Developments" : "Analysis");
 
     if (isStructured && keyDevelopments) {
-      bulletList(doc, keyDevelopments, articleType, { dotColor: C.navy });
+      bulletList(doc, keyDevelopments.map(capBullet), articleType, { dotColor: C.navy, size: 10 });
     } else {
       article.body.split("\n\n").filter(Boolean).forEach((p) => {
-        ensureSpace(doc, 40, articleType);
-        para(doc, p.replace(/\*\*/g, "").replace(/\*/g, "").trim());
-        doc.moveDown(0.6);
+        ensureSpace(doc, 36, articleType);
+        para(doc, capBullet(p), { size: 10, lineGap: 3 });
+        doc.moveDown(0.5);
       });
     }
 
-    doc.moveDown(0.4);
+    doc.moveDown(0.3);
     hRule(doc, doc.y, C.hairline, 0.4);
-    doc.moveDown(0.8);
+    doc.moveDown(0.6);
 
     // ── Why It Matters ──────────────────────────────────────────────────────
     if (keyTakeaways.length > 0) {
-      ensureSpace(doc, 60, articleType);
+      ensureSpace(doc, 50, articleType);
       sectionHeading(doc, isStructured ? "Why It Matters" : "Key Takeaways", C.navy);
-      bulletList(doc, keyTakeaways, articleType, { dotColor: C.gold });
-      doc.moveDown(0.4);
+      bulletList(doc, keyTakeaways.map((t) => cap(t, 240)), articleType, { dotColor: C.gold, size: 10 });
+      doc.moveDown(0.3);
       hRule(doc, doc.y, C.hairline, 0.4);
-      doc.moveDown(0.8);
+      doc.moveDown(0.6);
     }
 
     // ── RGI Take ────────────────────────────────────────────────────────────
     if (article.rgiTake) {
-      ensureSpace(doc, 80, articleType);
+      ensureSpace(doc, 70, articleType);
       sectionHeading(doc, "RGI Take", C.gold);
-      rgiTakeBox(doc, article.rgiTake, articleType);
+      rgiTakeBox(doc, cap(article.rgiTake, 650), articleType);
       hRule(doc, doc.y, C.hairline, 0.4);
-      doc.moveDown(0.8);
+      doc.moveDown(0.6);
     }
 
     // ── What to Watch ───────────────────────────────────────────────────────
     if (whatToWatch.length > 0) {
-      ensureSpace(doc, 60, articleType);
+      ensureSpace(doc, 50, articleType);
       sectionHeading(doc, "What to Watch Next", C.navy);
-      bulletList(doc, whatToWatch, articleType, { dotColor: C.navy });
-      doc.moveDown(0.5);
+      bulletList(doc, whatToWatch.map((t) => cap(t, 200)), articleType, { dotColor: C.navy, size: 10 });
+      doc.moveDown(0.4);
     }
 
     // ── Sources ─────────────────────────────────────────────────────────────
