@@ -15,7 +15,8 @@ run = "pnpm --filter @workspace/api-server run dev"
 [services.production]
 
 [services.production.build]
-args = ["pnpm", "--filter", "@workspace/api-server", "run", "build"]
+# build:prod runs db:migrate (schema sync) then compiles — guarantees schema matches code before server starts
+args = ["pnpm", "--filter", "@workspace/api-server", "run", "build:prod"]
 
 [services.production.build.env]
 NODE_ENV = "production"
