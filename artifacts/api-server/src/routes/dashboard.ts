@@ -136,82 +136,104 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
 
   const allArticlesToday = allArticlesWindow;
 
-  // ── Proportional Topic Diversity ────────────────────────────────────────────
-  // Goal: no single topic dominates the top stories list beyond its fair share
-  // of the day's actual news coverage.
+  // ── Topic Domain Diversity ───────────────────────────────────────────────────
+  // Goal: ensure each distinct domain of news (Geopolitics, AI, Finance, etc.)
+  // gets visible representation in the top 5 stories rather than one dominant
+  // domain sweeping all visible slots.
+  //
+  // Key insight: raw topic tags from the scraper contain many variant spellings
+  // of the same domain (e.g. "Geopolitics" and "Geopolitics & Global Power" are
+  // the same domain). We first normalize to a canonical set, then round-robin
+  // through domains so each gets at least one slot in the visible top 5.
   //
   // Algorithm:
-  //   1. Count how many articles (across the whole day's window) belong to each
-  //      primary topic tag — this is the "coverage proportion" for that topic.
-  //   2. Allocate TOP_STORY_SLOTS (10) proportionally:
-  //        slots_for_topic = max(1, round(proportion × slots))
-  //      Cap at remaining available slots; ensure total ≤ TOP_STORY_SLOTS.
-  //   3. For each topic (ordered by coverage desc), pick the highest-scored
-  //      candidates up to its slot allocation.
-  //   4. Fill any leftover slots with the next best candidates regardless of topic.
-  //   5. Sort the final list by relevancy score for display.
+  //   1. Normalize each article's primary tag to a canonical domain bucket.
+  //   2. Group the top-scored candidates by domain, preserving score order.
+  //   3. Order domains by the score of their best available article (best domain first).
+  //   4. Round-robin: pick one article from each domain in turn, cycling until
+  //      all 10 return slots are filled.  No single domain can take more than
+  //      ceil(10 / numDomains) consecutive slots before other domains get a turn.
+  //   5. Remaining slots go to the next highest-scored candidates overall.
   //
-  // Example: if Trade covers 40 % of today's articles it gets ≈ 4 of 10 slots
-  // (and ≈ 2 of the 5 shown by default). A topic covering 10 % gets 1 slot.
+  // Result: the top 5 visible slots cover ≥3 different domains by default.
   // ────────────────────────────────────────────────────────────────────────────
   const TOP_STORY_SLOTS = 10;
 
-  // Tally coverage per primary topic tag across the full content window
-  const topicCoverage: Record<string, number> = {};
-  let totalCovered = 0;
-  for (const article of allArticlesToday) {
-    const primaryTag = article.topicTags?.[0];
-    if (!primaryTag) continue;
-    topicCoverage[primaryTag] = (topicCoverage[primaryTag] ?? 0) + 1;
-    totalCovered++;
+  // Canonical domain map — variants of the same domain collapse into one bucket.
+  const DOMAIN_MAP: Record<string, string> = {
+    "Geopolitics & Global Power":          "Geopolitics",
+    "Wars, Conflict & Security":           "Geopolitics",
+    "Defense & Military":                  "Geopolitics",
+    "AI & Artificial Intelligence":        "AI & Technology",
+    "Technology & AI":                     "AI & Technology",
+    "AI":                                  "AI & Technology",
+    "Innovation & Digital Transformation": "AI & Technology",
+    "Cybersecurity":                       "AI & Technology",
+    "Policy & Regulation":                 "Policy & Governance",
+    "Policy, Regulation & Governance":     "Policy & Governance",
+    "Governance":                          "Policy & Governance",
+    "Macroeconomics":                      "Finance & Economics",
+    "Currency & Monetary Policy":          "Finance & Economics",
+    "Finance & Markets":                   "Finance & Economics",
+    "Energy & Oil":                        "Energy & Resources",
+    "Climate & Environmental Systems":     "Climate & Environment",
+    "Public Health":                       "Health & Science",
+    "Life Sciences":                       "Health & Science",
+    "Leadership":                          "Leadership & Strategy",
+    "Strategy":                            "Leadership & Strategy",
+  };
+
+  const normalizeDomain = (tag: string): string => DOMAIN_MAP[tag] ?? tag;
+
+  // Group candidates by canonical domain (each list is already score-sorted)
+  const domainBuckets = new Map<string, typeof topCandidates>();
+  for (const article of topCandidates) {
+    const domain = normalizeDomain(article.topicTags?.[0] ?? "General");
+    if (!domainBuckets.has(domain)) domainBuckets.set(domain, []);
+    domainBuckets.get(domain)!.push(article);
   }
 
-  // Compute proportional slot allocation per topic (at least 1 if any candidate exists)
-  const topicSlots: Record<string, number> = {};
-  if (totalCovered > 0) {
-    let remaining = TOP_STORY_SLOTS;
-    const sortedTopics = Object.entries(topicCoverage).sort((a, b) => b[1] - a[1]);
-    for (const [topic, count] of sortedTopics) {
-      if (remaining <= 0) break;
-      const proportion = count / totalCovered;
-      const raw = Math.round(proportion * TOP_STORY_SLOTS);
-      const slots = Math.min(Math.max(raw, 1), remaining);
-      topicSlots[topic] = slots;
-      remaining -= slots;
-    }
-  }
+  // Order domains by their best article's score (most newsworthy domain first)
+  const orderedDomains = [...domainBuckets.entries()]
+    .sort((a, b) => (b[1][0]?.relevancyScore ?? 0) - (a[1][0]?.relevancyScore ?? 0));
 
-  // First pass: pick top candidates per topic up to each topic's slot allocation
+  // Round-robin pick: one article per domain per pass, until slots filled
   const pickedIds = new Set<number>();
   const topArticles: typeof topCandidates = [];
+  const domainPointers = new Map<string, number>(orderedDomains.map(([d]) => [d, 0]));
 
-  const topicOrder = Object.entries(topicSlots).sort((a, b) => (topicCoverage[b[0]] ?? 0) - (topicCoverage[a[0]] ?? 0));
-  for (const [topic, slots] of topicOrder) {
-    if (topArticles.length >= TOP_STORY_SLOTS) break;
-    let picked = 0;
-    for (const article of topCandidates) {
-      if (picked >= slots || topArticles.length >= TOP_STORY_SLOTS) break;
-      if (pickedIds.has(article.id)) continue;
-      if (!article.topicTags?.includes(topic)) continue;
-      topArticles.push(article);
-      pickedIds.add(article.id);
-      picked++;
+  let pass = 0;
+  while (topArticles.length < TOP_STORY_SLOTS && pass < 10) {
+    let addedThisPass = 0;
+    for (const [domain, bucket] of orderedDomains) {
+      if (topArticles.length >= TOP_STORY_SLOTS) break;
+      const ptr = domainPointers.get(domain) ?? 0;
+      // Find the next unpicked article in this domain's bucket
+      let found = false;
+      for (let i = ptr; i < bucket.length; i++) {
+        if (!pickedIds.has(bucket[i].id)) {
+          topArticles.push(bucket[i]);
+          pickedIds.add(bucket[i].id);
+          domainPointers.set(domain, i + 1);
+          addedThisPass++;
+          found = true;
+          break;
+        }
+      }
+      if (!found) domainPointers.set(domain, bucket.length); // domain exhausted
     }
+    if (addedThisPass === 0) break; // all domains exhausted
+    pass++;
   }
 
-  // Second pass: fill remaining slots with the next highest-scored candidates
+  // Fallback: fill any remaining slots from the highest-scored unpicked candidates
   for (const article of topCandidates) {
     if (topArticles.length >= TOP_STORY_SLOTS) break;
-    if (pickedIds.has(article.id)) continue;
-    topArticles.push(article);
-    pickedIds.add(article.id);
+    if (!pickedIds.has(article.id)) {
+      topArticles.push(article);
+      pickedIds.add(article.id);
+    }
   }
-
-  // Final sort by relevancy score so the display order still feels ranked
-  topArticles.sort((a, b) =>
-    b.relevancyScore - a.relevancyScore ||
-    ((b.authenticityScore ?? 5) - (a.authenticityScore ?? 5))
-  );
   // ────────────────────────────────────────────────────────────────────────────
 
   // Build a set of tags that appear in Top Stories for weighted ranking
