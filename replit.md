@@ -70,6 +70,10 @@ pnpm workspace monorepo using TypeScript with:
 - Parallel fetch with Promise.allSettled (no single failure blocks others)
 - Author extraction from RSS fields and social posts
 - Signal detection: `isEmergingSignal` flag for high-relevance emerging trends
+- **Hourly scrape**: cron runs every hour at :00 (`0 * * * *`) — retry once after 60 s on failure
+- **Source cache**: 12-minute TTL prevents duplicate fetches if hourly and daily jobs overlap
+- **Startup fallback**: if no articles scraped in the last 60 minutes at boot, a scrape fires automatically (covers restarts between hourly ticks)
+- **Non-blocking**: all scrapes run in the background; the feed always serves existing articles immediately
 
 ### AI Scoring (Layer 2)
 - Claude Haiku scores each article 1-10 against RGI disciplines

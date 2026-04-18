@@ -60,15 +60,16 @@ async function initializeApp() {
   // Step 4 — restore in-memory scrape state from DB timestamps
   await initializeScrapeStatus();
 
-  // Step 5 — auto-scrape only if there's no recent content (avoids redundant work on restart)
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  // Step 5 — auto-scrape fallback: if no articles in the last 60 minutes, trigger a scrape.
+  // Covers the case where the hourly scheduler missed a run (e.g. after a restart between cron ticks).
+  const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
   const [{ recentCount }] = await db
     .select({ recentCount: count() })
     .from(articlesTable)
-    .where(gte(articlesTable.scrapedAt, twentyFourHoursAgo));
+    .where(gte(articlesTable.scrapedAt, sixtyMinutesAgo));
 
   if (recentCount === 0) {
-    logger.info("No articles in the last 24 hours — triggering automatic startup scrape");
+    logger.info("No articles in the last 60 minutes — triggering automatic startup scrape");
     runScrape().catch((err) => logger.error({ err }, "Startup scrape failed"));
   } else {
     logger.info({ recentCount }, "Recent articles found — skipping startup scrape, dashboard ready");
