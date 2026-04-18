@@ -36,9 +36,24 @@ function ArticleTypeBadge({ articleType }: { articleType: string }) {
   );
 }
 
+function BulletList({ items, dotColor = "text-primary" }: { items: string[]; dotColor?: string }) {
+  return (
+    <ul className="space-y-2">
+      {items.map((item, i) => (
+        <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+          <span className={`mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-current ${dotColor}`} />
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function FullArticleDialog({ article, open, onClose }: { article: DigestArticle | null; open: boolean; onClose: () => void }) {
   if (!article) return null;
-  const isDailyBrief = article.articleType === "daily_brief";
+  const isStructured = article.whatToWatch && article.whatToWatch.length > 0;
+  const keyDevelopments = isStructured ? article.body.split("\n").filter(Boolean) : null;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -62,61 +77,80 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
             </span>
           </div>
         </DialogHeader>
-        <div className="space-y-6 mt-2">
-          {isDailyBrief && article.executiveSummary && article.executiveSummary.length > 0 && (
+
+        <div className="space-y-5 mt-2">
+          {/* Executive Summary — shown for all articles when present */}
+          {article.executiveSummary && article.executiveSummary.length > 0 && (
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
               <p className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Executive Summary</p>
-              <ul className="space-y-2">
-                {article.executiveSummary.map((bullet, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-foreground/90">
-                    <span className="text-primary font-bold mt-0.5 shrink-0">•</span>
-                    {bullet}
-                  </li>
+              <div className="space-y-1.5">
+                {article.executiveSummary.map((s, i) => (
+                  <p key={i} className="text-sm text-foreground/90 leading-relaxed">{s}</p>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
-          <div>
-            {article.body.split("\n\n").filter(Boolean).map((para, i) => (
-              <p key={i} className="text-sm leading-relaxed text-foreground/90 mb-4">{stripMarkdown(para)}</p>
-            ))}
-          </div>
+
+          {/* Key Developments (new format) OR prose body (legacy) */}
+          {isStructured && keyDevelopments && keyDevelopments.length > 0 ? (
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Key Developments</p>
+              <BulletList items={keyDevelopments} dotColor="text-foreground/40" />
+            </div>
+          ) : (
+            <div>
+              {article.body.split("\n\n").filter(Boolean).map((para, i) => (
+                <p key={i} className="text-sm leading-relaxed text-foreground/90 mb-4">{stripMarkdown(para)}</p>
+              ))}
+            </div>
+          )}
+
+          {/* Why It Matters (new) / Key Takeaways (legacy) */}
+          {article.keyTakeaways && article.keyTakeaways.length > 0 && (
+            <div className="rounded-xl border border-amber-200/60 bg-amber-50/40 p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-amber-700 mb-3">
+                {isStructured ? "Why It Matters" : "Key Takeaways"}
+              </p>
+              <BulletList items={article.keyTakeaways} dotColor="text-amber-500" />
+            </div>
+          )}
+
+          {/* RGI Take */}
           {article.rgiTake && (
             <div className="border-l-4 border-primary/60 pl-5 py-2 bg-primary/5 rounded-r-md">
               <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">RGI Take</p>
               <p className="text-sm italic text-foreground/80 leading-relaxed">{article.rgiTake}</p>
             </div>
           )}
-          {article.keyTakeaways && article.keyTakeaways.length > 0 && (
-            <div className="rounded-xl border border-border bg-muted/30 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Key Takeaways</p>
-              <ul className="space-y-2">
-                {article.keyTakeaways.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                    <span className="flex-shrink-0 w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
+
+          {/* What to Watch (new format only) */}
+          {isStructured && article.whatToWatch && article.whatToWatch.length > 0 && (
+            <div className="rounded-xl border border-blue-200/60 bg-blue-50/40 p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-blue-700 mb-3">What to Watch</p>
+              <BulletList items={article.whatToWatch} dotColor="text-blue-500" />
             </div>
           )}
+
+          {/* Topic tags */}
           {article.topicTags && article.topicTags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5 pt-1">
               {article.topicTags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="text-xs font-normal">{tag}</Badge>
               ))}
             </div>
           )}
+
+          {/* Sources */}
           {article.sourceArticles && article.sourceArticles.length > 0 && (
             <div className="border-t pt-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Source</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Sources</p>
               {article.sourceArticles.map((src) => (
                 <a
                   key={src.id}
                   href={src.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+                  className="flex items-center gap-1.5 text-sm text-primary hover:underline mb-1"
                 >
                   {src.sourceName}: {src.headline}
                   <ExternalLink className="h-3 w-3" />
@@ -278,27 +312,71 @@ function DigestCard({ article }: { article: DigestArticle }) {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Article Body</p>
-            {isEditing ? (
-              <SelectionRegenerateTextarea
-                value={editedBody}
-                onChange={setEditedBody}
-                articleId={article.id}
-                articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
-                field="body"
-                className="text-sm leading-relaxed"
-                minHeight="240px"
-                data-testid="textarea-body"
-              />
-            ) : (
-              <div className="text-sm leading-relaxed text-foreground/90">
-                {article.body.split("\n\n").filter(Boolean).map((para, i) => (
-                  <p key={i} className="mb-3">{stripMarkdown(para)}</p>
-                ))}
-              </div>
-            )}
-          </div>
+          {(() => {
+            const isStructured = article.whatToWatch && article.whatToWatch.length > 0;
+            const keyDevelopments = isStructured ? article.body.split("\n").filter(Boolean) : null;
+            return (
+              <>
+                {/* Executive Summary */}
+                {article.executiveSummary && article.executiveSummary.length > 0 && (
+                  <div className="text-sm text-foreground/80 leading-relaxed space-y-1">
+                    {article.executiveSummary.map((s, i) => <p key={i}>{s}</p>)}
+                  </div>
+                )}
+
+                {/* Key Developments or prose body */}
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                    {isStructured ? "Key Developments" : "Article Body"}
+                  </p>
+                  {isEditing ? (
+                    <SelectionRegenerateTextarea
+                      value={editedBody}
+                      onChange={setEditedBody}
+                      articleId={article.id}
+                      articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
+                      field="body"
+                      className="text-sm leading-relaxed"
+                      minHeight="180px"
+                      data-testid="textarea-body"
+                    />
+                  ) : isStructured && keyDevelopments ? (
+                    <ul className="space-y-1.5">
+                      {keyDevelopments.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                          <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-foreground/30" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-sm leading-relaxed text-foreground/90">
+                      {article.body.split("\n\n").filter(Boolean).map((para, i) => (
+                        <p key={i} className="mb-3">{stripMarkdown(para)}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Why It Matters (new) or Key Takeaways (legacy) */}
+                {!isEditing && article.keyTakeaways && article.keyTakeaways.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-amber-700 uppercase tracking-wider mb-2">
+                      {isStructured ? "Why It Matters" : "Key Takeaways"}
+                    </p>
+                    <ul className="space-y-1.5">
+                      {article.keyTakeaways.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                          <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           <div className="border-l-2 border-primary/40 pl-4">
             <p className="text-xs font-medium text-primary/80 uppercase tracking-wider mb-2">RGI Take</p>
@@ -320,6 +398,21 @@ function DigestCard({ article }: { article: DigestArticle }) {
               </p>
             )}
           </div>
+
+          {/* What to Watch */}
+          {!isEditing && article.whatToWatch && article.whatToWatch.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-blue-700 uppercase tracking-wider mb-2">What to Watch</p>
+              <ul className="space-y-1.5">
+                {article.whatToWatch.map((item, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                    <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-blue-400" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {article.sourceArticles && article.sourceArticles.length > 0 && (
             <div className="text-xs text-muted-foreground border-t pt-3">

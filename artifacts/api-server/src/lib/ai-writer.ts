@@ -12,8 +12,8 @@ const BRIEF_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 // Topic article: Key: sorted article IDs + editorNotes → cached result + timestamp
 interface CachedArticle {
   result: {
-    headline: string; body: string; rgiTake: string;
-    keyTakeaways: string[]; topicTags: string[]; discipline: string; relevancyScore: number;
+    headline: string; body: string; executiveSummary: string[]; rgiTake: string;
+    keyTakeaways: string[]; whatToWatch: string[]; topicTags: string[]; discipline: string; relevancyScore: number;
   };
   generatedAt: number;
 }
@@ -26,7 +26,7 @@ function topicArticleCacheKey(articleIds: number[], editorNotes?: string | null)
 
 interface DailyBriefResult {
   headline: string; executiveSummary: string[]; body: string;
-  rgiTake: string; keyTakeaways: string[]; topicTags: string[];
+  rgiTake: string; keyTakeaways: string[]; whatToWatch: string[]; topicTags: string[];
   discipline: string; relevancyScore: number; sourceArticleIds: number[];
 }
 
@@ -108,185 +108,137 @@ EDITORIAL STANDARDS
 - CREDIBILITY RULE: Higher-authenticity sources carry more analytical weight. When a major claim rests on weak or single-source reporting, say so.
 - DENSITY RULE: Every sentence must add new information or new analysis. No filler. No repetition. No transitions that only restate the previous paragraph.`;
 
-const SYNTHESIS_PROMPT = `You are writing an RGI Strategic Intelligence Brief — a premium, analyst-grade intelligence piece. Your obligation is to reason deeply before writing, and to produce analysis that a senior leader cannot find anywhere else.
+const SYNTHESIS_PROMPT = `You are writing an RGI Strategic Intelligence Brief. Reason deeply before writing — your job is to produce insight a senior leader cannot find anywhere else.
 
-═══════════════════════════════════════════════════════
-PRE-WORK — MANDATORY INTERNAL REASONING (do this before writing a single word)
-═══════════════════════════════════════════════════════
 SOURCE MATERIAL:
 {SOURCES}
 
-Work through these five steps internally. The quality of this reasoning determines everything that follows.
-
-1. CORE EVENT: What precisely happened? Strip away media framing and identify the underlying fact, announcement, or development. Be exact.
-
-2. UNDERLYING DRIVERS: What caused this — and why now? Examine each dimension:
-   • Economic: capital flows, cost pressures, interest rates, incentive structures
-   • Geopolitical: power competition, alliance stress, sanctions, sovereignty disputes
-   • Technological: capability shifts, adoption thresholds, regulatory responses
-   • Institutional: leadership decisions, policy pivots, governance failures or breakthroughs
-   The deepest driver is usually not the one the media emphasizes.
-
-3. BROADER IMPLICATIONS: Where do the effects land beyond the immediate event?
-   Map second and third-order consequences across: markets, organizational risk, leadership decisions, supply chains, geopolitical stability, regulatory environments.
-   Ask: who is now under pressure they were not under yesterday, and why?
-
-4. FORWARD HORIZON: What happens in the next 24 to 72 hours? What happens in the next quarter?
-   Name the specific decision points, thresholds, and early indicators that will determine whether this situation escalates, stabilizes, or shifts.
-
-5. SOURCE CONFLICTS: Do any sources present contradictory data, interpretations, or claims?
-   If yes, you must surface the disagreement in the article. Name the competing claims. Evaluate which has stronger evidence. Never flatten contradictions into false consensus.
-
-═══════════════════════════════════════════════════════
-STRICT RULES BEFORE WRITING
-═══════════════════════════════════════════════════════
-FORBIDDEN:
-✗ Treating each source as its own section — the article must be one argued narrative, not a source review
-✗ "Topic A is important. Topic B is also important." — connect causally or don't include it
-✗ Covering all sources equally — weight them by analytical relevance to the central argument
-✗ Forcing artificial connections between genuinely unrelated developments
-✗ Echoing the dominant media narrative without independent scrutiny
-✗ Neutral hedging in the RGI Take
-✗ Filler sentences that only restate the previous paragraph
-✗ Generic language: "this is significant," "this could have major implications" — name the mechanism
-
-REQUIRED:
-✓ One central causal argument running through the entire body
-✓ Each paragraph follows logically from the previous — the reader should feel the pull
-✓ Cause → Effect → Implication traceable throughout
-✓ If sources conflict, name and evaluate the disagreement
-✓ Forward-looking: what happens next, and what signals to watch
-✓ All claims trace to provided sources — no fabrication
-
-ATTRIBUTION: Sources marked [PRIMARY SIGNAL] must be attributed directly — "In a statement on X, [name] declared…" not "reports suggest."
-
-═══════════════════════════════════════════════════════
-EDITORIAL DIRECTION (MANDATORY PRIORITY)
-═══════════════════════════════════════════════════════
+EDITORIAL DIRECTION:
 {NOTES}
-This direction overrides all other structural considerations. Apply it throughout — not just in one section.
 
 ═══════════════════════════════════════════════════════
-WRITE THE ARTICLE — continuous prose, no labels, no headers, no bullets in body
+INTERNAL PRE-WORK (do silently before writing)
 ═══════════════════════════════════════════════════════
-PARAGRAPH 1 — THE CATALYST: State the central development with precision. Specific facts only. Do not pad.
-
-PARAGRAPH 2 — THE MECHANISM: Explain WHY this is happening and HOW it propagates. Name the economic, geopolitical, or institutional system through which this force operates. Do not just describe — explain causality.
-
-PARAGRAPH 3 — THE CONVERGENCE: Where do multiple effects intersect? Which second and third-order consequences are now visible? Name the specific leaders, sectors, and systems now under new pressure — and the mechanism creating that pressure.
-
-PARAGRAPH 4 — THE FORWARD HORIZON: What decision points or thresholds will determine how this resolves? What should leaders watch in the next 24-72 hours and the next quarter? If sources disagreed on interpretation, name both possibilities and evaluate the evidence.
-
-Body requirements: 450-600 words. Every sentence adds new analysis. No filler. No repeated ideas. Flowing prose only.
+1. What precisely happened? Strip media framing — identify the underlying fact.
+2. Why now? Name the economic, geopolitical, technological, or institutional driver.
+3. Who is under new pressure, and through what mechanism?
+4. What signals or thresholds determine how this resolves in the next 72 hours and next quarter?
+5. Does the dominant narrative miss or overstate something? Take a position.
 
 ═══════════════════════════════════════════════════════
-OUTPUT FORMAT
+OUTPUT — STRUCTURED ARTICLE FORMAT
 ═══════════════════════════════════════════════════════
-Return ONLY a valid JSON object:
-- headline: string (one declarative sentence — a causal claim about what is actually happening. Foreign Affairs style. No colons. Not a topic list.)
-- body: string (450-600 words of dense analytical prose — no markdown, no headers, no bullets)
-- rgiTake: string (3-4 sentences. MANDATORY structure: (1) Open with explicit position — "RGI agrees / partially agrees / disagrees with [the dominant claim] because [specific reasoning]." (2) Name the RGI discipline most implicated and why. (3) Identify what the media or sources are missing or overstating. (4) Tell leaders one concrete thing to do or stop doing immediately. Voice: declarative, confident, editorial. FORBIDDEN: neutral summary, vague conclusions, restating the article.)
-- keyTakeaways: string array of EXACTLY 5 — crisp, actionable, leader-focused. Start each with a strong verb or noun. No filler.
-- topicTags: string array (from: ["AI & Artificial Intelligence", "Technology & Digital Innovation", "Geopolitics", "Global Politics", "Wars & Crisis", "Finance & Markets", "Fintech", "Macroeconomics", "Business & Strategy", "Leadership & Organizations", "Energy & Oil", "Climate & Environmental Health", "Supply Chains & Trade", "Policy & Regulation", "Future of Work"])
-- discipline: string (exactly one of: "Strategic Foresight", "System Vitality", "Civic Stewardship", or "Multiple")
-- relevancyScore: number 1-10
+Total article: 300–500 words. Scannable. No long prose blocks.
 
-Return ONLY valid JSON. No explanation, no markdown code blocks, no preamble.`;
+HEADLINE: One declarative sentence. A causal claim — not a topic list. Foreign Affairs style.
+
+EXECUTIVE SUMMARY (2–3 sentences): What happened and why it matters. Immediate and direct.
+
+KEY DEVELOPMENTS (3–5 bullets): The most important facts. One clear sentence each.
+
+WHY IT MATTERS (2–3 bullets): Direct implications for senior leaders. Name mechanisms, not abstractions.
+
+RGI TAKE (2–3 sentences): Open with explicit position — "RGI agrees / partially agrees / disagrees with [claim] because [reasoning]." State what the media or sources are missing. End with one concrete action or decision leaders must face.
+
+WHAT TO WATCH (2–3 bullets): Forward-looking signals in the next 24–72 hours or next quarter. Specific and time-bound.
+
+RULES:
+✗ No generic language: "this is significant," "could have major implications" — name the mechanism
+✗ No neutral hedging in the RGI Take
+✗ No bullet that repeats another bullet — every point adds distinct value
+✓ All claims trace to provided sources — no fabrication
+✓ If sources conflict, name the disagreement in Key Developments or RGI Take
+✓ Every sentence earns its place
+
+═══════════════════════════════════════════════════════
+OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble
+═══════════════════════════════════════════════════════
+{
+  "headline": "string — one declarative causal sentence",
+  "executiveSummary": ["sentence 1", "sentence 2", "sentence 3"],
+  "keyDevelopments": ["development 1", "development 2", "development 3", "development 4"],
+  "whyItMatters": ["implication 1", "implication 2", "implication 3"],
+  "rgiTake": "string — 2-3 sentences with explicit position, what media misses, and one concrete leader action",
+  "whatToWatch": ["signal 1", "signal 2", "signal 3"],
+  "topicTags": ["from the 12 allowed tags only"],
+  "discipline": "Strategic Foresight | System Vitality | Civic Stewardship | Multiple",
+  "relevancyScore": 1-10
+}
+
+Allowed topic tags (choose 1–3 only from this exact list):
+"Geopolitics & Global Power", "Economics & Macroeconomics", "Finance & Markets", "Technology & AI",
+"Innovation & Digital Transformation", "Business Strategy & Corporations", "Leadership & Organizations",
+"Energy & Resources", "Supply Chains & Global Trade", "Policy, Regulation & Governance",
+"Climate & Environmental Systems", "Future of Work & Society"
+
+Return ONLY valid JSON. No markdown code blocks.`;
 
 const DAILY_BRIEF_EDITORIAL_SUFFIX = `
 
 EDITORIAL DIRECTION — MANDATORY PRIORITY:
 {NOTES}
-The above direction MUST shape the emphasis, angle, and framing of the brief. Apply it throughout — not just in one section.`;
+Apply this throughout — not just in one section.`;
 
-const DAILY_BRIEF_PROMPT = `You are writing the RGI Daily Strategic Intelligence Brief — an executive-grade intelligence document that answers one question: "What is actually happening today, why is it happening, and what does it mean for leaders making consequential decisions right now?"
+const DAILY_BRIEF_PROMPT = `You are writing the RGI Daily Strategic Intelligence Brief — an executive-grade document that answers: "What is actually happening today, why, and what must leaders do?"
 
-You are an analyst, not a curator. Your job is to reason through the day's signals, find the real story underneath the headlines, and produce insight that cannot be found by reading any single source.
-
-═══════════════════════════════════════════════════════
-PRE-ANALYSIS — MANDATORY INTERNAL REASONING (perform before writing)
-═══════════════════════════════════════════════════════
 Today's Sources ({SOURCE_COUNT} articles across {THEME_COUNT} thematic areas):
 {SOURCES}
 
-Work through each step before writing a single word:
-
-1. CORE EVENT: What is the single most consequential development today? Not the most frequently covered topic — the development with the largest downstream effects. Why is this happening today and not last week?
-
-2. UNDERLYING DRIVERS: What structural forces produced this development?
-   • Economic: capital flows, rate environment, cost pressures, incentive structures
-   • Geopolitical: power competition, alliance fragility, sanctions regimes, sovereignty disputes
-   • Technological: new capabilities, adoption tipping points, regulatory pivots
-   • Institutional: leadership decisions, governance failures or breakthroughs, policy shifts
-   Identify the deepest driver — it is usually not the one the media is foregrounding.
-
-3. SECOND AND THIRD-ORDER EFFECTS: Where do the consequences land beyond the immediate event?
-   • Which markets are repricing and why?
-   • Which organizational decisions are now forced?
-   • Which geopolitical relationships are newly stressed?
-   • Which supply chains, energy systems, or governance structures face new pressure?
-
-4. FORWARD HORIZON — 24 to 72 hours and next quarter:
-   What specific thresholds, decision points, or signals will determine whether this escalates, stabilizes, or pivots? Name them concretely. What should a senior leader be monitoring tomorrow morning?
-
-5. SOURCE CONFLICTS: Do any sources present contradictory interpretations, data, or claims?
-   If yes, you must surface this in the article — name the competing claims, evaluate the evidence on each side, and explain which interpretation is better supported. Never manufacture false consensus.
-
-6. LEADERSHIP IMPLICATION: Based on this causal map, what concrete decisions are now in front of senior leaders — executives, policymakers, board members, institutional heads? Name the decision, name who faces it, and name the timeline.
+═══════════════════════════════════════════════════════
+INTERNAL PRE-WORK (do silently)
+═══════════════════════════════════════════════════════
+1. What is the single most consequential development today — and why today, not last week?
+2. What structural force (economic, geopolitical, technological, institutional) is the deepest driver?
+3. Where do the second and third-order effects land — markets, organizations, supply chains, governance?
+4. What specific signals or decision points determine how this resolves in the next 72 hours and next quarter?
+5. What are sources getting wrong or overstating? Do any sources conflict — name it if so.
 
 ═══════════════════════════════════════════════════════
-STRICT RULES
+OUTPUT — STRUCTURED ARTICLE FORMAT
 ═══════════════════════════════════════════════════════
-FORBIDDEN:
-✗ Topic-by-topic summaries ("On AI... On the economy... On governance...")
-✗ Parallel event descriptions without causal connection
-✗ Covering all sources equally regardless of analytical weight
-✗ Artificial connections between genuinely unrelated developments
-✗ Echoing the dominant media narrative without independent scrutiny
-✗ Filler sentences that restate the previous paragraph
-✗ Generic language: "this is significant," "this could have major implications" — name the mechanism
+Total: 300–500 words. Highly scannable. No long text blocks.
 
-REQUIRED:
-✓ One central causal argument threading through the entire body
-✓ Each paragraph causally follows from the previous
-✓ Explicit cause-and-effect relationships — explain WHY, not just THAT
-✓ Source disagreements surfaced and evaluated, not smoothed over
-✓ Forward-looking: specific signals and thresholds to watch
-✓ All claims derived from provided sources
+HEADLINE: One declarative sentence. A causal claim about what is happening and why — not a topic list.
 
-═══════════════════════════════════════════════════════
-STRUCTURE
-═══════════════════════════════════════════════════════
-HEADLINE: One declarative sentence — a causal claim about what is happening today and why. Not a topic list. A Foreign Affairs-style assertion.
+EXECUTIVE SUMMARY (2–3 sentences): The most important development and why it matters right now. Direct, no hedging.
 
-EXECUTIVE SUMMARY: Exactly 6 tight sentences. Not 6 summaries of 6 topics. Six facts that together build the complete argument a leader must grasp today.
+KEY DEVELOPMENTS (3–5 bullets): The most important facts across today's signals. One clear sentence each. No topic-by-topic summaries — connect causally.
 
-BODY — 500-650 words of continuous analytical prose. No headers, no bullets, no markdown:
+WHY IT MATTERS (2–3 bullets): What this forces for senior leaders — executives, policymakers, board members. Name mechanisms, not abstractions.
 
-Paragraph 1 — THE CENTRAL DEVELOPMENT: State the most consequential event with precision. Specific facts. No padding.
+RGI TAKE (2–3 sentences): Open with "RGI agrees / partially agrees / disagrees with [dominant narrative] because [reasoning]." Name what markets, media, or policymakers are missing. State one concrete thing leaders must do or stop doing.
 
-Paragraph 2 — THE MECHANISM: Explain WHY this is happening and HOW it propagates through the system. Name the economic, geopolitical, or institutional forces at work. Cite sources directly when relevant.
+WHAT TO WATCH (2–3 bullets): Specific signals, thresholds, or decision points to monitor in the next 24–72 hours and next quarter.
 
-Paragraph 3 — THE CONVERGENCE: Where do today's multiple developments intersect? Map the second and third-order effects across domains. Name the specific leaders, sectors, and systems now under new pressure — and the causal mechanism creating that pressure.
-
-Paragraph 4 — THE STRATEGIC IMPLICATION: What decisions are now forced for senior leaders? Name the specific types of leaders, the specific pressure they face, and the timeline. If sources disagreed, surface both interpretations and evaluate them.
-
-Paragraph 5 — WHAT TO WATCH: 2-3 concrete signals or thresholds — specific, actionable, time-bound — that will determine whether this situation escalates, stabilizes, or pivots in the next 24-72 hours and next quarter.
+RULES:
+✗ No topic-by-topic summaries — find the thread across developments
+✗ No generic language: name mechanisms, not "significance"
+✗ No neutral hedging in RGI Take
+✓ Surface source conflicts if they exist — do not manufacture consensus
+✓ All claims trace to provided sources
 
 ═══════════════════════════════════════════════════════
-OUTPUT FORMAT
+OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble
 ═══════════════════════════════════════════════════════
-Return ONLY a valid JSON object:
-- headline: string (one declarative causal sentence — not a topic list)
-- executiveSummary: string array (exactly 6 tight sentences building today's complete argument)
-- body: string (500-650 words of dense analytical prose — no markdown, no headers, no bullets)
-- rgiTake: string (3-4 sentences. MANDATORY structure: (1) Open with explicit position: "RGI agrees / partially agrees / disagrees with [today's dominant narrative] because [specific reasoning]." (2) Name the RGI discipline most implicated and explain why this moment tests it. (3) Identify what the media, markets, or policymakers are missing or overstating. (4) State one concrete action leaders must take or stop taking immediately. Voice: declarative, editorial, confident. FORBIDDEN: neutral summary, restating the article, vague conclusions.)
-- keyTakeaways: string array of EXACTLY 5 — crisp, actionable, leader-focused. Start each with a strong verb or noun. No filler.
-- topicTags: string array (from: ["AI & Artificial Intelligence", "Technology & Digital Innovation", "Geopolitics", "Global Politics", "Wars & Crisis", "Finance & Markets", "Fintech", "Macroeconomics", "Business & Strategy", "Leadership & Organizations", "Energy & Oil", "Climate & Environmental Health", "Supply Chains & Trade", "Policy & Regulation", "Future of Work"])
-- discipline: string (one of: "Strategic Foresight", "System Vitality", "Civic Stewardship", "Multiple")
-- relevancyScore: number 1-10
+{
+  "headline": "string — one declarative causal sentence",
+  "executiveSummary": ["sentence 1", "sentence 2", "sentence 3"],
+  "keyDevelopments": ["development 1", "development 2", "development 3", "development 4"],
+  "whyItMatters": ["implication 1", "implication 2", "implication 3"],
+  "rgiTake": "string — 2-3 sentences with explicit position, what's missing, and one leader action",
+  "whatToWatch": ["signal 1", "signal 2", "signal 3"],
+  "topicTags": ["from the 12 allowed tags only"],
+  "discipline": "Strategic Foresight | System Vitality | Civic Stewardship | Multiple",
+  "relevancyScore": 1-10
+}
 
-Return ONLY valid JSON. No explanation, no markdown code blocks.`;
+Allowed topic tags (choose 1–3 only from this exact list):
+"Geopolitics & Global Power", "Economics & Macroeconomics", "Finance & Markets", "Technology & AI",
+"Innovation & Digital Transformation", "Business Strategy & Corporations", "Leadership & Organizations",
+"Energy & Resources", "Supply Chains & Global Trade", "Policy, Regulation & Governance",
+"Climate & Environmental Systems", "Future of Work & Society"
+
+Return ONLY valid JSON. No markdown code blocks.`;
 
 export async function generateDigestArticle(
   articleIds: number[],
@@ -294,8 +246,10 @@ export async function generateDigestArticle(
 ): Promise<{
   headline: string;
   body: string;
+  executiveSummary: string[];
   rgiTake: string;
   keyTakeaways: string[];
+  whatToWatch: string[];
   topicTags: string[];
   discipline: string;
   relevancyScore: number;
@@ -347,9 +301,11 @@ export async function generateDigestArticle(
     const parsed = JSON.parse(cleanText);
     const result = {
       headline: parsed.headline || "Untitled Brief",
-      body: parsed.body || "",
+      body: Array.isArray(parsed.keyDevelopments) ? parsed.keyDevelopments.join("\n") : (parsed.body || ""),
+      executiveSummary: Array.isArray(parsed.executiveSummary) ? parsed.executiveSummary : [],
       rgiTake: parsed.rgiTake || "",
-      keyTakeaways: Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : [],
+      keyTakeaways: Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : []),
+      whatToWatch: Array.isArray(parsed.whatToWatch) ? parsed.whatToWatch : [],
       topicTags: parsed.topicTags || [],
       discipline: parsed.discipline || "Multiple",
       relevancyScore: parsed.relevancyScore || 7,
@@ -367,30 +323,38 @@ export async function generateDigestArticle(
   }
 }
 
-const REFINE_PROMPT = `You are the senior intelligence editor at the Rick Goings Institute (RGI). An article has already been drafted and the editor has requested specific changes.
+const REFINE_PROMPT = `You are the senior intelligence editor at the Rick Goings Institute (RGI). An article has been drafted and the editor has requested specific changes.
 
 CURRENT ARTICLE:
 Headline: {HEADLINE}
 
-Body:
+Executive Summary:
+{EXEC_SUMMARY}
+
+Key Developments:
 {BODY}
+
+Why It Matters:
+{KEY_TAKEAWAYS}
 
 RGI Take:
 {RGI_TAKE}
 
-Key Takeaways:
-{KEY_TAKEAWAYS}
+What to Watch:
+{WHAT_TO_WATCH}
 
-EDITOR'S REFINEMENT INSTRUCTION (MANDATORY — apply this precisely):
+EDITOR'S REFINEMENT INSTRUCTION (apply this precisely — it overrides all other considerations):
 {INSTRUCTION}
 
-Rewrite the article following the editor's instruction exactly. Maintain RGI's analytical voice, precision, and format. The instruction is the highest priority — restructure, refocus, shorten, expand, or reframe as directed.
+Rewrite the article following the editor's instruction exactly. Maintain RGI's analytical voice and the structured format. Keep the total article under 500 words.
 
-Return ONLY a valid JSON object with these fields:
-- headline: string (updated if needed based on instruction)
-- body: string (revised article body — clean prose, no markdown, no headers, no bullets in body)
-- rgiTake: string (3-4 sentences of RGI editorial opinion — update if instruction affects the take)
-- keyTakeaways: string array of EXACTLY 5 crisp actionable insights
+Return ONLY a valid JSON object:
+- headline: string (update if instruction requires)
+- executiveSummary: string array (2–3 sentences — what happened and why it matters)
+- keyDevelopments: string array (3–5 bullets — key facts, one sentence each)
+- whyItMatters: string array (2–3 bullets — implications for senior leaders)
+- rgiTake: string (2–3 sentences with explicit position, what media misses, one leader action)
+- whatToWatch: string array (2–3 forward-looking signals, specific and time-bound)
 
 Return ONLY valid JSON. No explanation, no markdown code blocks.`;
 
@@ -424,8 +388,10 @@ export async function refineArticle(
 ): Promise<{
   headline: string;
   body: string;
+  executiveSummary: string[];
   rgiTake: string;
   keyTakeaways: string[];
+  whatToWatch: string[];
 }> {
   const [article] = await db
     .select()
@@ -439,9 +405,11 @@ export async function refineArticle(
 
   const prompt = REFINE_PROMPT
     .replace("{HEADLINE}", article.headline)
+    .replace("{EXEC_SUMMARY}", (article.executiveSummary || []).join("\n"))
     .replace("{BODY}", article.body)
+    .replace("{KEY_TAKEAWAYS}", (article.keyTakeaways || []).join("\n"))
     .replace("{RGI_TAKE}", article.rgiTake || "")
-    .replace("{KEY_TAKEAWAYS}", JSON.stringify(article.keyTakeaways || []))
+    .replace("{WHAT_TO_WATCH}", ((article as Record<string, unknown>).whatToWatch as string[] || []).join("\n"))
     .replace("{INSTRUCTION}", instruction.trim());
 
   const message = await anthropic.messages.create({
@@ -460,9 +428,11 @@ export async function refineArticle(
 
     const refined = {
       headline: parsed.headline || article.headline,
-      body: parsed.body || article.body,
+      body: Array.isArray(parsed.keyDevelopments) ? parsed.keyDevelopments.join("\n") : (parsed.body || article.body),
+      executiveSummary: Array.isArray(parsed.executiveSummary) ? parsed.executiveSummary : (article.executiveSummary || []),
       rgiTake: parsed.rgiTake || article.rgiTake,
-      keyTakeaways: Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : article.keyTakeaways,
+      keyTakeaways: Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : article.keyTakeaways),
+      whatToWatch: Array.isArray(parsed.whatToWatch) ? parsed.whatToWatch : ((article as Record<string, unknown>).whatToWatch as string[] || []),
     };
 
     // Persist the refinement back to the DB
@@ -471,8 +441,10 @@ export async function refineArticle(
       .set({
         headline: refined.headline,
         body: refined.body,
+        executiveSummary: refined.executiveSummary,
         rgiTake: refined.rgiTake,
         keyTakeaways: refined.keyTakeaways,
+        whatToWatch: refined.whatToWatch,
       })
       .where(eq(digestArticlesTable.id, articleId));
 
@@ -712,9 +684,10 @@ export async function generateDailyBrief(
     const result: DailyBriefResult = {
       headline: parsed.headline || "RGI Daily Strategic Intelligence Brief",
       executiveSummary: Array.isArray(parsed.executiveSummary) ? parsed.executiveSummary : [],
-      body: parsed.body || "",
+      body: Array.isArray(parsed.keyDevelopments) ? parsed.keyDevelopments.join("\n") : (parsed.body || ""),
       rgiTake: parsed.rgiTake || "",
-      keyTakeaways: Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : [],
+      keyTakeaways: Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : []),
+      whatToWatch: Array.isArray(parsed.whatToWatch) ? parsed.whatToWatch : [],
       topicTags: parsed.topicTags || [],
       discipline: parsed.discipline || "Multiple",
       relevancyScore: parsed.relevancyScore || 8,

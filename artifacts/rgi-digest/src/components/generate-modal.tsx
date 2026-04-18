@@ -61,8 +61,10 @@ interface GeneratedArticle {
   id: number;
   headline: string;
   body: string;
+  executiveSummary: string[];
   rgiTake: string;
   keyTakeaways: string[];
+  whatToWatch: string[];
   topicTags: string[];
   discipline: string;
 }
@@ -245,8 +247,10 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
           id: data.id,
           headline: data.headline,
           body: data.body,
+          executiveSummary: data.executiveSummary || [],
           rgiTake: data.rgiTake,
           keyTakeaways: data.keyTakeaways || [],
+          whatToWatch: data.whatToWatch || [],
           topicTags: data.topicTags || [],
           discipline: data.discipline || "Multiple",
         });
@@ -303,8 +307,10 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
           id: data.id,
           headline: data.headline,
           body: data.body,
+          executiveSummary: data.executiveSummary || [],
           rgiTake: data.rgiTake,
           keyTakeaways: data.keyTakeaways || [],
+          whatToWatch: data.whatToWatch || [],
           topicTags: data.topicTags || [],
           discipline: data.discipline || "Multiple",
         });
@@ -348,8 +354,10 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
         ...prev,
         headline: refined.headline,
         body: refined.body,
+        executiveSummary: refined.executiveSummary || prev.executiveSummary,
         rgiTake: refined.rgiTake,
         keyTakeaways: refined.keyTakeaways,
+        whatToWatch: refined.whatToWatch || prev.whatToWatch,
       } : prev);
       setRefineHistory((h) => [...h, instruction]);
       setRefineInstruction("");
@@ -548,7 +556,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
           </DialogHeader>
 
           <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center gap-2 flex-wrap">
                 {generatedArticle.discipline && (
                   <Badge variant="secondary" className="text-[10px]">{generatedArticle.discipline}</Badge>
@@ -558,20 +566,73 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
                 ))}
               </div>
               <h2 className="text-xl font-serif font-bold leading-snug">{generatedArticle.headline}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed line-clamp-6">{generatedArticle.body}</p>
+
+              {/* Executive Summary */}
+              {generatedArticle.executiveSummary.length > 0 && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Executive Summary</p>
+                  <div className="space-y-1">
+                    {generatedArticle.executiveSummary.map((s, i) => (
+                      <p key={i} className="text-xs text-foreground/80 leading-relaxed">{s}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Key Developments */}
+              {(() => {
+                const isStructured = generatedArticle.whatToWatch.length > 0;
+                const keyDevelopments = isStructured ? generatedArticle.body.split("\n").filter(Boolean) : null;
+                return isStructured && keyDevelopments && keyDevelopments.length > 0 ? (
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Key Developments</p>
+                    <ul className="space-y-1.5">
+                      {keyDevelopments.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
+                          <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-foreground/30" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground leading-relaxed">{generatedArticle.body}</p>
+                );
+              })()}
+
+              {/* Why It Matters */}
+              {generatedArticle.keyTakeaways.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">
+                    {generatedArticle.whatToWatch.length > 0 ? "Why It Matters" : "Key Takeaways"}
+                  </p>
+                  <ul className="space-y-1">
+                    {generatedArticle.keyTakeaways.slice(0, 3).map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
+                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* RGI Take */}
               {generatedArticle.rgiTake && (
                 <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">RGI Take</p>
-                  <p className="text-xs leading-relaxed text-foreground/80 line-clamp-3">{generatedArticle.rgiTake}</p>
+                  <p className="text-xs leading-relaxed text-foreground/80">{generatedArticle.rgiTake}</p>
                 </div>
               )}
-              {generatedArticle.keyTakeaways.length > 0 && (
+
+              {/* What to Watch */}
+              {generatedArticle.whatToWatch.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Key Takeaways</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-700">What to Watch</p>
                   <ul className="space-y-1">
-                    {generatedArticle.keyTakeaways.slice(0, 3).map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                        <ChevronRight className="h-3 w-3 mt-0.5 text-primary/60 shrink-0" />
+                    {generatedArticle.whatToWatch.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
+                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-blue-400" />
                         {item}
                       </li>
                     ))}

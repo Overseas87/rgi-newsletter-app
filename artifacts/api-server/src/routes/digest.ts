@@ -135,9 +135,10 @@ router.post("/digest/generate", async (req, res): Promise<void> => {
         articleType: "topic_article",
         headline: generated.headline,
         body: generated.body,
-        executiveSummary: [],
+        executiveSummary: generated.executiveSummary,
         rgiTake: generated.rgiTake,
         keyTakeaways: generated.keyTakeaways,
+        whatToWatch: generated.whatToWatch,
         topicTags: generated.topicTags,
         sourceArticleIds: body.data.articleIds,
         relevancyScore: generated.relevancyScore,
@@ -184,6 +185,7 @@ router.post("/digest/daily-brief", async (req, res): Promise<void> => {
         executiveSummary: generated.executiveSummary,
         rgiTake: generated.rgiTake,
         keyTakeaways: generated.keyTakeaways,
+        whatToWatch: generated.whatToWatch,
         topicTags: generated.topicTags,
         sourceArticleIds: generated.sourceArticleIds,
         relevancyScore: generated.relevancyScore,
@@ -261,9 +263,10 @@ router.post("/digest/generate-on-demand", async (req, res): Promise<void> => {
           articleType: "topic_article",
           headline: generated.headline,
           body: generated.body,
-          executiveSummary: [],
+          executiveSummary: generated.executiveSummary,
           rgiTake: generated.rgiTake,
           keyTakeaways: generated.keyTakeaways,
+          whatToWatch: generated.whatToWatch,
           topicTags: generated.topicTags,
           sourceArticleIds: selectedIds,
           relevancyScore: generated.relevancyScore,
@@ -289,9 +292,10 @@ router.post("/digest/generate-on-demand", async (req, res): Promise<void> => {
         articleType: "topic_article",
         headline: generated.headline,
         body: generated.body,
-        executiveSummary: [],
+        executiveSummary: generated.executiveSummary,
         rgiTake: generated.rgiTake,
         keyTakeaways: generated.keyTakeaways,
+        whatToWatch: generated.whatToWatch,
         topicTags: generated.topicTags,
         sourceArticleIds: selectedIds,
         relevancyScore: generated.relevancyScore,
@@ -495,8 +499,10 @@ router.post("/digest/:id/regenerate", async (req, res): Promise<void> => {
       .set({
         headline: generated.headline,
         body: generated.body,
+        executiveSummary: generated.executiveSummary,
         rgiTake: generated.rgiTake,
         keyTakeaways: generated.keyTakeaways,
+        whatToWatch: generated.whatToWatch,
         topicTags: generated.topicTags,
         relevancyScore: generated.relevancyScore,
         discipline: generated.discipline,
@@ -577,24 +583,42 @@ router.post("/digest/:id/send-newsletter", async (req, res): Promise<void> => {
           <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a365d;">Executive Summary</p>
           <ul style="margin:0;padding-left:20px;color:#374151;font-size:15px;line-height:1.7;">${bulletList(article.executiveSummary)}</ul>
         </td></tr>` : ""}
-        <!-- Body -->
-        <tr><td style="padding:28px 40px 0;">
-          ${article.body.split("\n\n").filter(Boolean).map((p) => `<p style="margin:0 0 18px;color:#1f2937;font-size:16px;line-height:1.75;">${p.replace(/\*\*/g, "").replace(/\*/g, "").trim()}</p>`).join("")}
-        </td></tr>
+        <!-- Key Developments or Body -->
+        ${(() => {
+          const isStructured = article.whatToWatch && article.whatToWatch.length > 0;
+          const keyDevelopments = isStructured ? article.body.split("\n").filter(Boolean) : null;
+          if (isStructured && keyDevelopments && keyDevelopments.length > 0) {
+            return `<tr><td style="padding:28px 40px 0;">
+              <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#374151;">Key Developments</p>
+              <ul style="margin:0;padding-left:20px;color:#374151;font-size:15px;line-height:1.7;">${bulletList(keyDevelopments)}</ul>
+            </td></tr>`;
+          }
+          return `<tr><td style="padding:28px 40px 0;">
+            ${article.body.split("\n\n").filter(Boolean).map((p) => `<p style="margin:0 0 18px;color:#1f2937;font-size:16px;line-height:1.75;">${p.replace(/\*\*/g, "").replace(/\*/g, "").trim()}</p>`).join("")}
+          </td></tr>`;
+        })()}
+        <!-- Why It Matters / Key Takeaways -->
+        ${article.keyTakeaways && article.keyTakeaways.length > 0 ? `
+        <tr><td style="padding:24px 40px 0;">
+          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:20px;">
+            <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#92400e;">${article.whatToWatch && article.whatToWatch.length > 0 ? "Why It Matters" : "Key Takeaways"}</p>
+            <ul style="margin:0;padding-left:20px;color:#374151;font-size:14px;line-height:1.7;">${bulletList(article.keyTakeaways)}</ul>
+          </div>
+        </td></tr>` : ""}
         <!-- RGI Take -->
         ${article.rgiTake ? `
-        <tr><td style="padding:0 40px 28px;">
+        <tr><td style="padding:24px 40px 0;">
           <div style="border-left:4px solid #1a365d;padding:16px 20px;background:#eff6ff;margin-top:8px;">
             <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a365d;">RGI Take</p>
             <p style="margin:0;color:#1e40af;font-size:15px;font-style:italic;line-height:1.7;">${article.rgiTake}</p>
           </div>
         </td></tr>` : ""}
-        <!-- Key Takeaways -->
-        ${article.keyTakeaways && article.keyTakeaways.length > 0 ? `
-        <tr><td style="padding:0 40px 32px;">
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:20px;">
-            <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#374151;">Key Takeaways</p>
-            <ol style="margin:0;padding-left:20px;color:#374151;font-size:14px;line-height:1.7;">${bulletList(article.keyTakeaways)}</ol>
+        <!-- What to Watch -->
+        ${article.whatToWatch && article.whatToWatch.length > 0 ? `
+        <tr><td style="padding:24px 40px 32px;">
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:20px;">
+            <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1e40af;">What to Watch</p>
+            <ul style="margin:0;padding-left:20px;color:#374151;font-size:14px;line-height:1.7;">${bulletList(article.whatToWatch)}</ul>
           </div>
         </td></tr>` : ""}
         <!-- Footer -->

@@ -64,17 +64,17 @@ Dark navy/white/gold palette. No emojis. HBR/Foreign Affairs aesthetic. Serif he
 
 ### Strategic Brief Generation (Layer 3a)
 - Editor selects 2+ articles in Intelligence Feed
-- Claude Sonnet synthesizes them into one 700-900 word brief
-- Structure: Context → Synthesis → Implications → RGI Perspective → What Leaders Should Watch
+- Claude Sonnet synthesizes them into a structured 300-500 word brief
+- **6-section format**: Headline → Executive Summary (2-3 sentences) → Key Developments (3-5 bullets, stored in `body` as newline-separated) → Why It Matters (2-3 bullets, stored in `keyTakeaways`) → RGI Take → What to Watch (2-3 bullets, stored in `whatToWatch`)
 - Brief goes to Pending Review queue
 
 ### Daily Intelligence Brief (Layer 3b)
 - One-click: editor clicks "Generate Daily Brief" on dashboard
 - Auto-selects top 15-20 articles from today (score ≥ 6.0)
-- Claude Sonnet generates a comprehensive 900-1,200 word daily brief
-- Output includes: Headline, Executive Summary (6 bullets), full prose body by theme, Cross-Theme Insight, RGI Perspective, Why This Matters for Leaders
+- Claude Sonnet generates a structured daily brief using the same 6-section format
 - Stored as a digest article in Pending Review for editor approval
 - Optional: editor can pass specific article IDs via POST /api/digest/daily-brief body
+- **Backward compat**: Legacy articles (pre-format change) have prose in `body` and empty `whatToWatch`; frontend detects and renders accordingly
 
 ### Intelligence Feed (Layer 3c)
 - Shows ALL articles (no status filter) — 334+ signals from all sources

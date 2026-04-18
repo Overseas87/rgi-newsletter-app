@@ -27,7 +27,6 @@ function ArticleTypeBadge({ articleType }: { articleType: string }) {
 // Full article reading dialog
 function ArticleDialog({ article, open, onClose }: { article: DigestArticle | null; open: boolean; onClose: () => void }) {
   if (!article) return null;
-  const isDailyBrief = article.articleType === "daily_brief";
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -53,71 +52,116 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
           </div>
           <DialogTitle className="text-2xl font-serif leading-tight text-left">{article.headline}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-6 mt-2">
-          {isDailyBrief && article.executiveSummary && article.executiveSummary.length > 0 && (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Executive Summary</p>
-              <ul className="space-y-2">
-                {article.executiveSummary.map((bullet, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-foreground/90">
-                    <span className="text-primary font-bold mt-0.5 shrink-0">•</span>
-                    {bullet}
-                  </li>
-                ))}
-              </ul>
+        {(() => {
+          const isStructured = article.whatToWatch && article.whatToWatch.length > 0;
+          const keyDevelopments = isStructured ? article.body.split("\n").filter(Boolean) : null;
+          return (
+            <div className="space-y-5 mt-2">
+              {/* Executive Summary */}
+              {article.executiveSummary && article.executiveSummary.length > 0 && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Executive Summary</p>
+                  <div className="space-y-1.5">
+                    {article.executiveSummary.map((s, i) => (
+                      <p key={i} className="text-sm text-foreground/90 leading-relaxed">{s}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Key Developments or prose body */}
+              {isStructured && keyDevelopments && keyDevelopments.length > 0 ? (
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Key Developments</p>
+                  <ul className="space-y-2">
+                    {keyDevelopments.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-foreground/30" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div>
+                  {article.body.split("\n\n").filter(Boolean).map((para, i) => (
+                    <p key={i} className="text-sm leading-relaxed text-foreground/90 mb-4">{stripMarkdown(para)}</p>
+                  ))}
+                </div>
+              )}
+
+              {/* Why It Matters or Key Takeaways */}
+              {article.keyTakeaways && article.keyTakeaways.length > 0 && (
+                <div className="rounded-xl border border-amber-200/60 bg-amber-50/40 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-amber-700 mb-3">
+                    {isStructured ? "Why It Matters" : "Key Takeaways"}
+                  </p>
+                  <ul className="space-y-2">
+                    {article.keyTakeaways.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* RGI Take */}
+              {article.rgiTake && (
+                <div className="border-l-4 border-primary/60 pl-5 py-2 bg-primary/5 rounded-r-md">
+                  <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">RGI Take</p>
+                  <p className="text-sm italic text-foreground/80 leading-relaxed">{article.rgiTake}</p>
+                </div>
+              )}
+
+              {/* What to Watch */}
+              {isStructured && article.whatToWatch && article.whatToWatch.length > 0 && (
+                <div className="rounded-xl border border-blue-200/60 bg-blue-50/40 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-blue-700 mb-3">What to Watch</p>
+                  <ul className="space-y-2">
+                    {article.whatToWatch.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-blue-400" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Topic tags */}
+              {article.topicTags && article.topicTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {article.topicTags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs font-normal">{tag}</Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* Sources */}
+              {article.sourceArticles && article.sourceArticles.length > 0 && (
+                <div className="border-t pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    Sources ({article.sourceArticles.length})
+                  </p>
+                  {article.sourceArticles.map((src) => (
+                    <a
+                      key={src.id}
+                      href={src.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-sm text-primary hover:underline mb-1"
+                    >
+                      {src.sourceName}: {src.headline}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            {article.body.split("\n\n").filter(Boolean).map((para, i) => (
-              <p key={i} className="text-sm leading-relaxed text-foreground/90 mb-4">{stripMarkdown(para)}</p>
-            ))}
-          </div>
-          {article.rgiTake && (
-            <div className="border-l-4 border-primary/60 pl-5 py-2 bg-primary/5 rounded-r-md">
-              <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">RGI Take</p>
-              <p className="text-sm italic text-foreground/80 leading-relaxed">{article.rgiTake}</p>
-            </div>
-          )}
-          {article.keyTakeaways && article.keyTakeaways.length > 0 && (
-            <div className="rounded-xl border border-border bg-muted/30 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Key Takeaways</p>
-              <ul className="space-y-2">
-                {article.keyTakeaways.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                    <span className="flex-shrink-0 w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {article.topicTags && article.topicTags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {article.topicTags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs font-normal">{tag}</Badge>
-              ))}
-            </div>
-          )}
-          {article.sourceArticles && article.sourceArticles.length > 0 && (
-            <div className="border-t pt-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                Sources ({article.sourceArticles.length})
-              </p>
-              {article.sourceArticles.map((src) => (
-                <a
-                  key={src.id}
-                  href={src.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-sm text-primary hover:underline mb-1"
-                >
-                  {src.sourceName}: {src.headline}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
+          );
+        })()}
       </DialogContent>
     </Dialog>
   );

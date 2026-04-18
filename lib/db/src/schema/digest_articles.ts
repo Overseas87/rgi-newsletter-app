@@ -10,6 +10,7 @@ export const digestArticlesTable = pgTable("digest_articles", {
   executiveSummary: text("executive_summary").array().notNull().default([]),
   rgiTake: text("rgi_take").notNull(),
   keyTakeaways: text("key_takeaways").array().notNull().default([]),
+  whatToWatch: text("what_to_watch").array().notNull().default([]),
   topicTags: text("topic_tags").array().notNull().default([]),
   sourceArticleIds: integer("source_article_ids").array().notNull().default([]),
   relevancyScore: real("relevancy_score"),
