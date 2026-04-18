@@ -48,31 +48,98 @@ function hRule(doc: PDFKit.PDFDocument, y: number, color: string, weight = 0.5) 
   doc.restore();
 }
 
-// ── Header ─────────────────────────────────────────────────────────────────────
+// ── Content page header ────────────────────────────────────────────────────────
 function drawPageHeader(doc: PDFKit.PDFDocument) {
-  const HEADER_H = 72;
+  const HEADER_H = 68;
 
-  // Institution wordmark
+  // Wordmark line — "RGI–Crummer  Strategic Intelligence Analysis"
   doc.save();
   hex(doc, C.navy)
     .font("Helvetica-Bold")
-    .fontSize(13)
-    .text("RGI-CRUMMER", ML, 22, { characterSpacing: 1.2, width: CW });
-  doc.restore();
-
-  // Document type
-  doc.save();
+    .fontSize(8)
+    .text("RGI\u2013CRUMMER", ML, 26, { characterSpacing: 1.2, width: CW, continued: true });
   hex(doc, C.mid)
     .font("Helvetica")
-    .fontSize(8.5)
-    .text("Strategic Intelligence Analysis", ML, 40, { characterSpacing: 0.2, width: CW });
+    .fontSize(8)
+    .text("  \u2022  Strategic Intelligence Analysis", { characterSpacing: 0.2 });
   doc.restore();
 
-  // Single thin rule under header
+  // Thin rule under header
   hRule(doc, HEADER_H, C.hairline, 0.5);
 
   doc.x = ML;
   doc.y = HEADER_H + 18;
+}
+
+// ── Article cover page — premium, no background fills ─────────────────────────
+function drawArticleCover(
+  doc: PDFKit.PDFDocument,
+  headline: string,
+  subtitle: string,
+) {
+  currentPage++;
+  doc.addPage();
+
+  const today = new Date().toLocaleDateString("en-US", {
+    month: "long", day: "numeric", year: "numeric",
+  });
+
+  // ── Top branding block ────────────────────────────────────────────────────
+  doc.save();
+  hex(doc, C.navy)
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text("RGI\u2013CRUMMER", ML, 46, { characterSpacing: 1.8, width: CW });
+  doc.restore();
+
+  doc.save();
+  hex(doc, C.mid)
+    .font("Helvetica")
+    .fontSize(8)
+    .text("Strategic Intelligence Analysis", ML, 62, { characterSpacing: 0.4, width: CW });
+  doc.restore();
+
+  hRule(doc, 82, C.hairline, 0.5);
+
+  // ── Title — positioned at ~36% down the page ──────────────────────────────
+  const titleY = 290;
+  doc.font("Helvetica-Bold").fontSize(26);
+  const titleH = doc.heightOfString(headline, { width: CW, lineGap: 6 });
+
+  doc.save();
+  hex(doc, C.ink)
+    .font("Helvetica-Bold")
+    .fontSize(26)
+    .text(headline, ML, titleY, { width: CW, lineGap: 6, align: "left" });
+  doc.restore();
+
+  // ── Subtitle ──────────────────────────────────────────────────────────────
+  if (subtitle) {
+    const subY = titleY + titleH + 20;
+    doc.save();
+    hex(doc, C.mid)
+      .font("Helvetica-Oblique")
+      .fontSize(10.5)
+      .text(subtitle, ML, subY, { width: CW, lineGap: 4, align: "left" });
+    doc.restore();
+  }
+
+  // ── Bottom rule + metadata ────────────────────────────────────────────────
+  hRule(doc, 700, C.hairline, 0.5);
+
+  doc.save();
+  hex(doc, C.muted)
+    .font("Helvetica")
+    .fontSize(8)
+    .text(today, ML, 714, { width: CW, align: "left" });
+  doc.restore();
+
+  doc.save();
+  hex(doc, C.muted)
+    .font("Helvetica")
+    .fontSize(8)
+    .text("Prepared for academic use", ML, 714, { width: CW, align: "right" });
+  doc.restore();
 }
 
 // ── Footer ─────────────────────────────────────────────────────────────────────
@@ -271,69 +338,91 @@ function drawCombinedCover(doc: PDFKit.PDFDocument, articles: ArticleWithSources
   doc.addPage();
 
   const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric",
+    month: "long", day: "numeric", year: "numeric",
   });
 
-  // Navy header band
-  doc.save();
-  hex(doc, C.navy).rect(0, 0, W, 110).fill();
-  doc.restore();
-
-  // Institution name
-  doc.save();
-  hex(doc, C.white)
-    .font("Helvetica-Bold")
-    .fontSize(18)
-    .text("RGI-CRUMMER", ML, 28, { characterSpacing: 1.2, width: CW });
-  doc.restore();
-
-  doc.save();
-  hex(doc, "#A0B4CC")
-    .font("Helvetica")
-    .fontSize(10)
-    .text("Strategic Intelligence Analysis — Combined Report", ML, 55, { characterSpacing: 0.2, width: CW });
-  doc.restore();
-
-  doc.save();
-  hex(doc, "#7A94B0")
-    .font("Helvetica")
-    .fontSize(8.5)
-    .text(today, ML, 78, { characterSpacing: 0.1, width: CW });
-  doc.restore();
-
-  // Table of contents
-  const tocY = 148;
+  // ── Top branding block ──────────────────────────────────────────────────────
   doc.save();
   hex(doc, C.navy)
     .font("Helvetica-Bold")
-    .fontSize(8)
-    .text("CONTENTS", ML, tocY, { characterSpacing: 1.8, width: CW });
+    .fontSize(9)
+    .text("RGI\u2013CRUMMER", ML, 46, { characterSpacing: 1.8, width: CW });
   doc.restore();
 
-  hRule(doc, tocY + 17, C.hairline, 0.5);
+  doc.save();
+  hex(doc, C.mid)
+    .font("Helvetica")
+    .fontSize(8)
+    .text("Strategic Intelligence Analysis", ML, 62, { characterSpacing: 0.4, width: CW });
+  doc.restore();
 
+  hRule(doc, 82, C.hairline, 0.5);
+
+  // ── Report label ────────────────────────────────────────────────────────────
+  doc.save();
+  hex(doc, C.ink)
+    .font("Helvetica-Bold")
+    .fontSize(22)
+    .text("Daily Intelligence Digest", ML, 200, { width: CW, lineGap: 5 });
+  doc.restore();
+
+  doc.save();
+  hex(doc, C.mid)
+    .font("Helvetica")
+    .fontSize(10.5)
+    .text(today, ML, 240, { width: CW, lineGap: 4 });
+  doc.restore();
+
+  hRule(doc, 276, C.hairline, 0.5);
+
+  // ── Table of contents ───────────────────────────────────────────────────────
+  doc.save();
+  hex(doc, C.navy)
+    .font("Helvetica-Bold")
+    .fontSize(7.5)
+    .text("CONTENTS", ML, 294, { characterSpacing: 1.6, width: CW });
+  doc.restore();
+
+  let itemY = 316;
   articles.forEach((a, i) => {
-    const itemY = tocY + 28 + i * 38;
-    if (itemY > H - 100) return;
+    if (itemY > H - 110) return;
 
     doc.save();
     hex(doc, C.muted)
       .font("Helvetica")
-      .fontSize(7.5)
-      .text(`${String(i + 1).padStart(2, "0")}`, ML, itemY, { width: CW });
+      .fontSize(8)
+      .text(`${i + 1}`, ML, itemY, { width: 18 });
     doc.restore();
 
     doc.save();
     hex(doc, C.ink)
-      .font("Helvetica-Bold")
-      .fontSize(10)
-      .text(a.headline, ML + 20, itemY + 10, { width: CW - 20, lineGap: 2 });
+      .font("Helvetica")
+      .fontSize(9.5)
+      .text(a.headline, ML + 18, itemY, { width: CW - 18, lineGap: 2 });
     doc.restore();
 
-    hRule(doc, itemY + 34, C.hairline, 0.3);
+    const lineH = doc.heightOfString(a.headline, { width: CW - 18, lineGap: 2 });
+    itemY += lineH + 10;
+    hRule(doc, itemY, C.hairline, 0.3);
+    itemY += 12;
   });
 
-  drawPageFooter(doc, currentPage);
+  // ── Bottom metadata ─────────────────────────────────────────────────────────
+  hRule(doc, 700, C.hairline, 0.5);
+
+  doc.save();
+  hex(doc, C.muted)
+    .font("Helvetica")
+    .fontSize(8)
+    .text(today, ML, 714, { width: CW, align: "left" });
+  doc.restore();
+
+  doc.save();
+  hex(doc, C.muted)
+    .font("Helvetica")
+    .fontSize(8)
+    .text("Prepared for academic use", ML, 714, { width: CW, align: "right" });
+  doc.restore();
 }
 
 // ── Strip markdown markers ─────────────────────────────────────────────────────
@@ -378,6 +467,12 @@ export function generateArticlePdf(
     const keyTakeaways = (Array.isArray(article.keyTakeaways)    ? article.keyTakeaways    : []) as string[];
     const whatToWatch  = (Array.isArray(article.whatToWatch)     ? article.whatToWatch     : []) as string[];
     const sources      = article.sourceArticles ?? [];
+
+    // ── Cover page — single-article PDFs only ─────────────────────────────────
+    if (!options.combined) {
+      const subtitle = execSummary.length > 0 ? cleanText(execSummary[0]) : "";
+      drawArticleCover(doc, cleanText(article.headline), subtitle);
+    }
 
     newPage(doc);
 
