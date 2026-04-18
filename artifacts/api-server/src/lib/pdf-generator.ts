@@ -52,12 +52,12 @@ function hRule(doc: PDFKit.PDFDocument, y: number, color: string, weight = 0.5) 
 function drawPageHeader(doc: PDFKit.PDFDocument) {
   const HEADER_H = 68;
 
-  // Wordmark line — "RGI–Crummer  Strategic Intelligence Analysis"
+  // Wordmark line — "RICK GOINGS INSTITUTE  •  Strategic Intelligence Analysis"
   doc.save();
   hex(doc, C.navy)
     .font("Helvetica-Bold")
     .fontSize(8)
-    .text("RGI\u2013CRUMMER", ML, 26, { characterSpacing: 1.2, width: CW, continued: true });
+    .text("RICK GOINGS INSTITUTE", ML, 26, { characterSpacing: 0.8, width: CW, continued: true });
   hex(doc, C.mid)
     .font("Helvetica")
     .fontSize(8)
@@ -89,7 +89,7 @@ function drawArticleCover(
   hex(doc, C.navy)
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("RGI\u2013CRUMMER", ML, 46, { characterSpacing: 1.8, width: CW });
+    .text("RICK GOINGS INSTITUTE", ML, 46, { characterSpacing: 1.0, width: CW });
   doc.restore();
 
   doc.save();
@@ -156,7 +156,7 @@ function drawPageFooter(doc: PDFKit.PDFDocument, pageNum: number) {
   hex(doc, C.muted)
     .font("Helvetica")
     .fontSize(7)
-    .text("RGI-Crummer  ·  Confidential", ML, footerY + 10, {
+    .text("RGI  ·  Confidential", ML, footerY + 10, {
       characterSpacing: 0.1,
       width: CW / 2,
       align: "left",
@@ -346,7 +346,7 @@ function drawCombinedCover(doc: PDFKit.PDFDocument, articles: ArticleWithSources
   hex(doc, C.navy)
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("RGI\u2013CRUMMER", ML, 46, { characterSpacing: 1.8, width: CW });
+    .text("RICK GOINGS INSTITUTE", ML, 46, { characterSpacing: 1.0, width: CW });
   doc.restore();
 
   doc.save();
@@ -446,10 +446,10 @@ export function generateArticlePdf(
     info: {
       Title: articles.length === 1
         ? articles[0].headline
-        : `RGI-Crummer Intelligence Analysis — ${publishDate}`,
-      Author: "RGI-Crummer",
+        : `RGI Intelligence Analysis — ${publishDate}`,
+      Author: "Rick Goings Institute",
       Subject: "Strategic Intelligence Analysis",
-      Keywords: "RGI, Crummer, intelligence, strategy, leadership",
+      Keywords: "RGI, intelligence, strategy, leadership",
       Creator: "RGI Intelligence Platform",
     },
     autoFirstPage: false,
