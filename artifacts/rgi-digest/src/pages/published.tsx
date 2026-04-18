@@ -131,6 +131,21 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
                 </div>
               )}
 
+              {/* Implications for Leaders (new format only) */}
+              {isStructured && article.implificationsForLeaders && article.implificationsForLeaders.length > 0 && (
+                <div className="rounded-xl border border-violet-200/60 bg-violet-50/40 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-violet-700 mb-3">Implications for Leaders</p>
+                  <ul className="space-y-2">
+                    {article.implificationsForLeaders.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* RGI Take */}
               {article.rgiTake && (
                 <div className="border-l-4 border-primary/60 pl-5 py-2 bg-primary/5 rounded-r-md">
@@ -139,14 +154,44 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
                 </div>
               )}
 
+              {/* What Changed Since Yesterday (new format only) */}
+              {isStructured && article.whatChangedSinceYesterday && article.whatChangedSinceYesterday.length > 0 && (
+                <div className="rounded-xl border border-orange-200/60 bg-orange-50/40 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-orange-700 mb-3">What Changed Since Yesterday</p>
+                  <ul className="space-y-2">
+                    {article.whatChangedSinceYesterday.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-orange-400" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* What to Watch */}
               {isStructured && article.whatToWatch && article.whatToWatch.length > 0 && (
                 <div className="rounded-xl border border-blue-200/60 bg-blue-50/40 p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-blue-700 mb-3">What to Watch</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-blue-700 mb-3">What to Watch Next</p>
                   <ul className="space-y-2">
                     {article.whatToWatch.map((item, i) => (
                       <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
                         <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-blue-400" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Key Takeaways summary (new format only) */}
+              {isStructured && article.summaryTakeaways && article.summaryTakeaways.length > 0 && (
+                <div className="rounded-xl border border-emerald-200/60 bg-emerald-50/40 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-3">Key Takeaways</p>
+                  <ul className="space-y-2">
+                    {article.summaryTakeaways.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-emerald-400" />
                         {item}
                       </li>
                     ))}

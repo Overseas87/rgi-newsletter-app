@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, digestArticlesTable, articlesTable, newsletterSubscribersTable } from "@workspace/db";
-import { eq, inArray, desc, and, gte } from "drizzle-orm";
+import { eq, inArray, desc, and, gte, lt } from "drizzle-orm";
 import {
   ListDigestArticlesQueryParams,
   GenerateDigestArticleBody,
@@ -17,6 +17,41 @@ import {
 import { generateDigestArticle, generateDailyBrief, refineArticle, regenerateSelectionText } from "../lib/ai-writer";
 import { generateArticlePdf, type ArticleWithSources } from "../lib/pdf-generator";
 import { logger } from "../lib/logger";
+
+async function getYesterdayBriefContext(): Promise<string | null> {
+  const now = new Date();
+  const todayStart = new Date(now);
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setUTCDate(yesterdayStart.getUTCDate() - 1);
+
+  const rows = await db
+    .select()
+    .from(digestArticlesTable)
+    .where(
+      and(
+        eq(digestArticlesTable.articleType, "daily_brief"),
+        gte(digestArticlesTable.createdAt, yesterdayStart),
+        lt(digestArticlesTable.createdAt, todayStart)
+      )
+    )
+    .orderBy(desc(digestArticlesTable.createdAt))
+    .limit(1);
+
+  const prev = rows[0];
+  if (!prev) return null;
+
+  const keyDevs = prev.body.split("\n").filter(Boolean);
+  const lines: string[] = [
+    `Headline: ${prev.headline}`,
+    `Key Developments:\n${keyDevs.map((d) => `- ${d}`).join("\n")}`,
+  ];
+  if (prev.keyTakeaways?.length) {
+    lines.push(`Why It Matters:\n${prev.keyTakeaways.map((t) => `- ${t}`).join("\n")}`);
+  }
+  if (prev.rgiTake) lines.push(`RGI Take: ${prev.rgiTake}`);
+  return lines.join("\n\n");
+}
 
 function pdfToBuffer(doc: PDFKit.PDFDocument): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -185,7 +220,8 @@ router.post("/digest/daily-brief", async (req, res): Promise<void> => {
   req.log.info({ articleIds, auto: !articleIds, hasNotes: !!editorNotes, excludedTopics }, "Generating daily intelligence brief");
 
   try {
-    const generated = await generateDailyBrief(articleIds, editorNotes, excludedTopics.length > 0 ? excludedTopics : undefined);
+    const previousBriefContext = await getYesterdayBriefContext();
+    const generated = await generateDailyBrief(articleIds, editorNotes, excludedTopics.length > 0 ? excludedTopics : undefined, previousBriefContext);
 
     const [digestArticle] = await db
       .insert(digestArticlesTable)
@@ -196,7 +232,10 @@ router.post("/digest/daily-brief", async (req, res): Promise<void> => {
         executiveSummary: generated.executiveSummary,
         rgiTake: generated.rgiTake,
         keyTakeaways: generated.keyTakeaways,
+        implificationsForLeaders: generated.implificationsForLeaders,
+        whatChangedSinceYesterday: generated.whatChangedSinceYesterday,
         whatToWatch: generated.whatToWatch,
+        summaryTakeaways: generated.summaryTakeaways,
         topicTags: generated.topicTags,
         sourceArticleIds: generated.sourceArticleIds,
         relevancyScore: generated.relevancyScore,

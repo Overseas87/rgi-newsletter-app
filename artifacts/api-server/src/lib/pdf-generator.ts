@@ -463,9 +463,12 @@ export function generateArticlePdf(
     const isStructured =
       Array.isArray(article.whatToWatch) && (article.whatToWatch as string[]).length > 0;
 
-    const execSummary  = (Array.isArray(article.executiveSummary) ? article.executiveSummary : []) as string[];
-    const keyTakeaways = (Array.isArray(article.keyTakeaways)    ? article.keyTakeaways    : []) as string[];
-    const whatToWatch  = (Array.isArray(article.whatToWatch)     ? article.whatToWatch     : []) as string[];
+    const execSummary               = (Array.isArray(article.executiveSummary)         ? article.executiveSummary         : []) as string[];
+    const keyTakeaways              = (Array.isArray(article.keyTakeaways)             ? article.keyTakeaways             : []) as string[];
+    const implificationsForLeaders  = (Array.isArray((article as Record<string, unknown>).implificationsForLeaders)  ? (article as Record<string, unknown>).implificationsForLeaders  : []) as string[];
+    const whatChangedSinceYesterday = (Array.isArray((article as Record<string, unknown>).whatChangedSinceYesterday) ? (article as Record<string, unknown>).whatChangedSinceYesterday : []) as string[];
+    const whatToWatch               = (Array.isArray(article.whatToWatch)              ? article.whatToWatch              : []) as string[];
+    const summaryTakeaways          = (Array.isArray((article as Record<string, unknown>).summaryTakeaways)          ? (article as Record<string, unknown>).summaryTakeaways          : []) as string[];
     const sources      = article.sourceArticles ?? [];
 
     // ── Cover page — single-article PDFs only ─────────────────────────────────
@@ -520,39 +523,50 @@ export function generateArticlePdf(
     }
 
     // ── Analysis ──────────────────────────────────────────────────────────────
-    // Key developments + why it matters + what to watch — unified section
     const bodyPoints = article.body.split("\n").filter(Boolean).map(cleanText);
 
-    sectionGuard(120);
-    sectionHeading(doc, "Analysis");
+    function pdfSection(heading: string, items: string[]) {
+      if (!items.length) return;
+      sectionGuard(80);
+      sectionHeading(doc, heading);
+      bulletList(doc, items.map(cleanText));
+      doc.moveDown(1.1);
+      hRule(doc, doc.y, C.hairline, 0.4);
+      doc.y += 22;
+    }
 
     if (isStructured) {
+      // Key Developments
       if (bodyPoints.length > 0) {
+        sectionGuard(80);
+        sectionHeading(doc, "Key Developments");
         bulletList(doc, bodyPoints);
+        doc.moveDown(1.1);
+        hRule(doc, doc.y, C.hairline, 0.4);
+        doc.y += 22;
       }
-      if (keyTakeaways.length > 0) {
-        doc.moveDown(0.6);
-        bulletList(doc, keyTakeaways.map(cleanText));
-      }
-      if (whatToWatch.length > 0) {
-        doc.moveDown(0.6);
-        bulletList(doc, whatToWatch.map(cleanText));
-      }
+      // Why It Matters
+      pdfSection("Why It Matters", keyTakeaways);
+      // Implications for Leaders
+      pdfSection("Implications for Leaders", implificationsForLeaders);
     } else {
+      sectionGuard(120);
+      sectionHeading(doc, "Analysis");
       bodyPoints.forEach((p) => {
         doc.font("Helvetica").fontSize(10.5);
         const textH = doc.heightOfString(p, { width: CW, lineGap: 5 });
         ensureSpace(doc, textH + 6);
         para(doc, p, { size: 10.5, lineGap: 5 });
-        // ~9pt paragraph spacing
         doc.moveDown(0.6);
       });
+      if (keyTakeaways.length > 0) {
+        doc.moveDown(0.6);
+        bulletList(doc, keyTakeaways.map(cleanText));
+      }
+      doc.moveDown(1.1);
+      hRule(doc, doc.y, C.hairline, 0.4);
+      doc.y += 22;
     }
-
-    // ~24pt between sections
-    doc.moveDown(1.1);
-    hRule(doc, doc.y, C.hairline, 0.4);
-    doc.y += 22;
 
     // ── RGI Take ──────────────────────────────────────────────────────────────
     if (article.rgiTake) {
@@ -562,6 +576,17 @@ export function generateArticlePdf(
       doc.moveDown(1.1);
       hRule(doc, doc.y, C.hairline, 0.4);
       doc.y += 22;
+    }
+
+    // ── What Changed Since Yesterday ───────────────────────────────────────────
+    if (isStructured) {
+      pdfSection("What Changed Since Yesterday", whatChangedSinceYesterday);
+      // What to Watch Next
+      pdfSection("What to Watch Next", whatToWatch);
+      // Key Takeaways
+      pdfSection("Key Takeaways", summaryTakeaways);
+    } else {
+      pdfSection("What to Watch", whatToWatch);
     }
 
     // ── References ────────────────────────────────────────────────────────────

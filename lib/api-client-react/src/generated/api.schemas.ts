@@ -101,7 +101,10 @@ export interface DigestArticle {
   executiveSummary: string[];
   rgiTake: string;
   keyTakeaways: string[];
+  implificationsForLeaders: string[];
+  whatChangedSinceYesterday: string[];
   whatToWatch: string[];
+  summaryTakeaways: string[];
   topicTags: string[];
   sourceArticleIds: number[];
   sourceArticles?: Article[];

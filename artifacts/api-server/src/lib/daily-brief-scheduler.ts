@@ -4,6 +4,42 @@ import { logger } from "./logger";
 import { generateDailyBrief } from "./ai-writer";
 import { runScrape } from "./scraper";
 
+/** Fetches yesterday's daily_brief and formats it as context for "What Changed Since Yesterday". */
+async function getYesterdayBriefContext(): Promise<string | null> {
+  const now = new Date();
+  const todayStart = new Date(now);
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setUTCDate(yesterdayStart.getUTCDate() - 1);
+
+  const rows = await db
+    .select()
+    .from(digestArticlesTable)
+    .where(
+      and(
+        eq(digestArticlesTable.articleType, "daily_brief"),
+        gte(digestArticlesTable.createdAt, yesterdayStart),
+        lt(digestArticlesTable.createdAt, todayStart)
+      )
+    )
+    .orderBy(desc(digestArticlesTable.createdAt))
+    .limit(1);
+
+  const prev = rows[0];
+  if (!prev) return null;
+
+  const keyDevs = prev.body.split("\n").filter(Boolean);
+  const lines: string[] = [
+    `Headline: ${prev.headline}`,
+    `Key Developments:\n${keyDevs.map((d) => `- ${d}`).join("\n")}`,
+  ];
+  if (prev.keyTakeaways?.length) {
+    lines.push(`Why It Matters:\n${prev.keyTakeaways.map((t) => `- ${t}`).join("\n")}`);
+  }
+  if (prev.rgiTake) lines.push(`RGI Take: ${prev.rgiTake}`);
+  return lines.join("\n\n");
+}
+
 /** Returns today's UTC midnight and tomorrow's UTC midnight */
 function getTodayBounds(): { start: Date; end: Date } {
   const now = new Date();
@@ -49,11 +85,16 @@ async function attemptBriefGeneration(
   editorNotes?: string
 ): Promise<boolean> {
   try {
+    const previousBriefContext = await getYesterdayBriefContext();
+    if (previousBriefContext) {
+      logger.info("Found yesterday's brief — including as context for 'What Changed Since Yesterday'");
+    }
+
     let brief: Awaited<ReturnType<typeof generateDailyBrief>>;
     let usedFallback = false;
 
     try {
-      brief = await generateDailyBrief(undefined, editorNotes ?? null);
+      brief = await generateDailyBrief(undefined, editorNotes ?? null, undefined, previousBriefContext);
     } catch (primaryErr) {
       // Today's window empty or below quality threshold — try last 7 days
       logger.warn(
@@ -78,7 +119,7 @@ async function attemptBriefGeneration(
         (editorNotes ? editorNotes + "\n\n" : "") +
         "NOTE: Limited recent content — brief synthesises the most relevant intelligence available across the past several days.";
 
-      brief = await generateDailyBrief(fallbackIds, fallbackNote);
+      brief = await generateDailyBrief(fallbackIds, fallbackNote, undefined, previousBriefContext);
       usedFallback = true;
     }
 
@@ -89,7 +130,10 @@ async function attemptBriefGeneration(
       executiveSummary: brief.executiveSummary,
       rgiTake: brief.rgiTake,
       keyTakeaways: brief.keyTakeaways,
+      implificationsForLeaders: brief.implificationsForLeaders,
+      whatChangedSinceYesterday: brief.whatChangedSinceYesterday,
       whatToWatch: brief.whatToWatch,
+      summaryTakeaways: brief.summaryTakeaways,
       topicTags: brief.topicTags,
       sourceArticleIds: brief.sourceArticleIds,
       relevancyScore: brief.relevancyScore,

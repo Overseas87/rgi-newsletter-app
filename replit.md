@@ -89,11 +89,22 @@ pnpm workspace monorepo using TypeScript with:
 
 ### Daily Intelligence Brief (Layer 3b)
 - One-click: editor clicks "Generate Daily Brief" on dashboard
-- Auto-selects top 15-20 articles from today (score ≥ 6.0)
-- Claude Sonnet generates a structured daily brief using the same 6-section format
+- Auto-selects top articles from today (score ≥ 6.0)
+- Claude Sonnet generates a structured daily brief using the **strict 9-section format**:
+  1. **Headline** — one declarative causal sentence
+  2. **Executive Summary** (2-3 sentences) — stored in `executiveSummary[]`
+  3. **Key Developments** (3-5 bullets) — stored in `body` as newline-separated
+  4. **Why It Matters** (2-3 bullets) — stored in `keyTakeaways[]`
+  5. **Implications for Leaders** (2-3 actionable bullets) — stored in `implificationsForLeaders[]`
+  6. **RGI Take** (2-3 sentences with explicit agree/disagree) — stored in `rgiTake`
+  7. **What Changed Since Yesterday** (2-3 bullets, AI compares to prior day's brief) — stored in `whatChangedSinceYesterday[]`
+  8. **What to Watch Next** (2-3 time-bound bullets) — stored in `whatToWatch[]`
+  9. **Key Takeaways** (exactly 3 summary bullets) — stored in `summaryTakeaways[]`
+- Prior day's brief is fetched automatically and injected as context for section 7
+- Total length: 300-500 words; highly scannable, no long paragraphs
 - Stored as a digest article in Pending Review for editor approval
 - Optional: editor can pass specific article IDs via POST /api/digest/daily-brief body
-- **Backward compat**: Legacy articles (pre-format change) have prose in `body` and empty `whatToWatch`; frontend detects and renders accordingly
+- **Backward compat**: Legacy articles (pre-format) have prose in `body` and empty `whatToWatch`; frontend detects `whatToWatch.length > 0` to switch between structured and legacy rendering. The 3 new fields (`implificationsForLeaders`, `whatChangedSinceYesterday`, `summaryTakeaways`) are conditionally rendered only when non-empty
 
 ### Automated Daily Brief Scheduler (Layer 3b-auto)
 - Runs automatically every day at **6:00 AM EST (11:00 UTC)** via node-cron

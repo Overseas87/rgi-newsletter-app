@@ -26,8 +26,10 @@ function topicArticleCacheKey(articleIds: number[], editorNotes?: string | null)
 
 interface DailyBriefResult {
   headline: string; executiveSummary: string[]; body: string;
-  rgiTake: string; keyTakeaways: string[]; whatToWatch: string[]; topicTags: string[];
-  discipline: string; relevancyScore: number; sourceArticleIds: number[];
+  rgiTake: string; keyTakeaways: string[];
+  implificationsForLeaders: string[]; whatChangedSinceYesterday: string[];
+  whatToWatch: string[]; summaryTakeaways: string[];
+  topicTags: string[]; discipline: string; relevancyScore: number; sourceArticleIds: number[];
 }
 
 function dailyBriefCacheKey(date: string, excludedTopics: string[]): string {
@@ -209,70 +211,75 @@ EDITORIAL DIRECTION — MANDATORY PRIORITY:
 {NOTES}
 Apply this throughout — not just in one section.`;
 
-const DAILY_BRIEF_PROMPT = `You are writing the RGI Daily Strategic Intelligence Brief — an executive-grade document that answers: "What is actually happening today, why does it matter, and what must leaders do?"
-
-You are not summarizing the news. You are synthesizing today's intelligence into clear, actionable analysis that a senior leader cannot find anywhere else.
+const DAILY_BRIEF_PROMPT = `You are writing the RGI Daily Intelligence Brief — a concise executive brief readable in under 2 minutes, fully readable in under 5. Every word earns its place. No background. No padding.
 
 Today's Sources ({SOURCE_COUNT} articles across {THEME_COUNT} thematic areas):
 {SOURCES}
 
+{PREVIOUS_BRIEF_SECTION}
 ═══════════════════════════════════════════════════════
-INTERNAL REASONING (complete silently before writing)
+INTERNAL REASONING (silent — do not output)
 ═══════════════════════════════════════════════════════
-Work through the four-step reasoning process from the system prompt. Then apply all three analytical lenses:
-
-— CAUSE AND EFFECT: What single structural force is driving the most consequential development today? Why today, not last week or next month?
-— SECOND-ORDER CONSEQUENCES: Beyond the headline effect, what systems — markets, organizations, supply chains, governance structures — are being reconfigured right now as a result?
-— STRATEGIC RELEVANCE: What specific decision, risk, or opportunity does today's intelligence create for executives and institutional leaders?
-
-Also: Do any sources conflict? What is the dominant narrative and is it accurate, incomplete, or misleading?
+1. What precisely happened today? (strip media framing — name the underlying fact)
+2. What caused it? Name the economic force, geopolitical dynamic, or institutional decision.
+3. What gets reconfigured next? (second-order: markets, supply chains, leadership priorities)
+4. What specific signals will determine how this resolves in the next 72 hours and next quarter?
+5. If yesterday's brief is provided: what materially changed? What reversed? What is new today that was absent?
 
 ═══════════════════════════════════════════════════════
-OUTPUT — STRUCTURED ARTICLE FORMAT
+STRICT FORMAT — 9 sections, ~300–500 words total
 ═══════════════════════════════════════════════════════
-Total: 300–500 words. Highly scannable. No long text blocks. Every sentence is analysis, not description.
 
-HEADLINE: One declarative sentence. A causal claim about what is happening and why — must name the driver, not just the event. Not a topic list.
+HEADLINE: One declarative causal sentence. Names the development AND its driver. Not a topic label.
 
-EXECUTIVE SUMMARY (2–3 sentences): The single most consequential development today and its most important implication. Direct, no hedging. Each sentence adds new information — do not repeat the headline.
+EXECUTIVE SUMMARY (2–3 sentences): Core development + most important implication. No hedging. Each sentence adds distinct information — never repeat the headline.
 
-KEY DEVELOPMENTS (3–5 bullets): The most consequential facts across today's signals. One clear analytical sentence each. Do not summarize topic by topic — find the causal thread connecting them. Each bullet must be distinct.
+KEY DEVELOPMENTS (3–5 bullets): One analytical sentence per bullet. Name mechanism, actor, timeline. Find the causal thread — do not list disconnected facts. Each bullet must be distinct.
 
-WHY IT MATTERS (2–3 bullets): Second-order implications for senior leaders. Name the mechanism: who faces new pressure, through what channel, with what consequence, on what timeline. No abstractions.
+WHY IT MATTERS (2–3 bullets): Second-order implications. Who faces pressure, through what channel, on what timeline. Name the mechanism. No abstractions.
+
+IMPLICATIONS FOR LEADERS (2–3 bullets): Practical and actionable. What must decision-makers, executives, or board members do, stop doing, or decide differently because of this? Name the specific action or posture.
 
 RGI TAKE (2–3 sentences):
-  Sentence 1: "RGI [agrees / partially agrees / disagrees] with [the dominant narrative] because [specific reasoning]."
-  Sentence 2: Name precisely what markets, media, or policymakers are failing to see or are overstating.
-  Sentence 3: One concrete action, risk, or decision leaders must confront now.
+  Sentence 1: "RGI [agrees / partially agrees / disagrees] with [the dominant narrative] because [precise reasoning]."
+  Sentence 2: Name exactly what markets, media, or policymakers are missing, overstating, or failing to see.
+  Sentence 3: One concrete forward-looking action or risk leaders must confront now.
   A neutral or hedged Take is a failure. Take a position.
 
-WHAT TO WATCH (2–3 bullets): Specific signals, thresholds, or decision points. Time-bound where possible (next 72 hours / next quarter). Each bullet names what to look for and why it matters if it occurs.
+WHAT CHANGED SINCE YESTERDAY (2–3 bullets): Compare with the previous brief. Name meaningful shifts, reversals, or new developments. If no previous brief is available, write: ["No prior brief available for comparison — this is a baseline reading."]
+
+WHAT TO WATCH NEXT (2–3 bullets): Time-bound signals, decision points, or thresholds. Each bullet names what to look for and why it matters if it occurs. (next 24–72 hours / next quarter)
+
+KEY TAKEAWAYS (exactly 3 bullets): The three most important insights from the entire brief. Simple, direct, non-repetitive. A reader who reads only these three points should understand the essence.
 
 ABSOLUTE RULES:
-✗ Never restate what sources say — state what it means
-✗ No topic-by-topic summaries — synthesize across developments
-✗ No generic language: name the mechanism, the actor, the timeline
-✗ No neutral hedging in the RGI Take
+✗ No long paragraphs — bullets everywhere possible
+✗ No repetition across sections
+✗ No vague language — name the mechanism, actor, timeline
+✗ No generic phrases: "significant implications," "remains to be seen," "could have major impact"
 ✗ No fabrication — all claims trace to provided sources
-✓ Surface source conflicts if they exist — do not manufacture consensus
-✓ Every sentence must add new information or new analysis
+✓ Surface source conflicts explicitly
+✓ Every sentence adds new information or analysis
 
 ═══════════════════════════════════════════════════════
 OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble
 ═══════════════════════════════════════════════════════
 {
-  "headline": "string — one declarative causal sentence naming the development and its driver",
-  "executiveSummary": ["sentence 1", "sentence 2", "sentence 3"],
-  "keyDevelopments": ["causally connected development 1", "development 2", "development 3", "development 4"],
-  "whyItMatters": ["second-order implication 1 with named mechanism", "implication 2", "implication 3"],
-  "rgiTake": "string — opens with explicit agree/partially agree/disagree position, names what is missed, ends with one concrete leader action",
-  "whatToWatch": ["specific signal 1 with timeframe", "specific signal 2", "specific signal 3"],
+  "headline": "string",
+  "executiveSummary": ["sentence 1", "sentence 2"],
+  "keyDevelopments": ["bullet 1", "bullet 2", "bullet 3", "bullet 4"],
+  "whyItMatters": ["implication 1", "implication 2", "implication 3"],
+  "implificationsForLeaders": ["action 1", "action 2", "action 3"],
+  "rgiTake": "string — agree/disagree position + what is missed + one leader action",
+  "whatChangedSinceYesterday": ["shift 1", "shift 2", "shift 3"],
+  "whatToWatch": ["signal 1 with timeframe", "signal 2", "signal 3"],
+  "summaryTakeaways": ["takeaway 1", "takeaway 2", "takeaway 3"],
   "topicTags": ["from the 12 allowed tags only"],
   "discipline": "Strategic Foresight | System Vitality | Civic Stewardship | Multiple",
   "relevancyScore": 1-10
 }
 
-Allowed topic tags (choose 1–3 only from this exact list):
+Allowed topic tags (choose 1–3 only):
 "Geopolitics & Global Power", "Economics & Macroeconomics", "Finance & Markets", "Technology & AI",
 "Innovation & Digital Transformation", "Business Strategy & Corporations", "Leadership & Organizations",
 "Energy & Resources", "Supply Chains & Global Trade", "Policy, Regulation & Governance",
@@ -636,19 +643,9 @@ export async function generateNewsletterDigest(
 export async function generateDailyBrief(
   articleIds?: number[],
   editorNotes?: string | null,
-  excludedTopics?: string[]
-): Promise<{
-  headline: string;
-  executiveSummary: string[];
-  body: string;
-  rgiTake: string;
-  keyTakeaways: string[];
-  whatToWatch: string[];
-  topicTags: string[];
-  discipline: string;
-  relevancyScore: number;
-  sourceArticleIds: number[];
-}> {
+  excludedTopics?: string[],
+  previousBriefContext?: string | null
+): Promise<DailyBriefResult> {
   // ── Cache check (auto-brief only — specific articleIds always regenerate) ────
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -709,10 +706,15 @@ export async function generateDailyBrief(
     ? DAILY_BRIEF_EDITORIAL_SUFFIX.replace("{NOTES}", editorNotes.trim())
     : "";
 
+  const previousBriefSection = previousBriefContext
+    ? `═══════════════════════════════════════════════════════\nYESTERDAY'S BRIEF (for "What Changed Since Yesterday" comparison)\n═══════════════════════════════════════════════════════\n${previousBriefContext}\n\n`
+    : "";
+
   const prompt = (DAILY_BRIEF_PROMPT + editorialSuffix)
     .replace("{SOURCE_COUNT}", String(articles.length))
     .replace("{THEME_COUNT}", String(topicSet.size))
-    .replace("{SOURCES}", sourcesText);
+    .replace("{SOURCES}", sourcesText)
+    .replace("{PREVIOUS_BRIEF_SECTION}", previousBriefSection);
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
@@ -734,7 +736,10 @@ export async function generateDailyBrief(
       body: Array.isArray(parsed.keyDevelopments) ? parsed.keyDevelopments.join("\n") : (parsed.body || ""),
       rgiTake: parsed.rgiTake || "",
       keyTakeaways: Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : []),
+      implificationsForLeaders: Array.isArray(parsed.implificationsForLeaders) ? parsed.implificationsForLeaders : [],
+      whatChangedSinceYesterday: Array.isArray(parsed.whatChangedSinceYesterday) ? parsed.whatChangedSinceYesterday : [],
       whatToWatch: Array.isArray(parsed.whatToWatch) ? parsed.whatToWatch : [],
+      summaryTakeaways: Array.isArray(parsed.summaryTakeaways) ? parsed.summaryTakeaways : [],
       topicTags: parsed.topicTags || [],
       discipline: parsed.discipline || "Multiple",
       relevancyScore: parsed.relevancyScore || 8,
