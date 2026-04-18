@@ -18,6 +18,16 @@ import { generateDigestArticle, generateDailyBrief, refineArticle, regenerateSel
 import { generateArticlePdf, type ArticleWithSources } from "../lib/pdf-generator";
 import { logger } from "../lib/logger";
 
+function pdfToBuffer(doc: PDFKit.PDFDocument): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+    doc.end();
+  });
+}
+
 const router: IRouter = Router();
 
 async function enrichDigestArticle(article: typeof digestArticlesTable.$inferSelect) {
@@ -373,15 +383,18 @@ router.get("/digest/:id/pdf", async (req, res): Promise<void> => {
     }
 
     const filename = `rgi-brief-${slugify(article.headline)}.pdf`;
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
     const doc = generateArticlePdf([article]);
-    doc.pipe(res);
-    doc.end();
+    const buffer = await pdfToBuffer(doc);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", buffer.length);
+    res.setHeader("Cache-Control", "no-store");
+    res.end(buffer);
   } catch (err) {
     logger.error({ err }, "PDF generation failed");
-    res.status(500).json({ error: "Failed to generate PDF" });
+    if (!res.headersSent) res.status(500).json({ error: "Failed to generate PDF" });
   }
 });
 
@@ -410,15 +423,18 @@ router.get("/digest/pdf/combined", async (req, res): Promise<void> => {
 
     const date = new Date().toISOString().slice(0, 10);
     const filename = `rgi-intelligence-${date}.pdf`;
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
     const doc = generateArticlePdf(valid, { combined: true });
-    doc.pipe(res);
-    doc.end();
+    const buffer = await pdfToBuffer(doc);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", buffer.length);
+    res.setHeader("Cache-Control", "no-store");
+    res.end(buffer);
   } catch (err) {
     logger.error({ err }, "Combined PDF generation failed");
-    res.status(500).json({ error: "Failed to generate combined PDF" });
+    if (!res.headersSent) res.status(500).json({ error: "Failed to generate combined PDF" });
   }
 });
 
