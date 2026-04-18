@@ -7,7 +7,7 @@ import { startScheduler } from "./lib/scheduler";
 import { initializeScrapeStatus, runScrape } from "./lib/scraper";
 import { runDailyBriefJob } from "./lib/daily-brief-scheduler";
 import { seedDefaultSources } from "./lib/seed-sources";
-import { seedProductionData } from "./lib/seed-production-data";
+import { seedProductionData, upsertCanonicalSources } from "./lib/seed-production-data";
 import { db, articlesTable } from "@workspace/db";
 import { sourcesTable, digestArticlesTable as digestTable } from "@workspace/db/schema";
 import { gte, count, sql } from "drizzle-orm";
@@ -54,8 +54,12 @@ async function initializeApp() {
   // on first run of a fresh database. No-op if any data already exists.
   await seedProductionData();
 
-  // Step 3b — seed default sources only if the table is still empty
-  // (covers the case where seedProductionData was skipped and only sources are needed)
+  // Step 3b — upsert all 45 canonical sources so newly added sources are always
+  // present in production after a redeploy, even if the database is not fresh.
+  await upsertCanonicalSources();
+
+  // Step 3c — seed default sources only if the table is still empty
+  // (fallback for environments where seedProductionData was skipped entirely)
   await seedDefaultSources();
 
   // Step 4 — restore in-memory scrape state from DB timestamps
