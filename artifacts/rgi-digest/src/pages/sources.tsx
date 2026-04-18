@@ -15,12 +15,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, X, Check, Newspaper, Twitter, Linkedin, BookOpen, Building2, TrendingUp, Globe, Info, Loader2 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Plus, Pencil, Trash2, X, Check, Newspaper, Twitter, Linkedin, BookOpen, Building2, TrendingUp, Globe, Info, Loader2, Scale } from "lucide-react";
 
 // Credibility score computation
 // Tier sets the base range, type applies a modifier.
-// The score (0–100) determines how much weight this source's articles carry in the composite relevancy ranking.
-function computeCredibility(source: Source): { score: number; explanation: string } {
+// The 0–100 score determines article authenticity weighting in composite scoring.
+// credibility1to10 gives the discrete 1–10 score shown in the UI.
+function computeCredibility(source: Source): { score: number; credibility: number; explanation: string; shortLabel: string } {
   const tierBase: Record<number, number> = { 1: 88, 2: 68, 3: 48 };
   const typeBonus: Record<string, number> = {
     institutional: 8,
@@ -32,50 +34,73 @@ function computeCredibility(source: Source): { score: number; explanation: strin
     twitter: -10,
   };
   const authorityAdjust = source.authorityLevel != null
-    ? (3 - source.authorityLevel) * 4  // level 1 = +8, level 2 = +4, level 3 = 0, level 4 = -4, level 5 = -8
+    ? (3 - source.authorityLevel) * 4
     : 0;
 
   const raw = (tierBase[source.tier] ?? 68) + (typeBonus[source.type] ?? 0) + authorityAdjust;
   const score = Math.max(10, Math.min(100, Math.round(raw)));
+  // Map 0–100 to 1–10 (rounded)
+  const credibility = Math.max(1, Math.min(10, Math.round(score / 10)));
 
-  const tierLabel = source.tier === 1 ? "premier source (Tier 1)" : source.tier === 2 ? "standard source (Tier 2)" : "supplemental source (Tier 3)";
+  const tierLabel = source.tier === 1 ? "Premier source (Tier 1)" : source.tier === 2 ? "Standard source (Tier 2)" : "Supplemental source (Tier 3)";
   const typeLabel: Record<string, string> = {
-    institutional: "institutional credibility bonus",
-    market: "financial data credibility bonus",
-    corporate: "slight discount (corporate PR risk)",
+    institutional: "institutional credibility bonus applied",
+    market: "financial data credibility bonus applied",
+    corporate: "slight discount applied (corporate PR risk)",
     linkedin: "social platform discount applied",
     twitter: "social platform discount applied",
     rss: "",
     website: "",
   };
+
+  const shortLabel =
+    source.type === "institutional" ? "Primary institutional source" :
+    source.type === "market" ? "Major financial data source" :
+    source.type === "corporate" ? "Corporate communications" :
+    source.type === "linkedin" ? "Social professional network" :
+    source.type === "twitter" ? "Social media source" :
+    source.tier === 1 ? "Major editorial publication" :
+    source.tier === 2 ? "Established publication" :
+    "Supplemental intelligence source";
+
   const parts = [
-    `Classified as a ${tierLabel}`,
-    typeLabel[source.type] ? typeLabel[source.type] : null,
+    tierLabel,
+    typeLabel[source.type] || null,
     source.authorityLevel != null && source.authorityLevel <= 2 ? "high editorial authority" : null,
     source.authorityLevel != null && source.authorityLevel >= 4 ? "lower institutional authority" : null,
   ].filter(Boolean);
 
-  return { score, explanation: parts.join(". ") + "." };
+  return { score, credibility, explanation: parts.join(". ") + ".", shortLabel };
 }
 
-function CredibilityBar({ score }: { score: number }) {
+function weightLabel(weight: number): { text: string; color: string } {
+  if (weight >= 1.8) return { text: "Premier ×" + weight.toFixed(1), color: "text-violet-700 bg-violet-50 border-violet-200" };
+  if (weight >= 1.4) return { text: "Elevated ×" + weight.toFixed(1), color: "text-blue-700 bg-blue-50 border-blue-200" };
+  if (weight >= 0.9) return { text: "Standard ×" + weight.toFixed(1), color: "text-slate-600 bg-slate-50 border-slate-200" };
+  return { text: "Reduced ×" + weight.toFixed(1), color: "text-amber-700 bg-amber-50 border-amber-200" };
+}
+
+function CredibilityBadge({ credibility, score }: { credibility: number; score: number }) {
   const color =
+    credibility >= 9 ? "text-emerald-700 bg-emerald-50 border-emerald-200" :
+    credibility >= 7 ? "text-blue-700 bg-blue-50 border-blue-200" :
+    credibility >= 5 ? "text-amber-700 bg-amber-50 border-amber-200" :
+    "text-slate-600 bg-slate-50 border-slate-200";
+  const bar =
     score >= 80 ? "bg-emerald-500" :
     score >= 65 ? "bg-blue-500" :
     score >= 50 ? "bg-amber-400" :
     "bg-slate-400";
-  const labelColor =
-    score >= 80 ? "text-emerald-700 bg-emerald-50 border-emerald-200" :
-    score >= 65 ? "text-blue-700 bg-blue-50 border-blue-200" :
-    score >= 50 ? "text-amber-700 bg-amber-50 border-amber-200" :
-    "text-slate-600 bg-slate-50 border-slate-200";
 
   return (
     <div className="flex items-center gap-2 shrink-0">
-      <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${score}%` }} />
+      <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${bar}`} style={{ width: `${score}%` }} />
       </div>
-      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border tabular-nums ${labelColor}`}>{score}</span>
+      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border tabular-nums ${color}`}
+        title={`Credibility ${credibility}/10 (raw score ${score}/100)`}>
+        {credibility}/10
+      </span>
     </div>
   );
 }
@@ -114,12 +139,16 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
+// Weight preset steps shown in the slider labels
+const WEIGHT_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+
 function SourceRow({ source }: { source: Source }) {
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState(source.name);
   const [url, setUrl] = useState(source.url);
   const [tier, setTier] = useState(String(source.tier));
+  const [editWeight, setEditWeight] = useState(source.weight ?? 1.0);
 
   // Optimistic active state — updated immediately on toggle, reverted on failure
   const [isActive, setIsActive] = useState(source.isActive);
@@ -130,17 +159,23 @@ function SourceRow({ source }: { source: Source }) {
     if (!togglePending) setIsActive(source.isActive);
   }, [source.isActive, togglePending]);
 
+  useEffect(() => {
+    setEditWeight(source.weight ?? 1.0);
+  }, [source.weight]);
+
   const update = useUpdateSource();
   const remove = useDeleteSource();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["listSources"] });
 
-  const { score, explanation } = computeCredibility(source);
+  const { score, credibility, explanation, shortLabel } = computeCredibility(source);
+  const sourceWeight = source.weight ?? 1.0;
+  const wLabel = weightLabel(sourceWeight);
 
   const handleSave = () => {
     update.mutate(
-      { id: source.id, data: { name, url, tier: Number(tier) as 1 | 2 | 3 } },
+      { id: source.id, data: { name, url, tier: Number(tier) as 1 | 2 | 3, weight: editWeight } },
       {
         onSuccess: () => { setEditing(false); invalidate(); },
         onError: () => {
@@ -151,19 +186,13 @@ function SourceRow({ source }: { source: Source }) {
   };
 
   const handleToggle = (next: boolean) => {
-    // Immediate optimistic update
     setIsActive(next);
     setTogglePending(true);
-
     update.mutate(
       { id: source.id, data: { isActive: next } },
       {
-        onSuccess: () => {
-          setTogglePending(false);
-          invalidate();
-        },
+        onSuccess: () => { setTogglePending(false); invalidate(); },
         onError: () => {
-          // Revert the optimistic update
           setIsActive(!next);
           setTogglePending(false);
           toast({
@@ -220,6 +249,35 @@ function SourceRow({ source }: { source: Source }) {
               <Label className="text-xs mb-1 block">Feed URL</Label>
               <Input value={url} onChange={(e) => setUrl(e.target.value)} className="font-mono text-xs" data-testid="input-source-url" />
             </div>
+            {/* Weight editor */}
+            <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Scale className="h-3 w-3 text-muted-foreground" />
+                  <Label className="text-xs font-semibold">Source Weight</Label>
+                </div>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${weightLabel(editWeight).color}`}>
+                  {weightLabel(editWeight).text}
+                </span>
+              </div>
+              <Slider
+                min={0}
+                max={WEIGHT_STEPS.length - 1}
+                step={1}
+                value={[WEIGHT_STEPS.indexOf(editWeight) >= 0 ? WEIGHT_STEPS.indexOf(editWeight) : 2]}
+                onValueChange={([idx]) => setEditWeight(WEIGHT_STEPS[idx])}
+                className="w-full"
+                data-testid="slider-source-weight"
+              />
+              <div className="flex justify-between text-[9px] text-muted-foreground/70 font-medium">
+                <span>×0.5 Reduced</span>
+                <span>×1.0 Standard</span>
+                <span>×2.0 Premier</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Weight multiplies this source's authority contribution to article scoring. ×2.0 can add up to +1 point to articles from this source.
+              </p>
+            </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={handleSave} disabled={update.isPending} data-testid="btn-save-source">
                 <Check className="h-3 w-3 mr-1" /> Save
@@ -258,7 +316,14 @@ function SourceRow({ source }: { source: Source }) {
                 <p className="text-xs text-muted-foreground font-mono truncate">{source.url}</p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                <CredibilityBar score={score} />
+                {/* Weight badge — only shown when non-default */}
+                {Math.abs(sourceWeight - 1.0) > 0.05 && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${wLabel.color}`}
+                    title={`Source weight: ${sourceWeight.toFixed(2)}`}>
+                    {wLabel.text}
+                  </span>
+                )}
+                <CredibilityBadge credibility={credibility} score={score} />
                 <button
                   onClick={() => setExpanded((e) => !e)}
                   className="text-muted-foreground/50 hover:text-muted-foreground"
@@ -288,12 +353,29 @@ function SourceRow({ source }: { source: Source }) {
               </div>
             </div>
             {expanded && (
-              <div className="mt-2 px-3 py-2.5 rounded-md bg-muted/40 border border-border">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Credibility Rationale</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">{explanation}</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-1.5">
-                  Score of {score}/100 means articles from this source receive a {score >= 80 ? "high" : score >= 65 ? "standard" : "reduced"} authenticity weighting in the composite relevancy formula.
-                </p>
+              <div className="mt-2 px-3 py-2.5 rounded-md bg-muted/40 border border-border space-y-2">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-0.5">Credibility Rating</p>
+                    <p className="text-xs font-semibold text-foreground">{shortLabel}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{explanation}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <span className="text-2xl font-bold tabular-nums text-foreground">{credibility}</span>
+                    <span className="text-xs text-muted-foreground">/10</span>
+                  </div>
+                </div>
+                {Math.abs(sourceWeight - 1.0) > 0.05 && (
+                  <div className="pt-2 border-t border-border/50">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-0.5">Source Weight</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Weight ×{sourceWeight.toFixed(2)} — {sourceWeight > 1.0
+                        ? `Authority contribution boosted by ${Math.round((sourceWeight - 1) * 100)}%. Articles from this source earn up to ${Math.min(1, (sourceWeight - 1) * 2).toFixed(1)} additional scoring point(s).`
+                        : `Authority contribution reduced to ${Math.round(sourceWeight * 100)}% of standard. Articles from this source receive a corresponding score reduction.`
+                      }
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -350,7 +432,9 @@ export default function Sources() {
 
   const avgByTier = [1, 2, 3].reduce((acc, tier) => {
     const t = sources.filter((s: Source) => s.tier === tier);
-    acc[tier] = t.length > 0 ? Math.round(t.reduce((s, src) => s + computeCredibility(src as Source).score, 0) / t.length) : 0;
+    acc[tier] = t.length > 0
+      ? Math.round(t.reduce((s, src) => s + computeCredibility(src as Source).credibility, 0) / t.length * 10) / 10
+      : 0;
     return acc;
   }, {} as Record<number, number>);
 
@@ -368,23 +452,23 @@ export default function Sources() {
         </Button>
       </div>
 
-      {/* Credibility legend */}
+      {/* Credibility and weight legend */}
       <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
         <div className="flex items-start gap-2">
           <Info className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
           <div>
-            <p className="text-xs font-semibold text-foreground mb-1">How Credibility Scores Work</p>
+            <p className="text-xs font-semibold text-foreground mb-1">How Credibility and Source Weight Work</p>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Each source carries a credibility score (0–100) that is factored into the composite relevancy formula used to rank articles. A source's credibility accounts for 35% of an article's final score — alongside the AI's raw relevancy assessment (65%). This means high-relevance content from low-credibility sources cannot dominate the feed over verified journalism.
+              Each source has a <strong className="text-foreground/80">credibility rating (1–10)</strong> derived from its tier, type, and editorial authority. This rating influences an article's Source Authority scoring component. You can amplify or reduce a source's influence using the <strong className="text-foreground/80">source weight</strong> (×0.5 to ×2.0) in the edit panel — weight scales the authority contribution, so trusted sources can be elevated above their default tier.
             </p>
           </div>
         </div>
         <div className="grid grid-cols-4 gap-2">
           {[
-            { label: "80–100", desc: "Premier", color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
-            { label: "65–79", desc: "Standard", color: "text-blue-700 bg-blue-50 border-blue-200" },
-            { label: "50–64", desc: "Supplemental", color: "text-amber-700 bg-amber-50 border-amber-200" },
-            { label: "< 50", desc: "Low weight", color: "text-slate-600 bg-slate-50 border-slate-200" },
+            { label: "9–10", desc: "Premier", color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+            { label: "7–8", desc: "Standard", color: "text-blue-700 bg-blue-50 border-blue-200" },
+            { label: "5–6", desc: "Supplemental", color: "text-amber-700 bg-amber-50 border-amber-200" },
+            { label: "1–4", desc: "Low weight", color: "text-slate-600 bg-slate-50 border-slate-200" },
           ].map((item) => (
             <div key={item.label} className={`rounded-md border px-2.5 py-2 ${item.color}`}>
               <p className="text-[10px] font-bold tabular-nums">{item.label}</p>
@@ -392,7 +476,7 @@ export default function Sources() {
             </div>
           ))}
         </div>
-        <p className="text-[10px] text-muted-foreground">Click the <Info className="h-2.5 w-2.5 inline" /> icon on any source to see why it has its credibility score.</p>
+        <p className="text-[10px] text-muted-foreground">Click the <Info className="h-2.5 w-2.5 inline" /> icon on any source to see its credibility rationale. Click <Pencil className="h-2.5 w-2.5 inline" /> to adjust source weight.</p>
       </div>
 
       {/* Type summary */}
@@ -474,7 +558,7 @@ export default function Sources() {
                 </h2>
                 {tierSources.length > 0 && (
                   <span className="text-[10px] text-muted-foreground">
-                    Avg credibility: <span className="font-semibold tabular-nums">{avgByTier[tier]}</span>/100
+                    Avg credibility: <span className="font-semibold tabular-nums">{avgByTier[tier]}</span>/10
                   </span>
                 )}
               </div>

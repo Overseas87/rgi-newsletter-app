@@ -54,6 +54,9 @@ router.patch("/sources/:id", async (req, res): Promise<void> => {
   if (body.data.url !== undefined) updateData.url = body.data.url;
   if (body.data.tier !== undefined) updateData.tier = body.data.tier;
   if (body.data.isActive !== undefined) updateData.isActive = body.data.isActive;
+  if (body.data.weight !== undefined) updateData.weight = body.data.weight;
+  if (body.data.authorityLevel !== undefined) updateData.authorityLevel = body.data.authorityLevel;
+  if (body.data.description !== undefined) updateData.description = body.data.description ?? undefined;
 
   const [updated] = await db
     .update(sourcesTable)

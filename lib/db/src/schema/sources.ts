@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -15,6 +15,9 @@ export const sourcesTable = pgTable("sources", {
   authorType: text("author_type"),
   authorityLevel: integer("authority_level").default(3),
   description: text("description"),
+  // Editorial weight (0.5–2.0): scales how much this source's authority influences article scoring.
+  // 1.0 = standard, 2.0 = double authority contribution, 0.5 = halved.
+  weight: real("weight").notNull().default(1.0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

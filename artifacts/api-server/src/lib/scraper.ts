@@ -132,7 +132,8 @@ async function scoreArticle(
   content: string,
   sourceName: string,
   sourceTier: number,
-  authorityLevel: number
+  authorityLevel: number,
+  sourceWeight: number = 1.0
 ): Promise<{
   relevancyScore: number;
   authenticityScore: number;
@@ -177,11 +178,16 @@ async function scoreArticle(
     const sa  = Math.min(2, Math.max(0, Math.round(parsed.sourceAuthority        ?? 1)));
     const rec = Math.min(1, Math.max(0, Math.round(parsed.recency                ?? 0)));
 
-    // Final relevancy score is the deterministic sum of all five components
-    const computedScore = si + rr + cd + sa + rec;
+    // Apply source weight to the Source Authority component.
+    // Weight 1.0 = unchanged; weight 2.0 can boost SA contribution up to 3 (one extra point);
+    // weight 0.5 halves the SA contribution. Total is capped at 10.
+    const clampedWeight = Math.max(0.5, Math.min(2.0, sourceWeight));
+    const weightedSA = Math.min(3, Math.max(0, Math.round(sa * clampedWeight * 10) / 10));
+    const computedScore = Math.min(10, Math.max(0, si + rr + cd + weightedSA + rec));
 
     // Build a concise score breakdown appended to the viewpoint for transparency
-    const breakdown = `Impact ${si}/3 · Relevance ${rr}/2 · Cross-domain ${cd}/2 · Authority ${sa}/2 · Recency ${rec}/1`;
+    const weightLabel = clampedWeight !== 1.0 ? ` ×${clampedWeight.toFixed(1)} wt` : "";
+    const breakdown = `Impact ${si}/3 · Relevance ${rr}/2 · Cross-domain ${cd}/2 · Authority ${sa}/2${weightLabel} · Recency ${rec}/1`;
     const explanation = parsed.scoreExplanation ? `${parsed.scoreExplanation}` : "";
     const rgiViewpoint = parsed.viewpoint ?? "";
     const fullViewpoint = rgiViewpoint
@@ -198,9 +204,10 @@ async function scoreArticle(
       isPrimarySignal: parsed.isPrimarySignal ?? false,
     };
 
-    // Authenticity: apply a small tier floor boost (separate from relevancy formula)
+    // Authenticity: apply a small tier floor boost + weight influence (separate from relevancy)
     const authTierBonus = sourceTier === 1 ? 0.5 : sourceTier === 2 ? 0.2 : 0;
-    result.authenticityScore = Math.min(10, Math.max(1, result.authenticityScore + authTierBonus));
+    const authWeightBonus = (clampedWeight - 1.0) * 0.5; // weight 2.0 → +0.5, weight 0.5 → -0.25
+    result.authenticityScore = Math.min(10, Math.max(1, result.authenticityScore + authTierBonus + authWeightBonus));
     result.authenticityScore = Math.round(result.authenticityScore * 10) / 10;
 
   } catch (e) {
@@ -445,13 +452,11 @@ export async function runScrape(): Promise<{
           content,
           source.name,
           source.tier,
-          source.authorityLevel ?? 3
+          source.authorityLevel ?? 3,
+          source.weight ?? 1.0
         );
 
-        // Score is set purely by the AI's multi-factor strategic assessment.
-        // No programmatic adjustments after scoring — the score must reflect strategic merit only.
         const finalScore = scored.relevancyScore;
-
         const isSignal = detectEmergingSignal(item.headline, finalScore);
 
         return {
@@ -477,19 +482,75 @@ export async function runScrape(): Promise<{
       })
     );
 
+    // ── Multi-source story confidence boost ────────────────────────────────────
+    // If multiple sources independently cover the same story (same topic tags),
+    // the story is validated by corroboration. The top-scored article in each
+    // cluster receives +0.4 per extra source, capped at +1.0.
+    type ArticleToInsert = {
+      headline: string; url: string; sourceName: string; sourceUrl: string;
+      author: string | null; authorType: string | null;
+      platform: "news" | "twitter" | "linkedin" | "feed";
+      isEmergingSignal: boolean; isPrimarySignal: boolean;
+      relevancyScore: number; authenticityScore: number;
+      viewpoint: string | null; topicTags: string[];
+      teaserSummary: string; publishedAt: Date | null | undefined;
+      content: string | null | undefined;
+      status: "pending"; disciplineAlignment: string;
+    };
+    const validArticles: ArticleToInsert[] = [];
+    for (const r of scoringResults) {
+      if (r.status === "fulfilled" && r.value !== null && r.value.relevancyScore >= 4.5) {
+        validArticles.push(r.value as ArticleToInsert);
+      }
+    }
+
+    // Group by leading tag to detect coverage clusters
+    const clusterMap = new Map<string, ArticleToInsert[]>();
+    for (const article of validArticles) {
+      if (!article.topicTags?.length) continue;
+      const key = article.topicTags.slice().sort().join("|");
+      if (!clusterMap.has(key)) clusterMap.set(key, []);
+      clusterMap.get(key)!.push(article);
+    }
+
+    // Build a set of URLs that earn a multi-source boost
+    const boostMap = new Map<string, number>(); // url → boost delta
+    for (const [, cluster] of clusterMap) {
+      // Only clusters with 2+ different source URLs qualify
+      const uniqueSources = new Set(cluster.map((a) => a.sourceUrl));
+      if (uniqueSources.size < 2) continue;
+
+      // Sort by score descending — boost the top article
+      cluster.sort((a, b) => b.relevancyScore - a.relevancyScore);
+      const boost = Math.min(1.0, (uniqueSources.size - 1) * 0.4);
+      boostMap.set(cluster[0].url, boost);
+      logger.info(
+        { headline: cluster[0].headline, sources: uniqueSources.size, boost },
+        "Multi-source story boost applied"
+      );
+    }
+
     // Insert new articles — skip low-relevance content (score < 4.5 is noise, not signal)
+    for (const article of validArticles) {
+      const multiSourceBoost = boostMap.get(article.url) ?? 0;
+      const boostedScore = Math.min(10, Math.round((article.relevancyScore + multiSourceBoost) * 10) / 10);
+
+      try {
+        await db.insert(articlesTable).values({
+          ...article,
+          relevancyScore: boostedScore,
+          isEmergingSignal: multiSourceBoost > 0 ? true : article.isEmergingSignal,
+        });
+        articlesAdded++;
+      } catch (e) {
+        logger.warn({ err: e }, "Failed to insert article (likely duplicate)");
+      }
+    }
+
+    // Also skip any scored articles that were below threshold (the validArticles filter above handles this)
     for (const result of scoringResults) {
-      if (result.status === "fulfilled" && result.value !== null) {
-        if (result.value.relevancyScore < 4.5) {
-          logger.debug({ headline: result.value.headline, score: result.value.relevancyScore }, "Skipping low-relevance article");
-          continue;
-        }
-        try {
-          await db.insert(articlesTable).values(result.value);
-          articlesAdded++;
-        } catch (e) {
-          logger.warn({ err: e }, "Failed to insert article (likely duplicate)");
-        }
+      if (result.status === "fulfilled" && result.value !== null && result.value.relevancyScore < 4.5) {
+        logger.debug({ headline: result.value.headline, score: result.value.relevancyScore }, "Skipping low-relevance article");
       }
     }
 

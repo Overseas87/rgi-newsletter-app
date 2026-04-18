@@ -147,7 +147,7 @@ id, headline, url, sourceName, sourceUrl, author, authorType, platform (news/twi
 id, headline, body, rgiTake, topicTags, discipline, relevancyScore, sourceArticleIds, editorNotes, status (pending_review/approved/rejected), publishedAt, createdAt, updatedAt
 
 ### sources
-id, name, url, type, tier (1-3), authorName, authorType, authorityLevel (1-5), description, isActive, createdAt
+id, name, url, type, tier (1-3), authorName, authorType, authorityLevel (1-5), description, isActive, weight (real, 0.5–2.0, default 1.0), createdAt
 
 ### settings
 id, relevancyThreshold, scrapeIntervalHours, scrapeTimeUtc
@@ -157,6 +157,19 @@ id, email (unique), name, topics (text[]), isActive, subscribedAt
 
 ### newsletter_digests
 id, weekOf, headline, body, topicTags (text[]), subscriberCount, generatedAt
+
+## Scoring Pipeline
+
+Articles are scored on ingest by Claude Haiku using 5 components (max 10):
+- **Strategic Impact** (0–3): Systemic significance for leaders
+- **RGI Relevance** (0–2): Match to RGI's three disciplines
+- **Cross-Domain Influence** (0–2): Bridges multiple domains
+- **Source Authority** (0–2, weight-scaled): Weighted by `source.weight` — at ×2.0, SA can contribute up to 3 pts; at ×0.5, halved
+- **Recency** (0–1): Published within 24h
+
+Post-scoring: **Multi-source story boost** — articles with identical topic-tag fingerprints from 2+ distinct source URLs receive +0.4 per additional source (cap +1.0); flagged as emerging signals.
+
+Articles with score < 4.5 are discarded before insertion.
 
 ## OpenAPI / Codegen
 

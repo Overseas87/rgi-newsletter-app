@@ -603,6 +603,7 @@ export const ListSourcesResponseItem = zod.object({
   authorType: zod.string().nullish(),
   authorityLevel: zod.number().nullish(),
   description: zod.string().nullish(),
+  weight: zod.number().default(1.0),
   createdAt: zod.string(),
 });
 export const ListSourcesResponse = zod.array(ListSourcesResponseItem);
@@ -645,6 +646,7 @@ export const UpdateSourceBody = zod.object({
   authorType: zod.string().nullish(),
   authorityLevel: zod.number().nullish(),
   description: zod.string().nullish(),
+  weight: zod.number().min(0.5).max(2.0).optional(),
 });
 
 export const UpdateSourceResponse = zod.object({
@@ -666,6 +668,7 @@ export const UpdateSourceResponse = zod.object({
   authorType: zod.string().nullish(),
   authorityLevel: zod.number().nullish(),
   description: zod.string().nullish(),
+  weight: zod.number().default(1.0),
   createdAt: zod.string(),
 });
 
