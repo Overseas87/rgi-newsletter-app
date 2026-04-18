@@ -93,19 +93,20 @@ Sentence 2: State one concrete forward-looking implication for senior leaders. U
 Format: "RGI [agrees/partially agrees/disagrees]: [reason]. [Forward implication for leaders]."
 If the article is low-relevance (score 1-4), write: "RGI notes this item falls outside the core strategic lens — limited implications for senior leadership."
 
-TOPIC TAGS — choose only from this exact list:
-"AI & Artificial Intelligence", "Technology & Digital Innovation", "Geopolitics", "Global Politics",
-"Wars & Crisis", "Finance & Markets", "Macroeconomics", "Business & Strategy",
-"Leadership & Organizations", "Energy & Oil", "Climate & Environmental Health",
-"Supply Chains & Trade", "Policy & Regulation", "Future of Work", "Innovation & Startups"
+TOPIC TAGS — choose only from this exact list (12 topics):
+"Geopolitics & Global Power", "Economics & Macroeconomics", "Finance & Markets",
+"Technology & AI", "Innovation & Digital Transformation", "Business Strategy & Corporations",
+"Leadership & Organizations", "Energy & Resources", "Supply Chains & Global Trade",
+"Policy, Regulation & Governance", "Climate & Environmental Systems", "Future of Work & Society"
 
 TAGGING RULES:
 1. 1-3 tags maximum — be selective based on PRIMARY content focus, never tag tangentially
-2. NEVER use "Business & Strategy" or "Leadership & Organizations" as catch-alls — only if the PRIMARY focus is strategy/leadership itself
-3. AI regulation articles → "AI & Artificial Intelligence" + "Policy & Regulation" only
-4. Economic policy → "Macroeconomics" + "Policy & Regulation"; climate policy → "Climate & Environmental Health" + "Policy & Regulation"
-5. "Innovation & Startups" — use only when the primary focus is venture funding, startup ecosystems, or early-stage innovation
-6. Use the full tag string exactly as listed above — no abbreviations or partial matches
+2. "Technology & AI" → for AI breakthroughs, AI policy, semiconductor geopolitics, cybersecurity; "Innovation & Digital Transformation" → for digital strategy, fintech, crypto, startups, tech-driven business change
+3. "Geopolitics & Global Power" covers wars, sanctions, great-power competition, international relations
+4. "Economics & Macroeconomics" covers GDP, inflation, central banks, trade balances; "Finance & Markets" covers equities, bonds, commodities, banking
+5. AI regulation → "Technology & AI" + "Policy, Regulation & Governance"; climate policy → "Climate & Environmental Systems" + "Policy, Regulation & Governance"
+6. NEVER use "Business Strategy & Corporations" or "Leadership & Organizations" as catch-alls — only when corporate strategy or leadership is the PRIMARY story focus
+7. Use the full tag string exactly as listed above — no abbreviations or partial matches
 
 Return ONLY valid JSON with exactly these keys:
 - strategicImpact: integer 0-3

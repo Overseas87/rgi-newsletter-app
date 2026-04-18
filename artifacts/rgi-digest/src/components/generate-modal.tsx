@@ -23,24 +23,24 @@ import { VoiceInput } from "@/components/voice-input";
 
 const TOPIC_GROUPS = [
   {
-    label: "Technology & Intelligence",
-    topics: ["AI & Artificial Intelligence", "Technology & Digital Innovation", "Fintech"],
+    label: "Technology & Innovation",
+    topics: ["Technology & AI", "Innovation & Digital Transformation"],
   },
   {
-    label: "Global & Geopolitical",
-    topics: ["Geopolitics", "Global Politics", "Wars & Crisis"],
+    label: "Geopolitics & Economics",
+    topics: ["Geopolitics & Global Power", "Economics & Macroeconomics", "Finance & Markets"],
   },
   {
-    label: "Economic",
-    topics: ["Finance & Markets", "Macroeconomics", "Supply Chains & Trade"],
+    label: "Trade & Resources",
+    topics: ["Supply Chains & Global Trade", "Energy & Resources"],
   },
   {
     label: "Business & Leadership",
-    topics: ["Business & Strategy", "Leadership & Organizations", "Future of Work"],
+    topics: ["Business Strategy & Corporations", "Leadership & Organizations", "Future of Work & Society"],
   },
   {
     label: "Policy & Environment",
-    topics: ["Policy & Regulation", "Climate & Environmental Health", "Energy & Oil"],
+    topics: ["Policy, Regulation & Governance", "Climate & Environmental Systems"],
   },
 ];
 

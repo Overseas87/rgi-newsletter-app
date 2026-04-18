@@ -1,0 +1,30 @@
+Refactor the entire topic system to ensure it reflects a broader but highly relevant and structured set of topics aligned with the RGI perspective.
+
+Remove any topics that are too narrow, unclear, trendy, or not directly relevant to RGI’s core focus. Avoid standalone niche topics like “fintech” unless they are properly integrated into a broader and meaningful category such as “Finance & Markets” or “Technology & Innovation.”
+
+Replace the current topic system with a curated and expanded set of high-level topics that reflect real-world systems and strategic relevance. Use a structure that prioritizes clarity, importance, and consistency.
+
+Define the following core topic categories:
+
+Geopolitics & Global Power
+Economics & Macroeconomics
+Finance & Markets
+Technology & AI
+Innovation & Digital Transformation
+Business Strategy & Corporations
+Leadership & Organizations
+Energy & Resources
+Supply Chains & Global Trade
+Policy, Regulation & Governance
+Climate & Environmental Systems
+Future of Work & Society
+
+Ensure that all topics used in the system fall within these categories or clearly align with them. If more specific subtopics are needed (for example fintech, crypto, or startups), they must be treated as subtopics and not as standalone primary categories.
+
+Expand the available topic options in both the “Topic Article” and “General Brief” generation flows. The user should see a broader range of meaningful topics to choose from, but the list must remain clean and structured.
+
+For the Topic Article flow, allow the user to select one or multiple topics from this refined list. For the General Brief, include all topics by default but allow the user to exclude specific ones.
+
+Ensure that topics are only assigned to articles when they are truly relevant. Avoid over-tagging and do not assign topics loosely based on keywords alone.
+
+The goal is to create a topic system that is broad enough to cover all relevant developments, but structured and disciplined enough to avoid noise and maintain a strong RGI identity.

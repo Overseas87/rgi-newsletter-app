@@ -30,15 +30,15 @@ import {
 // ─── Discipline mapping ────────────────────────────────────────────────────────
 const DISCIPLINE_KEYWORDS: Record<string, string[]> = {
   "Strategic Foresight": [
-    "AI & Artificial Intelligence", "Technology & Digital Innovation", "Geopolitics",
-    "Global Politics", "Wars & Crisis", "Macroeconomics", "Supply Chains & Trade", "Future of Work",
-    "Innovation & Startups",
+    "Technology & AI", "Innovation & Digital Transformation", "Geopolitics & Global Power",
+    "Economics & Macroeconomics", "Supply Chains & Global Trade", "Future of Work & Society",
   ],
   "System Vitality": [
-    "Business & Strategy", "Leadership & Organizations", "Finance & Markets", "Energy & Oil",
+    "Business Strategy & Corporations", "Leadership & Organizations",
+    "Finance & Markets", "Energy & Resources",
   ],
   "Civic Stewardship": [
-    "Policy & Regulation", "Climate & Environmental Health",
+    "Policy, Regulation & Governance", "Climate & Environmental Systems",
   ],
 };
 
