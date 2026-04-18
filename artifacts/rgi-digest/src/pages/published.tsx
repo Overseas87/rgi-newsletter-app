@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { format, formatDistanceToNow } from "date-fns";
 import { useState } from "react";
-import { ExternalLink, Globe, Tag, Download, FileDown } from "lucide-react";
+import { ExternalLink, Globe, Tag, Download, FileDown, Loader2 } from "lucide-react";
+import { usePdfDownload } from "@/hooks/use-pdf-download";
 import { stripMarkdown } from "@/lib/utils";
 
 function ArticleTypeBadge({ articleType }: { articleType: string }) {
@@ -26,6 +27,15 @@ function ArticleTypeBadge({ articleType }: { articleType: string }) {
 
 // Full article reading dialog
 function ArticleDialog({ article, open, onClose }: { article: DigestArticle | null; open: boolean; onClose: () => void }) {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const slugified = article
+    ? article.headline.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)
+    : "";
+  const { download: downloadPdf, isDownloading } = usePdfDownload({
+    url: article ? `${base}/api/digest/${article.id}/pdf` : "",
+    filename: article ? `rgi-brief-${slugified}.pdf` : "rgi-brief.pdf",
+  });
+
   if (!article) return null;
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -38,15 +48,18 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
               Score: {article.relevancyScore?.toFixed(1)}/10
             </Badge>
             <div className="ml-auto flex items-center gap-3">
-              <a
-                href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/digest/${article.id}/pdf`}
-                download
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs h-7"
+                onClick={downloadPdf}
+                disabled={isDownloading}
               >
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
-                  <Download className="h-3 w-3" />
-                  Download PDF
-                </Button>
-              </a>
+                {isDownloading
+                  ? <Loader2 className="h-3 w-3 animate-spin" />
+                  : <Download className="h-3 w-3" />}
+                {isDownloading ? "Generating…" : "Download PDF"}
+              </Button>
               <div className="flex flex-col items-end gap-0.5">
                 <span className="text-[11px] text-muted-foreground">
                   <span className="font-medium">RGI generated:</span> {format(new Date(article.createdAt), "MMMM d, yyyy")} — {format(new Date(article.createdAt), "HH:mm")}
@@ -185,9 +198,13 @@ export default function Published() {
   const dailyBriefs = (articles as DigestArticle[]).filter((a) => a.articleType === "daily_brief");
   const topicArticles = (articles as DigestArticle[]).filter((a) => a.articleType === "topic_article");
 
-  const combinedPdfUrl = articles.length > 0
-    ? `${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/digest/pdf/combined?ids=${articles.map((a) => a.id).join(",")}`
-    : null;
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const today = new Date().toISOString().slice(0, 10);
+  const combinedIds = (articles as DigestArticle[]).map((a) => a.id).join(",");
+  const { download: downloadAll, isDownloading: isDownloadingAll } = usePdfDownload({
+    url: combinedIds ? `${base}/api/digest/pdf/combined?ids=${combinedIds}` : "",
+    filename: `rgi-intelligence-${today}.pdf`,
+  });
 
   return (
     <div className="space-y-8">
@@ -196,13 +213,18 @@ export default function Published() {
           <h1 className="text-3xl font-serif tracking-tight text-foreground">Published Archive</h1>
           <p className="text-muted-foreground mt-1 text-sm">All approved strategic intelligence briefs and topic articles.</p>
         </div>
-        {combinedPdfUrl && (
-          <a href={combinedPdfUrl} download>
-            <Button variant="outline" className="gap-2 shrink-0">
-              <FileDown className="h-4 w-4" />
-              Download All as PDF
-            </Button>
-          </a>
+        {combinedIds && (
+          <Button
+            variant="outline"
+            className="gap-2 shrink-0"
+            onClick={downloadAll}
+            disabled={isDownloadingAll}
+          >
+            {isDownloadingAll
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <FileDown className="h-4 w-4" />}
+            {isDownloadingAll ? "Generating…" : "Download All as PDF"}
+          </Button>
         )}
       </div>
 

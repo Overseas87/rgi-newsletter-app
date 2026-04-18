@@ -17,7 +17,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { stripMarkdown } from "@/lib/utils";
-import { CheckCircle, XCircle, RefreshCw, Edit3, Save, X, Eye, ExternalLink, Globe, Tag, Clock, Download } from "lucide-react";
+import { CheckCircle, XCircle, RefreshCw, Edit3, Save, X, Eye, ExternalLink, Globe, Tag, Clock, Download, Loader2 } from "lucide-react";
+import { usePdfDownload } from "@/hooks/use-pdf-download";
 import { SelectionRegenerateTextarea } from "@/components/selection-regenerate-textarea";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -50,6 +51,15 @@ function BulletList({ items, dotColor = "text-primary" }: { items: string[]; dot
 }
 
 function FullArticleDialog({ article, open, onClose }: { article: DigestArticle | null; open: boolean; onClose: () => void }) {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const slugified = article
+    ? article.headline.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)
+    : "";
+  const { download: downloadPdf, isDownloading } = usePdfDownload({
+    url: article ? `${base}/api/digest/${article.id}/pdf` : "",
+    filename: article ? `rgi-brief-${slugified}.pdf` : "rgi-brief.pdf",
+  });
+
   if (!article) return null;
   const isStructured = article.whatToWatch && article.whatToWatch.length > 0;
   const keyDevelopments = isStructured ? article.body.split("\n").filter(Boolean) : null;
@@ -64,16 +74,18 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
             <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
               Score: {article.relevancyScore?.toFixed(1)}/10
             </Badge>
-            <a
-              href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/digest/${article.id}/pdf`}
-              download
-              className="ml-auto"
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs h-7 ml-auto"
+              onClick={downloadPdf}
+              disabled={isDownloading}
             >
-              <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
-                <Download className="h-3 w-3" />
-                Download PDF
-              </Button>
-            </a>
+              {isDownloading
+                ? <Loader2 className="h-3 w-3 animate-spin" />
+                : <Download className="h-3 w-3" />}
+              {isDownloading ? "Generating…" : "Download PDF"}
+            </Button>
           </div>
           <DialogTitle className="text-2xl font-serif leading-tight text-left">{article.headline}</DialogTitle>
           <div className="flex items-center gap-4 pt-2 flex-wrap">

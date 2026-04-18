@@ -288,58 +288,42 @@ function sourcesSection(doc: PDFKit.PDFDocument, sources: Article[], articleType
   hRule(doc, doc.y, C.hairline, 0.5);
   doc.moveDown(0.8);
 
-  sectionHeading(doc, `Sources & References`, C.muted);
+  sectionHeading(doc, "Sources & References", C.muted);
 
   sources.forEach((src, i) => {
-    ensureSpace(doc, 48, articleType);
+    ensureSpace(doc, 52, articleType);
 
-    // Number + headline
-    const num = `${i + 1}.`;
-    doc.save();
-    hex(doc, C.ink)
-      .font("Helvetica-Bold")
-      .fontSize(8.5)
-      .text(num, ML, doc.y, { continued: true, width: 14 });
-    hex(doc, C.ink)
-      .font("Helvetica-Bold")
-      .fontSize(8.5)
-      .text(`  ${src.headline ?? "Untitled"}`, { width: CW - 14, lineGap: 2 });
-    doc.restore();
+    // Number + headline — single text call, no `continued` to avoid pdfkit flow bugs
+    const headline = src.headline ?? "Untitled";
+    doc.fillColor(C.ink).font("Helvetica-Bold").fontSize(8.5)
+      .text(`${i + 1}.  ${headline}`, ML, doc.y, { width: CW, lineGap: 2 });
 
-    // Publication / author line
+    // Publication / author
     const pubParts = [src.sourceName, src.author].filter(Boolean);
     if (pubParts.length > 0) {
-      doc.save();
-      hex(doc, C.muted)
-        .font("Helvetica")
-        .fontSize(7.5)
-        .text(`   ${pubParts.join("  ·  ")}`, ML, doc.y, { width: CW, lineGap: 1.5 });
-      doc.restore();
+      doc.fillColor(C.muted).font("Helvetica").fontSize(7.5)
+        .text(`    ${pubParts.join("  ·  ")}`, ML, doc.y, { width: CW, lineGap: 1.5 });
     }
 
-    // URL — truncated display text, full link behind it
+    // URL — clean display, live hyperlink
     if (src.url) {
       let displayUrl = src.url;
       try {
         const u = new URL(src.url);
         displayUrl = u.hostname.replace(/^www\./, "") + u.pathname;
-        if (displayUrl.length > 80) displayUrl = displayUrl.slice(0, 77) + "…";
+        if (displayUrl.length > 80) displayUrl = displayUrl.slice(0, 77) + "\u2026";
       } catch {}
 
-      doc.save();
-      hex(doc, C.linkBlue)
-        .font("Helvetica")
-        .fontSize(7.5)
-        .text(`   ${displayUrl}`, ML, doc.y, {
+      doc.fillColor(C.linkBlue).font("Helvetica").fontSize(7.5)
+        .text(`    ${displayUrl}`, ML, doc.y, {
           width: CW,
           lineGap: 1.5,
           link: src.url,
           underline: true,
         });
-      doc.restore();
     }
 
-    doc.moveDown(0.6);
+    doc.moveDown(0.7);
   });
 }
 
