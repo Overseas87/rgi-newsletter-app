@@ -22,6 +22,7 @@ import {
   ChevronUp,
   BookOpen,
   MessageSquareQuote,
+  BarChart2,
 } from "lucide-react";
 import { GenerateModal } from "@/components/generate-modal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -155,15 +156,30 @@ function TopStoryModal({ article, open, onClose }: { article: TopArticle | null;
             </div>
           )}
 
-          {article.viewpoint && (
-            <div className="rounded-lg bg-muted/30 border border-border p-4 flex items-start gap-3">
-              <MessageSquareQuote className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Source Viewpoint</p>
-                <p className="text-sm italic text-foreground/70 leading-relaxed">{article.viewpoint}</p>
+          {article.viewpoint && (() => {
+            const scoreIdx = article.viewpoint.indexOf("\n\n[Score:");
+            const rgiTake = scoreIdx !== -1 ? article.viewpoint.slice(0, scoreIdx) : article.viewpoint;
+            const scoreBreakdown = scoreIdx !== -1 ? article.viewpoint.slice(scoreIdx + 2).replace(/^\[Score:\s*/, "").replace(/\]$/, "") : null;
+            return (
+              <div className="space-y-2">
+                {rgiTake && (
+                  <div className="rounded-lg bg-muted/30 border border-border p-4 flex items-start gap-3">
+                    <MessageSquareQuote className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">RGI Position</p>
+                      <p className="text-sm italic text-foreground/70 leading-relaxed">{rgiTake}</p>
+                    </div>
+                  </div>
+                )}
+                {scoreBreakdown && (
+                  <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 flex items-start gap-2">
+                    <BarChart2 className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-slate-500 leading-relaxed">{scoreBreakdown}</p>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* RGI Relevance Explanation */}
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">

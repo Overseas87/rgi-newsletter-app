@@ -30,47 +30,54 @@ function detectEmergingSignal(headline: string, score: number): boolean {
   return SIGNAL_KEYWORDS.some((kw) => lower.includes(kw)) && score >= 7;
 }
 
-const RGI_RELEVANCY_PROMPT = `You are a ruthlessly selective editorial AI for the Rick Goings Institute (RGI) at Rollins College. RGI serves senior leaders — CEOs, board members, policymakers, institutional executives. Your job is to filter for strategic signal and evaluate both relevance AND credibility.
+const RGI_RELEVANCY_PROMPT = `You are a structured scoring AI for the Rick Goings Institute (RGI) at Rollins College. RGI serves senior leaders — CEOs, board members, policymakers, institutional executives. You evaluate articles using a fixed five-component formula that always produces a deterministic, transparent score.
 
 RGI's three core disciplines:
 1. Strategic Foresight — AI acceleration, geopolitical volatility, market transitions, weak signals, long-range pattern recognition
 2. System Vitality — organizational culture, leadership effectiveness, human energy, trust, institutional health, future of work
 3. Civic Stewardship — corporate responsibility, civic institutions, community impact, legitimacy of firms in society, democracy, policy reform
 
-THE GOVERNING QUESTION: Does this article materially affect how leaders, organizations, or systems operate? If the honest answer is NO — score it 1-3.
+═══════════════════════════════════════════════════════
+SCORING FORMULA — five components, summed for final score (0–10 total)
+═══════════════════════════════════════════════════════
 
-AUTOMATIC LOW SCORES (1-3) — these content types are ALWAYS low relevance regardless of source:
-- Entertainment, celebrity, sports, lifestyle content
-- Local school board issues, neighborhood disputes, minor municipal news
-- Human-interest stories without systemic implications
-- Consumer product reviews, travel guides, food/culture coverage
-- Crime reports without systemic/policy significance
-- Routine earnings beats with no strategic signal
-- Press releases announcing minor hires or product updates with no market significance
+COMPONENT 1 — STRATEGIC IMPACT (0 to 3)
+How consequential is this development for global systems, markets, geopolitics, or major technological change?
+  3: Historic or market-moving. Affects global systems, geopolitical stability, or reshapes a major industry. Rare.
+  2: Significant. Meaningful shift in a major economy, sector, or policy environment affecting many organizations.
+  1: Moderate. Relevant development with limited scope — affects one sector, one country, or is incremental in nature.
+  0: Minimal. Routine announcement, local story, or development with no strategic implications.
 
-SCORING DISTRIBUTION — you must use the full 1-10 range with realistic spread. The expected distribution across any batch of articles is approximately:
-- Scores 1-4 (noise/low relevance): ~20% of articles — routine developments with no strategic signal
-- Scores 4.5-6.4 (moderate interest): ~45% of articles — solid reporting on relevant topics but incremental in nature
-- Scores 6.5-7.9 (notable): ~25% of articles — meaningful developments with real leadership implications, worth reading
-- Scores 8.0-8.9 (significant): ~8% of articles — major systemic shifts, important geopolitical/economic developments, primary signals
-- Scores 9.0-10.0 (exceptional): ~2% of articles — RARE. Reserve for historic events, major market-moving announcements, extraordinary primary signals from the world's most consequential leaders
-If you find yourself assigning 8+ to more than 1 in 8 articles, recalibrate downward. A score of 7.5 on a solid, relevant article is correct.
+COMPONENT 2 — RGI RELEVANCE (0 to 2)
+How directly does this topic align with RGI's core focus areas: business strategy, finance and markets, AI and technology, geopolitics and global governance, leadership, and systems thinking?
+  2: Primary alignment — the article's core subject IS one of RGI's domains.
+  1: Partial alignment — the article touches RGI domains but its primary focus is adjacent or tangential.
+  0: No alignment — lifestyle, entertainment, consumer, local, or purely technical content with no leadership angle.
 
-HIGH SCORES (8-10) REQUIRE ALL of the following:
-- Systemic or market-level shifts (not one company's quarterly result)
-- Geopolitical developments affecting global business or security
-- Major AI, technology, or regulatory developments with broad leadership implications
-- Leadership or governance crises/breakthroughs that reshape how institutions operate
-- Economic inflection points (rate changes, recession signals, major policy shifts)
-- Primary signals from heads of state, Fortune 500 CEOs, central bank governors, major institutional leaders
+COMPONENT 3 — CROSS-DOMAIN INFLUENCE (0 to 2)
+Does this development create ripple effects across multiple industries, sectors, or domains? Does it sit at the intersection of several systems?
+  2: High cross-domain impact — affects at least three distinct sectors or creates cascading effects (e.g., a geopolitical event that simultaneously affects energy, markets, and supply chains).
+  1: Some cross-domain influence — affects two sectors or has clear second-order effects in an adjacent domain.
+  0: Single-domain — contained within one industry or sector with no meaningful spillover.
 
-MULTI-FACTOR RELEVANCY SCORING — evaluate each factor:
-1. Strategic Importance (40%): How fundamentally does this reshape leadership, markets, or governance?
-2. Impact Scope (25%): Local/individual = low. National = mid. Global/systemic = high.
-3. Source Authority (20%): Anonymous/minor outlet = low. Major publication = mid. Direct primary signal = high.
-4. Innovation/Disruption Level (15%): Incremental = low. Paradigm-shifting = high.
+COMPONENT 4 — SOURCE AUTHORITY (0 to 2)
+How credible and authoritative is the source of this information?
+  2: Primary source — official government statement, direct executive communication, central bank announcement, peer-reviewed research, or Tier-1 outlet (NYT, WSJ, FT, Bloomberg, Reuters, The Economist) with named expert sources.
+  1: Credible secondary — reputable Tier-2 publication, named expert author, corroborated reporting, trade publication with strong editorial standards.
+  0: Weak sourcing — unnamed sources, speculative analysis, single-source claim, known low-credibility outlet, or unverifiable content.
 
-RECENCY RULE: Do NOT adjust relevancyScore based on publication date. Score purely on strategic merit.
+COMPONENT 5 — RECENCY SIGNAL (0 to 1)
+Does the timing of this article matter? Is it reporting on something that is actively unfolding or just concluded?
+  1: Active and time-sensitive — the development is currently unfolding, a decision is imminent, or this is breaking news that leaders must act on now.
+  0: Not time-sensitive — analysis of past events, background reporting, evergreen content, or developments that concluded more than a week ago.
+
+═══════════════════════════════════════════════════════
+SCORING DISCIPLINE
+═══════════════════════════════════════════════════════
+- A perfect 10 requires: Strategic Impact 3 + RGI Relevance 2 + Cross-Domain 2 + Source Authority 2 + Recency 1. Reserve for historic, system-level events only.
+- A score of 7 (e.g., 2+2+1+2+0) is correct for a solid, relevant article from a major outlet.
+- Most articles should score between 4 and 7. Scores of 8+ should represent the top ~10% of content.
+- Do NOT inflate scores. An article that is merely interesting but not strategically consequential must not exceed 5.
 
 AUTHENTICITY SCORING (1-10) — evaluate separately from relevancy:
 Score how credible and trustworthy this source/article is:
@@ -99,7 +106,21 @@ TAGGING RULES:
 4. Economic policy → "Macroeconomics" + "Policy & Regulation"; climate policy → "Climate & Environmental Health" + "Policy & Regulation"
 5. Use the full tag string exactly as listed above — no abbreviations or partial matches
 
-Return ONLY valid JSON with keys: relevancyScore, authenticityScore, viewpoint, topicTags, teaserSummary, disciplineAlignment, isPrimarySignal. No explanation.
+Return ONLY valid JSON with exactly these keys:
+- strategicImpact: integer 0-3
+- rgiRelevance: integer 0-2
+- crossDomainInfluence: integer 0-2
+- sourceAuthority: integer 0-2
+- recency: integer 0-1
+- scoreExplanation: string — one sentence naming the two factors that most drove the score up or down (e.g. "High strategic impact from global market disruption, but single-domain with no cross-sector ripple effects.")
+- authenticityScore: number 1-10
+- viewpoint: string — RGI 2-sentence position ("RGI [agrees/partially agrees/disagrees]: [reason]. [Forward implication]." — or for scores 0-3 total: "RGI notes this item falls outside the core strategic lens — limited implications for senior leadership.")
+- topicTags: string array (1-3 tags from the list below)
+- teaserSummary: string — 1-2 sentence factual summary of the article's core claim
+- disciplineAlignment: string — one of: "Strategic Foresight", "System Vitality", "Civic Stewardship", "Multiple"
+- isPrimarySignal: boolean
+
+No explanation, no markdown, no preamble. ONLY the JSON object.
 
 Article:
 Title: {TITLE}
@@ -128,7 +149,7 @@ async function scoreArticle(
 
   const message = await anthropic.messages.create({
     model: "claude-haiku-4-5",
-    max_tokens: 600,
+    max_tokens: 700,
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -148,18 +169,40 @@ async function scoreArticle(
   try {
     const cleanText = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
     const parsed = JSON.parse(cleanText);
-    result = { ...result, ...parsed };
 
-    // Small tier + authority nudge — kept conservative so the AI's own distribution guidance drives scores
-    const tierBonus = sourceTier === 1 ? 0.2 : sourceTier === 2 ? 0.1 : 0;
-    const authorityBonus = (authorityLevel - 3) * 0.1; // authority 1-5, baseline 3; max ±0.2
-    result.relevancyScore = Math.min(10, Math.max(1, result.relevancyScore + tierBonus + authorityBonus));
-    result.relevancyScore = Math.round(result.relevancyScore * 10) / 10;
+    // Clamp each component to its allowed range
+    const si  = Math.min(3, Math.max(0, Math.round(parsed.strategicImpact        ?? 1)));
+    const rr  = Math.min(2, Math.max(0, Math.round(parsed.rgiRelevance           ?? 1)));
+    const cd  = Math.min(2, Math.max(0, Math.round(parsed.crossDomainInfluence   ?? 0)));
+    const sa  = Math.min(2, Math.max(0, Math.round(parsed.sourceAuthority        ?? 1)));
+    const rec = Math.min(1, Math.max(0, Math.round(parsed.recency                ?? 0)));
 
-    // Apply tier bonus to authenticity (tier 1 sources get +0.5 credibility floor boost)
+    // Final relevancy score is the deterministic sum of all five components
+    const computedScore = si + rr + cd + sa + rec;
+
+    // Build a concise score breakdown appended to the viewpoint for transparency
+    const breakdown = `Impact ${si}/3 · Relevance ${rr}/2 · Cross-domain ${cd}/2 · Authority ${sa}/2 · Recency ${rec}/1`;
+    const explanation = parsed.scoreExplanation ? `${parsed.scoreExplanation}` : "";
+    const rgiViewpoint = parsed.viewpoint ?? "";
+    const fullViewpoint = rgiViewpoint
+      ? `${rgiViewpoint}\n\n[Score: ${breakdown}${explanation ? ` — ${explanation}` : ""}]`
+      : `[Score: ${breakdown}${explanation ? ` — ${explanation}` : ""}]`;
+
+    result = {
+      relevancyScore: computedScore,
+      authenticityScore: parsed.authenticityScore ?? 5,
+      viewpoint: fullViewpoint,
+      topicTags: Array.isArray(parsed.topicTags) ? parsed.topicTags : [],
+      teaserSummary: parsed.teaserSummary ?? headline.slice(0, 200),
+      disciplineAlignment: parsed.disciplineAlignment ?? "Multiple",
+      isPrimarySignal: parsed.isPrimarySignal ?? false,
+    };
+
+    // Authenticity: apply a small tier floor boost (separate from relevancy formula)
     const authTierBonus = sourceTier === 1 ? 0.5 : sourceTier === 2 ? 0.2 : 0;
     result.authenticityScore = Math.min(10, Math.max(1, result.authenticityScore + authTierBonus));
     result.authenticityScore = Math.round(result.authenticityScore * 10) / 10;
+
   } catch (e) {
     logger.warn({ err: e, text }, "Failed to parse AI scoring response");
   }

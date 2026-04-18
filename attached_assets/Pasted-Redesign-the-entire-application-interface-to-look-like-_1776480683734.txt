@@ -1,0 +1,57 @@
+Redesign the entire application interface to look like a professional, production-ready intelligence platform for the Rick Goings Institute. The current design feels like a prototype and must be upgraded to a clean, structured, high-end dashboard suitable for presentation and daily use.
+
+First, implement a strong and consistent layout structure across all pages. The application should use a clear three-part layout:
+
+a top navigation bar
+a left sidebar for navigation
+a main content area
+
+The top navigation bar should include the RGI logo on the left, followed by the text “Rick Goings Institute” and a subtitle “Newsletter Generator.” This should look clean, minimal, and professional. Use a modern font with proper spacing. The top bar should feel premium and fixed at the top.
+
+The left sidebar should include all main navigation items such as Dashboard, Intelligence Feed, Generate, Pending Review, Published, Rejected, Sources, and Settings. The sidebar should be minimal, with clear icons and labels, and should use subtle highlighting for the active section. Avoid clutter and unnecessary elements.
+
+The main dashboard must be visually structured and clean. The “Top Stories Today” section should be the dominant central element, with large, well-designed cards. Each card should include:
+
+headline
+source
+publish time
+short description
+relevancy score (as a clean badge, not a bar)
+
+Cards should have spacing, rounded corners, and subtle shadows. They should feel clickable and premium.
+
+To the right of Top Stories, place a smaller panel called “What Matters Today.” This should contain a maximum of five topics, displayed in a compact and elegant way. Each topic should have a name, a small score, and a minimal description if needed. This section must not visually compete with Top Stories.
+
+Use a clean white or very light background for the entire application. Use dark text (dark blue or near-black) for readability. Use RGI brand colors (such as navy or gold accents) for highlights, buttons, and active states. Avoid heavy or dark backgrounds for reading areas.
+
+Improve typography across the app. Use consistent font sizes:
+
+large bold headlines
+medium section titles
+clean body text with proper line spacing
+
+Ensure all text is easy to read and well spaced. Avoid dense or cramped layouts.
+
+Standardize buttons and interactions. All primary actions such as “Scrape Now,” “Generate Brief,” and “Generate Topic Article” should be clearly visible, styled consistently, and positioned in the top area. Buttons should have a clean design with subtle hover effects.
+
+Ensure consistency across all pages:
+
+Dashboard
+Intelligence Feed
+Article View
+Pending / Published / Rejected
+Sources
+Settings
+
+Each page should follow the same layout structure, spacing, and design language.
+
+For article pages, create a clean reading layout similar to a professional editorial platform. Use a white background, large readable text, clear section separation, and strong hierarchy for:
+
+headline
+summary
+RGI Take
+key takeaways
+
+Ensure that all interactions feel smooth and intuitive. Hover states, clickable areas, and transitions should feel responsive and polished.
+
+The overall goal is to transform the application from a prototype into a high-end, professional intelligence dashboard that is visually clean, easy to navigate, and ready to present to stakeholders. The design should feel modern, minimal, and trustworthy, similar to a premium SaaS product used by executives.
