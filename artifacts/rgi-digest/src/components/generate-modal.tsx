@@ -73,10 +73,13 @@ interface GenerateModalProps {
   initialMode?: Mode;
 }
 
+const ALL_TOPICS = TOPIC_GROUPS.flatMap((g) => g.topics);
+
 export function GenerateModal({ open, onOpenChange, initialMode = "topic_article" }: GenerateModalProps) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [stage, setStage] = useState<Stage>("configure");
   const [selectedTopics, setSelectedTopics] = useState<Set<string>>(new Set());
+  const [excludedTopics, setExcludedTopics] = useState<Set<string>>(new Set());
   const [editorNotes, setEditorNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatedArticle, setGeneratedArticle] = useState<GeneratedArticle | null>(null);
@@ -111,6 +114,21 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
     setSelectedTopics(next);
   };
 
+  const toggleExcludedTopic = (topic: string) => {
+    const next = new Set(excludedTopics);
+    if (next.has(topic)) next.delete(topic);
+    else next.add(topic);
+    setExcludedTopics(next);
+  };
+
+  const excludeGroup = (topics: string[]) => {
+    const next = new Set(excludedTopics);
+    const allExcluded = topics.every((t) => next.has(t));
+    if (allExcluded) topics.forEach((t) => next.delete(t));
+    else topics.forEach((t) => next.add(t));
+    setExcludedTopics(next);
+  };
+
   const handleClose = () => {
     onOpenChange(false);
     setTimeout(() => {
@@ -119,6 +137,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
       setRefineInstruction("");
       setRefineHistory([]);
       setSelectedTopics(new Set());
+      setExcludedTopics(new Set());
       setEditorNotes("");
       setCandidates([]);
       setSelectedArticleIds(new Set());
@@ -174,7 +193,10 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
       const res = await fetch(`${base}/api/digest/daily-brief`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ editorNotes: editorNotes.trim() || null }),
+        body: JSON.stringify({
+          editorNotes: editorNotes.trim() || null,
+          excludedTopics: excludedTopics.size > 0 ? Array.from(excludedTopics) : [],
+        }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Unknown error" }));
@@ -618,26 +640,85 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
         <div className="overflow-y-auto flex-1 px-6 pb-6 pt-3">
           {mode === "daily_brief" ? (
             <div className="space-y-5">
-              <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-                <p className="text-sm font-semibold">What this generates</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  The Daily Intelligence Brief synthesizes all of today's high-scoring articles across every topic into one authoritative executive document.
-                </p>
-                <div className="space-y-1.5 pt-1 border-t border-border mt-3">
-                  {[
-                    "Executive summary — 6 bullets, one per major development",
-                    "Dominant narrative — the central story connecting today's events",
-                    "Thematic deep dives — one analytical paragraph per major theme",
-                    "Cross-theme intelligence — patterns visible only at the macro level",
-                    "RGI perspective and leadership implications",
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <ChevronRight className="h-3 w-3 mt-0.5 text-primary/60 shrink-0" />
-                      {item}
-                    </div>
-                  ))}
+              {/* Topic scope — all included by default, user can exclude */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">Topic Scope</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      All topics are included by default. Uncheck any you want to exclude from this brief.
+                    </p>
+                  </div>
+                  {excludedTopics.size > 0 && (
+                    <button
+                      onClick={() => setExcludedTopics(new Set())}
+                      className="text-xs text-primary hover:underline font-medium shrink-0"
+                    >
+                      Restore all
+                    </button>
+                  )}
                 </div>
+
+                {TOPIC_GROUPS.map((group) => {
+                  const groupExcluded = group.topics.filter((t) => excludedTopics.has(t)).length;
+                  return (
+                    <div key={group.label}>
+                      <button
+                        onClick={() => excludeGroup(group.topics)}
+                        className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2 hover:text-foreground transition-colors w-full text-left"
+                      >
+                        {group.label}
+                        {groupExcluded > 0 && (
+                          <Badge variant="secondary" className="text-[10px] h-4 px-1.5 bg-muted text-muted-foreground">
+                            {groupExcluded} excluded
+                          </Badge>
+                        )}
+                      </button>
+                      <div className="grid grid-cols-2 gap-2">
+                        {group.topics.map((topic) => {
+                          const isExcluded = excludedTopics.has(topic);
+                          return (
+                            <div
+                              key={topic}
+                              className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                                isExcluded
+                                  ? "border-border bg-muted/30 opacity-50"
+                                  : "border-primary/30 bg-primary/5 text-foreground"
+                              }`}
+                              onClick={() => toggleExcludedTopic(topic)}
+                              data-testid={`daily-topic-${topic.replace(/\s+/g, "-").toLowerCase()}`}
+                            >
+                              <Checkbox
+                                checked={!isExcluded}
+                                onCheckedChange={() => toggleExcludedTopic(topic)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="shrink-0"
+                              />
+                              <Label className={`text-sm font-medium cursor-pointer leading-none ${isExcluded ? "line-through opacity-60" : ""}`}>
+                                {topic}
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+
+              {/* Excluded topics summary */}
+              {excludedTopics.size > 0 && (
+                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700 space-y-1">
+                  <p className="font-semibold">
+                    {excludedTopics.size} topic{excludedTopics.size !== 1 ? "s" : ""} excluded — brief will focus on {ALL_TOPICS.length - excludedTopics.size} of {ALL_TOPICS.length} topics
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {Array.from(excludedTopics).map((t) => (
+                      <span key={t} className="line-through opacity-70">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <Label className="text-sm font-semibold mb-1.5 block">
@@ -661,7 +742,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
 
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground leading-relaxed">
                 <FileText className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                Automatically selects today's top articles (score 6.5+) across all sources. You can refine the output after generation.
+                Automatically selects today's top articles (score 6.0+) across all included topics. You can refine the output after generation.
               </div>
 
               <div className="flex items-center justify-between pt-1">

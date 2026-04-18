@@ -172,7 +172,7 @@ async function fetchRssItems(source: {
 
   try {
     const response = await axios.get(source.url, {
-      timeout: 15000,
+      timeout: 5000,
       headers: {
         "User-Agent": "RGI-Intelligence-Bot/2.0",
         "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
@@ -247,7 +247,7 @@ async function fetchRssItems(source: {
       });
     });
 
-    return items.slice(0, 25);
+    return items.slice(0, 5);
   } catch (e) {
     logger.warn({ err: e, url: source.url }, "Failed to fetch RSS feed");
     return [];
@@ -274,6 +274,10 @@ async function fetchNitterItems(source: {
 let scrapeInProgress = false;
 let lastScrapeAt: Date | null = null;
 let lastScrapeArticlesFound = 0;
+
+// Per-source cache: tracks last successful fetch time so recently-scraped sources are skipped
+const sourceLastFetched = new Map<string, number>(); // source URL → timestamp ms
+const SOURCE_CACHE_TTL_MS = 12 * 60 * 1000; // 12 minutes
 
 export function getScrapeStatus() {
   return {
@@ -324,6 +328,13 @@ export async function runScrape(): Promise<{
     logger.info({ count: sources.length }, "Fetching sources in parallel");
     const fetchResults = await Promise.allSettled(
       sources.map(async (source) => {
+        // Skip recently-cached sources
+        const lastFetched = sourceLastFetched.get(source.url);
+        if (lastFetched && Date.now() - lastFetched < SOURCE_CACHE_TTL_MS) {
+          logger.debug({ source: source.name }, "Source recently fetched — using cache, skipping");
+          return { source, items: [] as ScrapedItem[] };
+        }
+
         let items: ScrapedItem[] = [];
 
         if (source.type === "rss" || source.type === "website") {
@@ -344,9 +355,11 @@ export async function runScrape(): Promise<{
         } else if (source.type === "linkedin") {
           // LinkedIn sources — log as needing configuration
           logger.info({ source: source.name }, "LinkedIn source requires API configuration — skipping");
-          return { source, items: [] };
+          return { source, items: [] as ScrapedItem[] };
         }
 
+        // Mark this source as freshly fetched
+        sourceLastFetched.set(source.url, Date.now());
         return { source, items };
       })
     );

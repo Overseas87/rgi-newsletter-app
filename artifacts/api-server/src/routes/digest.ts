@@ -106,11 +106,14 @@ router.post("/digest/daily-brief", async (req, res): Promise<void> => {
     ? req.body.articleIds
     : undefined;
   const editorNotes: string | null = req.body?.editorNotes || null;
+  const excludedTopics: string[] = Array.isArray(req.body?.excludedTopics)
+    ? req.body.excludedTopics.filter((t: unknown) => typeof t === "string")
+    : [];
 
-  req.log.info({ articleIds, auto: !articleIds, hasNotes: !!editorNotes }, "Generating daily intelligence brief");
+  req.log.info({ articleIds, auto: !articleIds, hasNotes: !!editorNotes, excludedTopics }, "Generating daily intelligence brief");
 
   try {
-    const generated = await generateDailyBrief(articleIds, editorNotes);
+    const generated = await generateDailyBrief(articleIds, editorNotes, excludedTopics.length > 0 ? excludedTopics : undefined);
 
     const [digestArticle] = await db
       .insert(digestArticlesTable)

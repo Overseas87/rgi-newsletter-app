@@ -456,7 +456,8 @@ export async function generateNewsletterDigest(
 
 export async function generateDailyBrief(
   articleIds?: number[],
-  editorNotes?: string | null
+  editorNotes?: string | null,
+  excludedTopics?: string[]
 ): Promise<{
   headline: string;
   executiveSummary: string[];
@@ -488,6 +489,12 @@ export async function generateDailyBrief(
 
     // Filter to minimum quality threshold
     articles = articles.filter((a) => a.relevancyScore >= 6.0);
+
+    // Apply excluded topics: skip an article only if ALL its topic tags are excluded
+    if (excludedTopics && excludedTopics.length > 0) {
+      const excluded = new Set(excludedTopics);
+      articles = articles.filter((a) => a.topicTags.some((t) => !excluded.has(t)));
+    }
   }
 
   if (articles.length === 0) {
