@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useListSources,
   useCreateSource,
@@ -14,7 +14,8 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, X, Check, Newspaper, Twitter, Linkedin, BookOpen, Building2, TrendingUp, Globe, Info } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Pencil, Trash2, X, Check, Newspaper, Twitter, Linkedin, BookOpen, Building2, TrendingUp, Globe, Info, Loader2 } from "lucide-react";
 
 // Credibility score computation
 // Tier sets the base range, type applies a modifier.
@@ -120,9 +121,19 @@ function SourceRow({ source }: { source: Source }) {
   const [url, setUrl] = useState(source.url);
   const [tier, setTier] = useState(String(source.tier));
 
+  // Optimistic active state — updated immediately on toggle, reverted on failure
+  const [isActive, setIsActive] = useState(source.isActive);
+  const [togglePending, setTogglePending] = useState(false);
+
+  // Keep local state in sync if the parent re-fetches (e.g. page load, external update)
+  useEffect(() => {
+    if (!togglePending) setIsActive(source.isActive);
+  }, [source.isActive, togglePending]);
+
   const update = useUpdateSource();
   const remove = useDeleteSource();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["listSources"] });
 
   const { score, explanation } = computeCredibility(source);
@@ -130,21 +141,59 @@ function SourceRow({ source }: { source: Source }) {
   const handleSave = () => {
     update.mutate(
       { id: source.id, data: { name, url, tier: Number(tier) as 1 | 2 | 3 } },
-      { onSuccess: () => { setEditing(false); invalidate(); } }
+      {
+        onSuccess: () => { setEditing(false); invalidate(); },
+        onError: () => {
+          toast({ title: "Save failed", description: "Could not save changes. Please try again.", variant: "destructive" });
+        },
+      }
     );
   };
 
-  const handleToggle = (active: boolean) => {
-    update.mutate({ id: source.id, data: { isActive: active } }, { onSuccess: invalidate });
+  const handleToggle = (next: boolean) => {
+    // Immediate optimistic update
+    setIsActive(next);
+    setTogglePending(true);
+
+    update.mutate(
+      { id: source.id, data: { isActive: next } },
+      {
+        onSuccess: () => {
+          setTogglePending(false);
+          invalidate();
+        },
+        onError: () => {
+          // Revert the optimistic update
+          setIsActive(!next);
+          setTogglePending(false);
+          toast({
+            title: "Toggle failed",
+            description: `Could not ${next ? "activate" : "deactivate"} "${source.name}". Please try again.`,
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   const handleDelete = () => {
     if (!confirm(`Remove source "${source.name}"?`)) return;
-    remove.mutate({ id: source.id }, { onSuccess: invalidate });
+    remove.mutate(
+      { id: source.id },
+      {
+        onSuccess: invalidate,
+        onError: () => {
+          toast({ title: "Delete failed", description: "Could not remove source. Please try again.", variant: "destructive" });
+        },
+      }
+    );
   };
 
   return (
-    <Card data-testid={`source-row-${source.id}`} className={!source.isActive ? "opacity-50" : ""}>
+    <Card
+      data-testid={`source-row-${source.id}`}
+      className={`transition-opacity duration-150 ${!isActive ? "opacity-50" : ""}`}
+    >
       <CardContent className="p-4">
         {editing ? (
           <div className="space-y-3">
@@ -187,6 +236,21 @@ function SourceRow({ source }: { source: Source }) {
                 <div className="flex items-center gap-2 flex-wrap mb-0.5">
                   <span className="font-medium text-sm">{source.name}</span>
                   <TypeBadge type={source.type} />
+                  {/* Active / Inactive status badge */}
+                  <span
+                    className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border transition-colors ${
+                      togglePending
+                        ? "text-gray-500 bg-gray-50 border-gray-200"
+                        : isActive
+                        ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                        : "text-slate-500 bg-slate-50 border-slate-200"
+                    }`}
+                  >
+                    {togglePending ? (
+                      <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                    ) : null}
+                    {togglePending ? "Updating…" : isActive ? "Active" : "Inactive"}
+                  </span>
                   {source.authorName && (
                     <span className="text-xs text-muted-foreground">· {source.authorName}</span>
                   )}
@@ -203,9 +267,11 @@ function SourceRow({ source }: { source: Source }) {
                   <Info className="h-3.5 w-3.5" />
                 </button>
                 <Switch
-                  checked={source.isActive}
+                  checked={isActive}
                   onCheckedChange={handleToggle}
+                  disabled={togglePending}
                   data-testid={`toggle-source-${source.id}`}
+                  aria-label={isActive ? "Deactivate source" : "Activate source"}
                 />
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditing(true)} data-testid="btn-edit-source">
                   <Pencil className="h-3.5 w-3.5" />
