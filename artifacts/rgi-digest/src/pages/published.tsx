@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { format, formatDistanceToNow } from "date-fns";
 import { useState } from "react";
-import { ExternalLink, Globe, Tag } from "lucide-react";
+import { ExternalLink, Globe, Tag, Download, FileDown } from "lucide-react";
 import { stripMarkdown } from "@/lib/utils";
 
 function ArticleTypeBadge({ articleType }: { articleType: string }) {
@@ -37,17 +37,28 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
             <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
               Score: {article.relevancyScore?.toFixed(1)}/10
             </Badge>
-            <div className="ml-auto flex flex-col items-end gap-0.5">
-              <span className="text-[11px] text-muted-foreground">
-                <span className="font-medium">RGI generated:</span> {format(new Date(article.createdAt), "MMMM d, yyyy")} — {format(new Date(article.createdAt), "HH:mm")}
-                {" "}
-                <span className="text-muted-foreground/50">({formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })})</span>
-              </span>
-              {article.publishedAt && (
-                <span className="text-[11px] text-muted-foreground/60">
-                  <span className="font-medium">Approved:</span> {format(new Date(article.publishedAt), "MMMM d, yyyy")} — {format(new Date(article.publishedAt), "HH:mm")}
+            <div className="ml-auto flex items-center gap-3">
+              <a
+                href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/digest/${article.id}/pdf`}
+                download
+              >
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
+                  <Download className="h-3 w-3" />
+                  Download PDF
+                </Button>
+              </a>
+              <div className="flex flex-col items-end gap-0.5">
+                <span className="text-[11px] text-muted-foreground">
+                  <span className="font-medium">RGI generated:</span> {format(new Date(article.createdAt), "MMMM d, yyyy")} — {format(new Date(article.createdAt), "HH:mm")}
+                  {" "}
+                  <span className="text-muted-foreground/50">({formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })})</span>
                 </span>
-              )}
+                {article.publishedAt && (
+                  <span className="text-[11px] text-muted-foreground/60">
+                    <span className="font-medium">Approved:</span> {format(new Date(article.publishedAt), "MMMM d, yyyy")} — {format(new Date(article.publishedAt), "HH:mm")}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <DialogTitle className="text-2xl font-serif leading-tight text-left">{article.headline}</DialogTitle>
@@ -174,11 +185,25 @@ export default function Published() {
   const dailyBriefs = (articles as DigestArticle[]).filter((a) => a.articleType === "daily_brief");
   const topicArticles = (articles as DigestArticle[]).filter((a) => a.articleType === "topic_article");
 
+  const combinedPdfUrl = articles.length > 0
+    ? `${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/digest/pdf/combined?ids=${articles.map((a) => a.id).join(",")}`
+    : null;
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-serif tracking-tight text-foreground">Published Archive</h1>
-        <p className="text-muted-foreground mt-1 text-sm">All approved strategic intelligence briefs and topic articles.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-serif tracking-tight text-foreground">Published Archive</h1>
+          <p className="text-muted-foreground mt-1 text-sm">All approved strategic intelligence briefs and topic articles.</p>
+        </div>
+        {combinedPdfUrl && (
+          <a href={combinedPdfUrl} download>
+            <Button variant="outline" className="gap-2 shrink-0">
+              <FileDown className="h-4 w-4" />
+              Download All as PDF
+            </Button>
+          </a>
+        )}
       </div>
 
       {isLoading ? (

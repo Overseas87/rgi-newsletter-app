@@ -15,6 +15,7 @@ import {
   RegenerateDigestArticleBody,
 } from "@workspace/api-zod";
 import { generateDigestArticle, generateDailyBrief, refineArticle, regenerateSelectionText } from "../lib/ai-writer";
+import { generateArticlePdf, type ArticleWithSources } from "../lib/pdf-generator";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -334,6 +335,91 @@ router.get("/digest/:id", async (req, res): Promise<void> => {
 
   const enriched = await enrichDigestArticle(article);
   res.json(enriched);
+});
+
+// ── PDF export helpers ─────────────────────────────────────────────────────────
+async function fetchArticleWithSources(id: number): Promise<ArticleWithSources | null> {
+  const [article] = await db
+    .select()
+    .from(digestArticlesTable)
+    .where(eq(digestArticlesTable.id, id));
+  if (!article) return null;
+
+  const srcIds = Array.isArray(article.sourceArticleIds) ? (article.sourceArticleIds as number[]) : [];
+  const sourceArticles = srcIds.length > 0
+    ? await db.select().from(articlesTable).where(inArray(articlesTable.id, srcIds))
+    : [];
+
+  return { ...article, sourceArticles };
+}
+
+function slugify(headline: string): string {
+  return headline.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+}
+
+// GET /api/digest/:id/pdf — download single article as PDF
+router.get("/digest/:id/pdf", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid article ID" });
+    return;
+  }
+
+  try {
+    const article = await fetchArticleWithSources(id);
+    if (!article) {
+      res.status(404).json({ error: "Article not found" });
+      return;
+    }
+
+    const filename = `rgi-brief-${slugify(article.headline)}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    const doc = generateArticlePdf([article]);
+    doc.pipe(res);
+    doc.end();
+  } catch (err) {
+    logger.error({ err }, "PDF generation failed");
+    res.status(500).json({ error: "Failed to generate PDF" });
+  }
+});
+
+// GET /api/digest/pdf/combined?ids=1,2,3 — download multiple articles as one PDF
+router.get("/digest/pdf/combined", async (req, res): Promise<void> => {
+  const rawIds = typeof req.query.ids === "string" ? req.query.ids : "";
+  const ids = rawIds.split(",").map(Number).filter((n) => !isNaN(n) && n > 0);
+
+  if (ids.length === 0) {
+    res.status(400).json({ error: "Provide at least one article ID via ?ids=1,2,3" });
+    return;
+  }
+  if (ids.length > 20) {
+    res.status(400).json({ error: "Maximum 20 articles per combined PDF" });
+    return;
+  }
+
+  try {
+    const articles = await Promise.all(ids.map(fetchArticleWithSources));
+    const valid = articles.filter(Boolean) as ArticleWithSources[];
+
+    if (valid.length === 0) {
+      res.status(404).json({ error: "No articles found for the provided IDs" });
+      return;
+    }
+
+    const date = new Date().toISOString().slice(0, 10);
+    const filename = `rgi-intelligence-${date}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    const doc = generateArticlePdf(valid, { combined: true });
+    doc.pipe(res);
+    doc.end();
+  } catch (err) {
+    logger.error({ err }, "Combined PDF generation failed");
+    res.status(500).json({ error: "Failed to generate combined PDF" });
+  }
 });
 
 router.patch("/digest/:id", async (req, res): Promise<void> => {

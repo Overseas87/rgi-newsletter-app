@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { stripMarkdown } from "@/lib/utils";
-import { CheckCircle, XCircle, RefreshCw, Edit3, Save, X, Eye, ExternalLink, Globe, Tag, Clock } from "lucide-react";
+import { CheckCircle, XCircle, RefreshCw, Edit3, Save, X, Eye, ExternalLink, Globe, Tag, Clock, Download } from "lucide-react";
 import { SelectionRegenerateTextarea } from "@/components/selection-regenerate-textarea";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -64,6 +64,16 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
             <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
               Score: {article.relevancyScore?.toFixed(1)}/10
             </Badge>
+            <a
+              href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/digest/${article.id}/pdf`}
+              download
+              className="ml-auto"
+            >
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
+                <Download className="h-3 w-3" />
+                Download PDF
+              </Button>
+            </a>
           </div>
           <DialogTitle className="text-2xl font-serif leading-tight text-left">{article.headline}</DialogTitle>
           <div className="flex items-center gap-4 pt-2 flex-wrap">
