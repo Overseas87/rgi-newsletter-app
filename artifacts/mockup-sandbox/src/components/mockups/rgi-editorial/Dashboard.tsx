@@ -90,11 +90,18 @@ export function Dashboard() {
         <div className="h-16 flex items-center px-5 border-b border-white/10">
           <div className="flex items-center gap-3">
             <img
-              src="/__mockup/images/rgi-logo-real.png"
-              alt="Rick Goings Institute"
-              className="h-8 w-auto object-contain"
-              style={{ filter: "brightness(0) invert(1)" }}
+              src="/__mockup/images/rgi-logo-transparent.png"
+              alt="RGI"
+              className="h-8 w-8 object-contain flex-shrink-0"
             />
+            <div className="flex flex-col leading-tight">
+              <span className="text-white font-['Playfair_Display'] font-semibold text-[13px] tracking-wide">
+                Rick Goings Institute
+              </span>
+              <span className="text-white/45 text-[9px] uppercase tracking-widest">
+                Strategic Intelligence
+              </span>
+            </div>
           </div>
         </div>
 
