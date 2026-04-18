@@ -14,7 +14,7 @@ import {
   RegenerateDigestArticleParams,
   RegenerateDigestArticleBody,
 } from "@workspace/api-zod";
-import { generateDigestArticle, generateDailyBrief, refineArticle } from "../lib/ai-writer";
+import { generateDigestArticle, generateDailyBrief, refineArticle, regenerateSelectionText } from "../lib/ai-writer";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -606,6 +606,58 @@ router.post("/digest/:id/send-newsletter", async (req, res): Promise<void> => {
     article: updated,
     ...(sendError ? { warning: sendError } : {}),
   });
+});
+
+router.post("/digest/:id/regenerate-selection", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid article ID" });
+    return;
+  }
+
+  const { selectedText, field, instructions } = req.body;
+
+  if (!selectedText || typeof selectedText !== "string" || !selectedText.trim()) {
+    res.status(400).json({ error: "selectedText is required" });
+    return;
+  }
+  if (!instructions || typeof instructions !== "string" || !instructions.trim()) {
+    res.status(400).json({ error: "instructions are required" });
+    return;
+  }
+  if (!["body", "rgiTake"].includes(field)) {
+    res.status(400).json({ error: "field must be 'body' or 'rgiTake'" });
+    return;
+  }
+
+  try {
+    const [article] = await db
+      .select()
+      .from(digestArticlesTable)
+      .where(eq(digestArticlesTable.id, id))
+      .limit(1);
+
+    if (!article) {
+      res.status(404).json({ error: "Article not found" });
+      return;
+    }
+
+    const result = await regenerateSelectionText({
+      selectedText,
+      field: field as "body" | "rgiTake",
+      instructions,
+      article: {
+        headline: article.headline,
+        body: article.body,
+        rgiTake: article.rgiTake || "",
+      },
+    });
+
+    res.json(result);
+  } catch (err) {
+    logger.error({ err }, "Selection regeneration failed");
+    res.status(500).json({ error: err instanceof Error ? err.message : "Regeneration failed" });
+  }
 });
 
 export default router;

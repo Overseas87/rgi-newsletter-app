@@ -18,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { stripMarkdown } from "@/lib/utils";
 import { CheckCircle, XCircle, RefreshCw, Edit3, Save, X, Eye, ExternalLink, Globe, Tag, Clock } from "lucide-react";
+import { SelectionRegenerateTextarea } from "@/components/selection-regenerate-textarea";
 import { format, formatDistanceToNow } from "date-fns";
 
 function ArticleTypeBadge({ articleType }: { articleType: string }) {
@@ -280,10 +281,14 @@ function DigestCard({ article }: { article: DigestArticle }) {
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Article Body</p>
             {isEditing ? (
-              <Textarea
+              <SelectionRegenerateTextarea
                 value={editedBody}
-                onChange={(e) => setEditedBody(e.target.value)}
-                className="min-h-[240px] text-sm leading-relaxed"
+                onChange={setEditedBody}
+                articleId={article.id}
+                articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
+                field="body"
+                className="text-sm leading-relaxed"
+                minHeight="240px"
                 data-testid="textarea-body"
               />
             ) : (
@@ -298,10 +303,14 @@ function DigestCard({ article }: { article: DigestArticle }) {
           <div className="border-l-2 border-primary/40 pl-4">
             <p className="text-xs font-medium text-primary/80 uppercase tracking-wider mb-2">RGI Take</p>
             {isEditing ? (
-              <Textarea
+              <SelectionRegenerateTextarea
                 value={editedTake}
-                onChange={(e) => setEditedTake(e.target.value)}
-                className="min-h-[80px] text-sm"
+                onChange={setEditedTake}
+                articleId={article.id}
+                articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
+                field="rgiTake"
+                className="text-sm"
+                minHeight="80px"
                 placeholder="The RGI editorial perspective..."
                 data-testid="textarea-rgi-take"
               />

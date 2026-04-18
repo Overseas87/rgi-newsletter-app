@@ -451,6 +451,65 @@ export async function refineArticle(
   }
 }
 
+export async function regenerateSelectionText(options: {
+  selectedText: string;
+  field: "body" | "rgiTake";
+  instructions: string;
+  article: { headline: string; body: string; rgiTake: string };
+}): Promise<{ regeneratedText: string }> {
+  const { selectedText, field, instructions, article } = options;
+  const fieldLabel = field === "rgiTake" ? "RGI Take (editorial position)" : "Article Body";
+
+  const prompt = `You are line-editing a specific passage within a published RGI intelligence article.
+
+ARTICLE HEADLINE: ${article.headline}
+
+FULL ARTICLE BODY (for context — do not rewrite the surrounding content):
+${article.body}
+
+RGI TAKE (for context):
+${article.rgiTake || "None"}
+
+FIELD BEING EDITED: ${fieldLabel}
+
+SELECTED PASSAGE TO REWRITE:
+"${selectedText}"
+
+EDITOR INSTRUCTION: ${instructions}
+
+Rules:
+- Rewrite ONLY the selected passage above, nothing outside of it.
+- Maintain the RGI editorial voice: precise, analytical, no hype, no emotional language.
+- Ensure the rewritten passage integrates seamlessly with the surrounding text.
+- Match the approximate length of the original unless the instruction explicitly requires otherwise.
+- Return ONLY the rewritten passage — no preamble, no explanation, no surrounding context.
+
+Return ONLY a JSON object with no markdown code fences:
+{"regeneratedText": "the rewritten passage only"}`;
+
+  const message = await anthropic.messages.create({
+    model: "claude-haiku-4-5",
+    max_tokens: 2048,
+    system: RGI_SYSTEM_PROMPT,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const block = message.content[0];
+  const text = block.type === "text" ? block.text : "{}";
+  const cleanText = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
+
+  try {
+    const parsed = JSON.parse(cleanText);
+    if (!parsed.regeneratedText || typeof parsed.regeneratedText !== "string") {
+      throw new Error("Missing regeneratedText in response");
+    }
+    return { regeneratedText: parsed.regeneratedText };
+  } catch (e) {
+    logger.error({ err: e, text }, "Failed to parse selection regeneration response");
+    throw new Error("Failed to parse AI response");
+  }
+}
+
 export async function generateNewsletterDigest(
   topics: string[],
   weekOf: string
