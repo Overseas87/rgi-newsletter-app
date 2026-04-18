@@ -643,6 +643,7 @@ export async function generateDailyBrief(
   body: string;
   rgiTake: string;
   keyTakeaways: string[];
+  whatToWatch: string[];
   topicTags: string[];
   discipline: string;
   relevancyScore: number;

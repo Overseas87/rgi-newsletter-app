@@ -91,6 +91,16 @@ pnpm workspace monorepo using TypeScript with:
 - Optional: editor can pass specific article IDs via POST /api/digest/daily-brief body
 - **Backward compat**: Legacy articles (pre-format change) have prose in `body` and empty `whatToWatch`; frontend detects and renders accordingly
 
+### Automated Daily Brief Scheduler (Layer 3b-auto)
+- Runs automatically every day at **6:00 AM EST (11:00 UTC)** via node-cron
+- Full pipeline: scrape → generate daily brief → save as pending_review
+- **Duplicate guard**: checks for existing `daily_brief` with today's UTC date; skips if found (exactly one per day)
+- **Pre-scrape**: if no articles in last 6 hours, triggers a lightweight scrape before generation
+- **7-day fallback**: if today's articles don't meet quality threshold (score ≥ 6.0), falls back to best articles from last 7 days and notes "limited recent content" in editor notes
+- **Retry once**: on failure, waits 60 s then retries; logs error if second attempt also fails
+- **Manual trigger**: `POST /api/brief/trigger` — fires the job immediately in the background (202 response); useful for testing or on-demand generation
+- Persists across restarts and deployments (cron re-registers on every server start)
+
 ### Intelligence Feed (Layer 3c)
 - Shows ALL articles (no status filter) — 334+ signals from all sources
 - Filter by source type: All / News / X (Twitter) / LinkedIn / Institutional / Corporate / Market
