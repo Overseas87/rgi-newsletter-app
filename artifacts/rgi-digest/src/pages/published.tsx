@@ -1,4 +1,4 @@
-import { useListDigestArticles, useDeleteDigestArticle, DigestArticle } from "@workspace/api-client-react";
+import { useListDigestArticles, useUpdateDigestArticle, DigestArticle } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -243,7 +243,7 @@ export default function Published() {
   const { data: articles = [], isLoading } = useListDigestArticles({ status: "approved" });
   const [selectedRead, setSelectedRead] = useState<DigestArticle | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DigestArticle | null>(null);
-  const { mutate: deleteArticle, isPending: isDeleting } = useDeleteDigestArticle({
+  const { mutate: rejectArticle, isPending: isDeleting } = useUpdateDigestArticle({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["listDigestArticles"] });
@@ -480,9 +480,9 @@ export default function Published() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this article?</AlertDialogTitle>
+            <AlertDialogTitle>Move to Rejected?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove <span className="font-medium text-foreground">"{deleteTarget?.headline}"</span> from the archive. This cannot be undone.
+              <span className="font-medium text-foreground">"{deleteTarget?.headline}"</span> will be moved to the Rejected section. You can permanently delete it from there.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -490,10 +490,10 @@ export default function Published() {
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isDeleting}
-              onClick={() => deleteTarget && deleteArticle({ id: deleteTarget.id })}
+              onClick={() => deleteTarget && rejectArticle({ id: deleteTarget.id, data: { status: "rejected" } })}
             >
               {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Delete
+              Move to Rejected
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
