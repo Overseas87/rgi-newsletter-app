@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,7 @@ import { useLocation } from "wouter";
 import {
   Wand2, FileText, Loader2, Globe, Tag, ChevronRight,
   Volume2, VolumeX, RefreshCw, Send, CheckCircle, Trash2,
-  ArrowLeft, ListChecks,
+  ArrowLeft, ListChecks, Zap,
 } from "lucide-react";
 import { VoiceInput } from "@/components/voice-input";
 
@@ -84,10 +84,15 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
   const [loading, setLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState(0);
   const [generatedArticle, setGeneratedArticle] = useState<GeneratedArticle | null>(null);
+  const [fromCache, setFromCache] = useState(false);
   const [refineInstruction, setRefineInstruction] = useState("");
   const [refining, setRefining] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [refineHistory, setRefineHistory] = useState<string[]>([]);
+
+  // Track whether modal is still open when a background fetch completes
+  const modalOpenRef = useRef(open);
+  useEffect(() => { modalOpenRef.current = open; }, [open]);
 
   // Article selection state
   const [candidates, setCandidates] = useState<CandidateArticle[]>([]);
@@ -101,18 +106,20 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   const LOADING_STAGES = [
-    "Analyzing sources...",
-    "Mapping intelligence signals...",
+    "Selecting top articles...",
+    "Analyzing intelligence signals...",
     "Building narrative thread...",
-    "Generating brief...",
+    "Writing brief...",
+    "Almost done...",
   ];
 
   const startProgressAnimation = () => {
     setLoadingStage(0);
-    const t1 = setTimeout(() => setLoadingStage(1), 3000);
-    const t2 = setTimeout(() => setLoadingStage(2), 8000);
+    const t1 = setTimeout(() => setLoadingStage(1), 2000);
+    const t2 = setTimeout(() => setLoadingStage(2), 7000);
     const t3 = setTimeout(() => setLoadingStage(3), 14000);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    const t4 = setTimeout(() => setLoadingStage(4), 22000);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   };
 
   const toggleTopic = (topic: string) => {
@@ -145,19 +152,27 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
     setExcludedTopics(next);
   };
 
+  const resetState = () => {
+    setStage("configure");
+    setGeneratedArticle(null);
+    setFromCache(false);
+    setRefineInstruction("");
+    setRefineHistory([]);
+    setSelectedTopics(new Set());
+    setExcludedTopics(new Set());
+    setEditorNotes("");
+    setCandidates([]);
+    setSelectedArticleIds(new Set());
+    setLoading(false);
+  };
+
   const handleClose = () => {
     onOpenChange(false);
-    setTimeout(() => {
-      setStage("configure");
-      setGeneratedArticle(null);
-      setRefineInstruction("");
-      setRefineHistory([]);
-      setSelectedTopics(new Set());
-      setExcludedTopics(new Set());
-      setEditorNotes("");
-      setCandidates([]);
-      setSelectedArticleIds(new Set());
-    }, 300);
+    // If generation is in flight, let it continue in the background.
+    // The fetch handler checks modalOpenRef and will show a toast on completion.
+    if (!loading) {
+      setTimeout(resetState, 300);
+    }
   };
 
   // Fetch candidate articles matching selected topics
@@ -206,6 +221,10 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
   const handleGenerateDailyBrief = async () => {
     setLoading(true);
     const stopAnimation = startProgressAnimation();
+    toast({
+      title: "Generating daily brief",
+      description: "You can close this window — we'll notify you when it's ready.",
+    });
     try {
       const res = await fetch(`${base}/api/digest/daily-brief`, {
         method: "POST",
@@ -220,21 +239,35 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
         throw new Error(err.error || "Generation failed");
       }
       const data = await res.json();
-      setGeneratedArticle({
-        id: data.id,
-        headline: data.headline,
-        body: data.body,
-        rgiTake: data.rgiTake,
-        keyTakeaways: data.keyTakeaways || [],
-        topicTags: data.topicTags || [],
-        discipline: data.discipline || "Multiple",
-      });
-      setStage("preview");
+      if (modalOpenRef.current) {
+        setFromCache(!!data.fromCache);
+        setGeneratedArticle({
+          id: data.id,
+          headline: data.headline,
+          body: data.body,
+          rgiTake: data.rgiTake,
+          keyTakeaways: data.keyTakeaways || [],
+          topicTags: data.topicTags || [],
+          discipline: data.discipline || "Multiple",
+        });
+        setStage("preview");
+      } else {
+        // Modal was closed — show background completion toast
+        queryClient.invalidateQueries();
+        toast({
+          title: "Daily brief ready",
+          description: `"${(data.headline || "Brief").slice(0, 70)}…" has been added to Pending Review.`,
+        });
+        setTimeout(resetState, 100);
+      }
     } catch (e) {
       toast({ title: "Generation failed", description: String(e instanceof Error ? e.message : e), variant: "destructive" });
+      if (modalOpenRef.current) setLoading(false);
+      else setTimeout(resetState, 100);
+      return;
     } finally {
       stopAnimation();
-      setLoading(false);
+      if (modalOpenRef.current) setLoading(false);
     }
   };
 
@@ -246,6 +279,10 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
     }
     setLoading(true);
     const stopAnimation = startProgressAnimation();
+    toast({
+      title: "Generating brief",
+      description: "You can close this window — we'll notify you when it's ready.",
+    });
     try {
       const res = await fetch(`${base}/api/digest/generate`, {
         method: "POST",
@@ -260,21 +297,35 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
         throw new Error(err.error || "Generation failed");
       }
       const data = await res.json();
-      setGeneratedArticle({
-        id: data.id,
-        headline: data.headline,
-        body: data.body,
-        rgiTake: data.rgiTake,
-        keyTakeaways: data.keyTakeaways || [],
-        topicTags: data.topicTags || [],
-        discipline: data.discipline || "Multiple",
-      });
-      setStage("preview");
+      if (modalOpenRef.current) {
+        setFromCache(!!data.fromCache);
+        setGeneratedArticle({
+          id: data.id,
+          headline: data.headline,
+          body: data.body,
+          rgiTake: data.rgiTake,
+          keyTakeaways: data.keyTakeaways || [],
+          topicTags: data.topicTags || [],
+          discipline: data.discipline || "Multiple",
+        });
+        setStage("preview");
+      } else {
+        // Modal was closed — show background completion toast
+        queryClient.invalidateQueries();
+        toast({
+          title: "Brief ready",
+          description: `"${(data.headline || "Brief").slice(0, 70)}…" has been added to Pending Review.`,
+        });
+        setTimeout(resetState, 100);
+      }
     } catch (e) {
       toast({ title: "Generation failed", description: String(e instanceof Error ? e.message : e), variant: "destructive" });
+      if (modalOpenRef.current) setLoading(false);
+      else setTimeout(resetState, 100);
+      return;
     } finally {
       stopAnimation();
-      setLoading(false);
+      if (modalOpenRef.current) setLoading(false);
     }
   };
 
@@ -440,17 +491,24 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
               <ArrowLeft className="h-3.5 w-3.5" />
               Back to Topics
             </Button>
-            <Button
-              onClick={handleGenerateFromSelection}
-              disabled={loading || selectedArticleIds.size === 0}
-              className="gap-2 min-w-56"
-              data-testid="btn-generate-from-selection"
-            >
-              {loading
-                ? <><Loader2 className="h-4 w-4 animate-spin" />{LOADING_STAGES[loadingStage]}</>
-                : <><Wand2 className="h-4 w-4" />Generate from {selectedArticleIds.size} Article{selectedArticleIds.size !== 1 ? "s" : ""}</>
-              }
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              <Button
+                onClick={handleGenerateFromSelection}
+                disabled={loading || selectedArticleIds.size === 0}
+                className="gap-2 min-w-56"
+                data-testid="btn-generate-from-selection"
+              >
+                {loading
+                  ? <><Loader2 className="h-4 w-4 animate-spin" />{LOADING_STAGES[loadingStage]}</>
+                  : <><Wand2 className="h-4 w-4" />Generate from {selectedArticleIds.size} Article{selectedArticleIds.size !== 1 ? "s" : ""}</>
+                }
+              </Button>
+              {loading && (
+                <p className="text-[10px] text-muted-foreground">
+                  You can close this dialog — brief will notify when ready
+                </p>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -467,6 +525,12 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 <DialogTitle className="text-sm font-semibold text-foreground">Article Generated</DialogTitle>
+                {fromCache && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                    <Zap className="h-2.5 w-2.5" />
+                    Returned from cache
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Button

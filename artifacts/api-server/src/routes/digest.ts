@@ -61,13 +61,73 @@ router.post("/digest/generate", async (req, res): Promise<void> => {
     return;
   }
 
-  req.log.info({ articleIds: body.data.articleIds }, "Generating digest article");
+  const requestedIds = [...body.data.articleIds].sort((a, b) => a - b);
+  req.log.info({ articleIds: requestedIds }, "Generating digest article");
 
   try {
+    // ── Stale DB check ────────────────────────────────────────────────────────
+    // If same article IDs were already generated in the last 3 hours (no editorial override),
+    // return the existing article immediately instead of calling Claude again.
+    if (!body.data.editorNotes?.trim()) {
+      const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const recentArticles = await db
+        .select()
+        .from(digestArticlesTable)
+        .where(
+          and(
+            gte(digestArticlesTable.createdAt, threeHoursAgo),
+            eq(digestArticlesTable.articleType, "topic_article")
+          )
+        )
+        .orderBy(desc(digestArticlesTable.createdAt))
+        .limit(20);
+
+      const idKey = requestedIds.join(",");
+      const staleMatch = recentArticles.find(
+        (a) => [...a.sourceArticleIds].sort((x, y) => x - y).join(",") === idKey
+      );
+
+      if (staleMatch) {
+        req.log.info({ id: staleMatch.id }, "Returning stale-matched digest article from DB");
+        const enriched = await enrichDigestArticle(staleMatch);
+        res.status(200).json({ ...enriched, fromCache: true });
+        return;
+      }
+    }
+
+    // ── Generate (or return in-memory cached) ─────────────────────────────────
     const generated = await generateDigestArticle(
       body.data.articleIds,
       body.data.editorNotes
     );
+
+    // If the result was from the in-memory cache, find the most recent matching DB article
+    // so we can return it without creating a duplicate.
+    if (generated.fromCache) {
+      const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const existing = await db
+        .select()
+        .from(digestArticlesTable)
+        .where(
+          and(
+            gte(digestArticlesTable.createdAt, threeHoursAgo),
+            eq(digestArticlesTable.articleType, "topic_article")
+          )
+        )
+        .orderBy(desc(digestArticlesTable.createdAt))
+        .limit(5);
+
+      const idKey = requestedIds.join(",");
+      const cacheMatch = existing.find(
+        (a) => [...a.sourceArticleIds].sort((x, y) => x - y).join(",") === idKey
+      );
+      if (cacheMatch) {
+        req.log.info({ id: cacheMatch.id }, "Returning in-memory cached article matched to DB");
+        const enriched = await enrichDigestArticle(cacheMatch);
+        res.status(200).json({ ...enriched, fromCache: true });
+        return;
+      }
+    }
 
     const [digestArticle] = await db
       .insert(digestArticlesTable)
@@ -93,7 +153,7 @@ router.post("/digest/generate", async (req, res): Promise<void> => {
       .where(inArray(articlesTable.id, body.data.articleIds));
 
     const enriched = await enrichDigestArticle(digestArticle);
-    res.status(201).json(enriched);
+    res.status(201).json({ ...enriched, fromCache: generated.fromCache });
   } catch (e) {
     req.log.error({ err: e }, "Failed to generate digest article");
     res.status(500).json({ error: "Failed to generate article" });

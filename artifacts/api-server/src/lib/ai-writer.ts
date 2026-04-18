@@ -4,10 +4,25 @@ import { inArray, gte, desc, eq } from "drizzle-orm";
 import { logger } from "./logger";
 
 // ── Generation cache ──────────────────────────────────────────────────────────
-// Key: date-string + sorted excludedTopics → cached result + timestamp
+// Daily brief: Key: date-string + sorted excludedTopics → cached result + timestamp
 interface CachedBrief { result: DailyBriefResult; generatedAt: number }
 const dailyBriefCache = new Map<string, CachedBrief>();
 const BRIEF_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+// Topic article: Key: sorted article IDs + editorNotes → cached result + timestamp
+interface CachedArticle {
+  result: {
+    headline: string; body: string; rgiTake: string;
+    keyTakeaways: string[]; topicTags: string[]; discipline: string; relevancyScore: number;
+  };
+  generatedAt: number;
+}
+const topicArticleCache = new Map<string, CachedArticle>();
+const TOPIC_CACHE_TTL_MS = 60 * 60 * 1000; // 60 minutes
+
+function topicArticleCacheKey(articleIds: number[], editorNotes?: string | null): string {
+  return `${[...articleIds].sort((a, b) => a - b).join(",")}:${editorNotes?.trim() || ""}`;
+}
 
 interface DailyBriefResult {
   headline: string; executiveSummary: string[]; body: string;
@@ -20,13 +35,14 @@ function dailyBriefCacheKey(date: string, excludedTopics: string[]): string {
 }
 
 // Compact source format — headline + viewpoint + short summary (no full content dump)
+// 350-char cap per source keeps prompt tight and generation fast without losing analytical value
 function compactSource(a: Record<string, unknown>, i: number): string {
   const isPrimary = a.isPrimarySignal as boolean | undefined;
   const auth = (a.authenticityScore as number | null | undefined) ?? 5;
   const credLabel = auth >= 8 ? "HIGH" : auth >= 6 ? "MED" : "LOW";
   const signalTag = isPrimary ? " [PRIMARY SIGNAL]" : "";
   const viewpoint = (a.viewpoint as string | null | undefined) || "";
-  const summary = ((a.teaserSummary || a.content || a.headline) as string).slice(0, 600);
+  const summary = ((a.teaserSummary || a.content || a.headline) as string).slice(0, 350);
   return [
     `S${i + 1}${signalTag}: ${a.headline}`,
     `Source: ${a.sourceName}${a.author ? ` · ${a.author}` : ""} | Relevancy: ${a.relevancyScore}/10 | Auth: ${auth}/10 (${credLabel})`,
@@ -283,7 +299,16 @@ export async function generateDigestArticle(
   topicTags: string[];
   discipline: string;
   relevancyScore: number;
+  fromCache: boolean;
 }> {
+  // ── Cache check ────────────────────────────────────────────────────────────
+  const cacheKey = topicArticleCacheKey(articleIds, editorNotes);
+  const cached = topicArticleCache.get(cacheKey);
+  if (cached && Date.now() - cached.generatedAt < TOPIC_CACHE_TTL_MS) {
+    logger.info({ cacheKey }, "Returning cached topic article");
+    return { ...cached.result, fromCache: true };
+  }
+
   let articles = await db
     .select()
     .from(articlesTable)
@@ -320,7 +345,7 @@ export async function generateDigestArticle(
   try {
     const cleanText = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
     const parsed = JSON.parse(cleanText);
-    return {
+    const result = {
       headline: parsed.headline || "Untitled Brief",
       body: parsed.body || "",
       rgiTake: parsed.rgiTake || "",
@@ -329,6 +354,13 @@ export async function generateDigestArticle(
       discipline: parsed.discipline || "Multiple",
       relevancyScore: parsed.relevancyScore || 7,
     };
+
+    // Store in cache (only when no editorNotes — editorial direction makes each unique)
+    if (!editorNotes?.trim()) {
+      topicArticleCache.set(cacheKey, { result, generatedAt: Date.now() });
+    }
+
+    return { ...result, fromCache: false };
   } catch (e) {
     logger.error({ err: e, text }, "Failed to parse AI article response");
     throw new Error("Failed to parse AI-generated article");
@@ -414,7 +446,7 @@ export async function refineArticle(
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 8192,
+    max_tokens: 2500,
     system: RGI_SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
   });
