@@ -174,7 +174,13 @@ Then explicitly determine:
 2. What assumption are others getting wrong?
 3. What mechanism converts this into real-world consequences?
 
-Do not proceed until this is clear.
+Then force the analysis to answer:
+
+- What behavior does this insight FORCE from each actor?
+- Why can those actors NOT behave differently?
+- What outcome becomes structurally likely as a result?
+
+If the answer is not clear, the mechanism is incomplete. Do not proceed until it is.
 
 ---
 
