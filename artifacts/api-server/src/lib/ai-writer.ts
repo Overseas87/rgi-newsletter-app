@@ -29,6 +29,7 @@ interface DailyBriefResult {
   rgiTake: string; keyTakeaways: string[];
   implificationsForLeaders: string[]; whatChangedSinceYesterday: string[];
   whatToWatch: string[]; summaryTakeaways: string[];
+  whatMostAreMissing: string | null; mechanism: string[]; constraintsAndRisks: string[];
   topicTags: string[]; discipline: string; relevancyScore: number; sourceArticleIds: number[];
 }
 
@@ -135,7 +136,11 @@ EDITORIAL STANDARDS
 - FABRICATION RULE: All claims must trace to provided sources. Do not invent data, quotes, or events.
 - STANDARD: Write at the level of Harvard Business Review or Foreign Affairs — analytical, rigorous, and worth reading twice.`;
 
-const SYNTHESIS_PROMPT = `You are writing an RGI Strategic Intelligence Brief. You are not summarizing sources — you are analyzing them. Your job is to produce insight a senior leader cannot find by reading the sources themselves.
+const SYNTHESIS_PROMPT = `You are a senior strategic intelligence analyst writing for the Rick Goings Institute (RGI).
+
+Your audience: senior executives, investors, policymakers — time-constrained and already informed.
+They need: prioritization, interpretation, non-obvious insight, decision-relevant conclusions.
+They do NOT need news summaries.
 
 SOURCE MATERIAL:
 {SOURCES}
@@ -143,61 +148,76 @@ SOURCE MATERIAL:
 EDITORIAL DIRECTION:
 {NOTES}
 
-═══════════════════════════════════════════════════════
-INTERNAL REASONING (complete silently before writing)
-═══════════════════════════════════════════════════════
-Work through the four-step reasoning process from the system prompt. Then apply all three analytical lenses:
+CORE MISSION
+Answer: "What is actually happening beneath the surface, and what are informed people still getting wrong?"
+Every brief must surface a hidden dynamic or flawed assumption, explain the mechanism, and translate it into decision-relevant implications. If the analysis does not change how a smart reader thinks, it is insufficient.
 
-— CAUSE AND EFFECT: What force, decision, or failure produced this development? Why now?
-— SECOND-ORDER CONSEQUENCES: Beyond the obvious first-order effect, what gets reconfigured next? What do markets, organizations, and supply chains have to absorb or adjust to?
-— STRATEGIC RELEVANCE: What specific decision or risk does this create for a senior leader today?
+ANALYTICAL STANDARDS (MANDATORY):
+1. INSIGHT DENSITY — every paragraph must contain at least one non-obvious idea. Eliminate all filler.
+2. SIGNAL PRIORITIZATION — explicitly distinguish signal (decision-relevant) from noise. Do not include information unless it changes interpretation.
+3. MECHANISM-BASED REASONING — never state conclusions without explaining the causal chain, incentives, and constraints. Show HOW and WHY.
+4. SECOND-ORDER THINKING — identify downstream effects across markets, institutions, and political dynamics. At least one required.
+5. STRATEGIC FRAMING — analyze in terms of power, incentives, constraints, trade-offs. Avoid event-level thinking.
+6. ORIGINALITY — at least ONE core insight must not be directly stated in the source material.
 
-═══════════════════════════════════════════════════════
-OUTPUT — STRUCTURED ARTICLE FORMAT
-═══════════════════════════════════════════════════════
-Total article: 300–500 words. Highly scannable. No long prose blocks. Every sentence is analysis, not description.
+INTERNAL QUALITY CONTROL (answer silently before outputting — if any answer is NO, revise):
+1. Does the brief contain a clear non-obvious insight?
+2. Is the core assumption explicitly stated?
+3. Is the mechanism fully explained?
+4. Is at least one second-order effect identified?
+5. Are recommendations actionable and time-relevant?
+6. Would a well-informed executive learn something new?
 
-HEADLINE: 8–12 words maximum. Lead with the key actor and action. Use a dash or colon to add the sharpest consequence. Must be scannable in 3 seconds — no subordinate clauses, no jargon. Think Bloomberg/Reuters, not Foreign Affairs. Format: "[Actor] [Action] [What] — [Consequence]" or "[Event]: [Impact]". Examples: "Trump Threatens Iran — Hormuz Deal at Risk" / "Fed Holds Rates as Trade War Pressure Builds" / "China Dumps Treasuries: Dollar Risk Returns".
+OUTPUT SECTIONS:
 
-EXECUTIVE SUMMARY (2–3 sentences): The core development and its most important implication. Direct, no hedging. Must not repeat the headline — each sentence adds new information.
+HEADLINE: Must reflect the TRUE strategic insight — not the surface event. 8-12 words. Bloomberg/Reuters style.
 
-KEY DEVELOPMENTS (3–5 bullets): The most consequential facts across the sources. One clear analytical sentence each. Connect causally where possible — not a list of disconnected events. Each bullet must be distinct from every other.
+EXECUTIVE ANALYSIS (max 120 words total across 2-3 sentences): What changed structurally. Why it matters now. What others are misinterpreting.
 
-WHY IT MATTERS (2–3 bullets): Second-order implications for senior leaders. Name the mechanism — who faces new pressure, through what channel, on what timeline. No abstractions.
+WHAT ACTUALLY MATTERS (3-5 bullets): Each must identify a high-signal development AND explain WHY it matters — not just what happened. Causal chain required.
 
-RGI TAKE (2–3 sentences): 
-  Sentence 1: "RGI [agrees / partially agrees / disagrees] with [the dominant claim or framing] because [specific reasoning]."
-  Sentence 2: Name precisely what markets, media, or policymakers are missing, overstating, or failing to see.
-  Sentence 3: One concrete forward-looking action or decision leaders must confront as a result.
-  A neutral or hedged Take is a failure. Take a position.
+WHAT MOST ARE MISSING (THE CORE SECTION — one paragraph): Identify exactly ONE of: a flawed market assumption, a misleading narrative, or a hidden structural dynamic. Be explicit and direct. This is the intellectual center of the brief.
 
-WHAT TO WATCH (2–3 bullets): Specific signals, thresholds, or decision points — not vague trends. Time-bound where possible (next 72 hours / next quarter). Each bullet names what to look for and why it matters if it happens.
+MECHANISM (exactly 4 steps — every step must be logically connected):
+  Step 1 — Trigger: What set this in motion?
+  Step 2 — Immediate reaction: First-order response across markets, actors, institutions.
+  Step 3 — System response: How interconnected systems absorb or amplify.
+  Step 4 — Secondary effects: What this forces, constrains, or makes inevitable next.
 
-ABSOLUTE RULES:
-✗ Never restate what sources say — state what it means
-✗ No generic language: "this is significant," "could have major implications," "remains to be seen"
-✗ No neutral hedging in the RGI Take — it must state a position
-✗ No bullet repeats another — every point adds distinct analytical value
-✗ No fabrication — all claims trace to provided sources
-✓ If sources conflict, surface the disagreement explicitly in Key Developments or RGI Take
-✓ Every sentence earns its place — cut anything that does not add new insight
+IMPLICATIONS FOR DECISION-MAKERS (2-3 bullets): Actionable and specific. For each: what to do, when to act, what risk or opportunity this addresses. No generic recommendations.
 
-═══════════════════════════════════════════════════════
-OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble
-═══════════════════════════════════════════════════════
+CONSTRAINTS AND RISKS TO THIS VIEW (2-3 bullets): State 2-3 assumptions underlying this analysis. For each: explain how being wrong would change the conclusion.
+
+RGI TAKE (High-Conviction Conclusion):
+  "RGI [agrees / partially agrees / disagrees] with [the dominant narrative] because [precise reasoning]. [What markets/media/policymakers are missing]. [One concrete forward-looking action or risk leaders must confront now]."
+  Clear and decisive. Avoid unnecessary hedging. A neutral Take is a failure.
+
+WHAT TO WATCH (2-3 bullets): Only indicators that would confirm OR invalidate the thesis. Time-bound and specific.
+
+FORBIDDEN:
+- Summarizing news without interpretation
+- Repeating obvious insights  
+- Listing risks without explaining mechanisms
+- Vague or non-actionable recommendations
+- Generic phrases: "this is significant," "remains to be seen," "could have major impact"
+
+OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble:
 {
-  "headline": "string — 8 to 12 words, actor + action + consequence, scannable in 3 seconds, Bloomberg/Reuters style",
-  "executiveSummary": ["sentence 1", "sentence 2", "sentence 3"],
-  "keyDevelopments": ["development 1", "development 2", "development 3", "development 4"],
-  "whyItMatters": ["second-order implication 1", "second-order implication 2", "second-order implication 3"],
-  "rgiTake": "string — opens with explicit agree/partially agree/disagree position, names what is being missed, ends with one concrete leader action",
-  "whatToWatch": ["specific signal 1 with timeframe", "specific signal 2 with timeframe", "specific signal 3"],
+  "headline": "string — 8-12 words, true strategic insight not surface event, Bloomberg/Reuters style",
+  "executiveSummary": ["what changed structurally", "why now", "what others misinterpret"],
+  "keyDevelopments": ["high-signal bullet with causal WHY 1", "high-signal bullet 2", "high-signal bullet 3", "high-signal bullet 4"],
+  "whatMostAreMissing": "string — one paragraph. The flawed assumption, misleading narrative, or hidden structural dynamic. The intellectual core.",
+  "mechanism": ["Step 1 — Trigger: ...", "Step 2 — Immediate reaction: ...", "Step 3 — System response: ...", "Step 4 — Secondary effects: ..."],
+  "whyItMatters": ["actionable implication with what/when/risk 1", "implication 2", "implication 3"],
+  "constraintsAndRisks": ["assumption 1 and how being wrong changes conclusion", "assumption 2", "assumption 3"],
+  "rgiTake": "string — agrees/partially agrees/disagrees + what is being missed + one concrete leader action",
+  "whatToWatch": ["confirming/invalidating signal with timeframe 1", "signal 2", "signal 3"],
   "topicTags": ["from the 12 allowed tags only"],
   "discipline": "Strategic Foresight | System Vitality | Civic Stewardship | Multiple",
   "relevancyScore": 1-10
 }
 
-Allowed topic tags (choose 1–3 only from this exact list):
+Allowed topic tags (choose 1-3 only):
 "Geopolitics & Global Power", "Economics & Macroeconomics", "Finance & Markets", "Technology & AI",
 "Innovation & Digital Transformation", "Business Strategy & Corporations", "Leadership & Organizations",
 "Energy & Resources", "Supply Chains & Global Trade", "Policy, Regulation & Governance",
@@ -238,7 +258,17 @@ KEY DEVELOPMENTS (3–5 bullets): One analytical sentence per bullet. Name mecha
 
 WHY IT MATTERS (2–3 bullets): Second-order implications. Who faces pressure, through what channel, on what timeline. Name the mechanism. No abstractions.
 
-IMPLICATIONS FOR LEADERS (2–3 bullets): Practical and actionable. What must decision-makers, executives, or board members do, stop doing, or decide differently because of this? Name the specific action or posture.
+WHAT MOST ARE MISSING (THE CORE SECTION — one paragraph): Identify ONE: a flawed market assumption, a misleading narrative, or a hidden structural dynamic. Be explicit and direct. This is the intellectual center of the brief.
+
+MECHANISM (exactly 4 steps — every step logically connected):
+  Step 1 — Trigger: What set this in motion?
+  Step 2 — Immediate reaction: First-order response across markets, actors, institutions.
+  Step 3 — System response: How interconnected systems absorb or amplify.
+  Step 4 — Secondary effects: What this forces, constrains, or makes inevitable next.
+
+IMPLICATIONS FOR DECISION-MAKERS (2–3 bullets): Actionable and specific. For each: what to do, when to act, what risk or opportunity this addresses.
+
+CONSTRAINTS AND RISKS TO THIS VIEW (2–3 bullets): State the key assumptions. For each: explain how being wrong changes the conclusion.
 
 RGI TAKE (2–3 sentences):
   Sentence 1: "RGI [agrees / partially agrees / disagrees] with [the dominant narrative] because [precise reasoning]."
@@ -269,8 +299,11 @@ OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble
   "executiveSummary": ["sentence 1", "sentence 2"],
   "keyDevelopments": ["bullet 1", "bullet 2", "bullet 3", "bullet 4"],
   "whyItMatters": ["implication 1", "implication 2", "implication 3"],
-  "implificationsForLeaders": ["action 1", "action 2", "action 3"],
-  "rgiTake": "string — agree/disagree position + what is missed + one leader action",
+  "whatMostAreMissing": "string — one paragraph: the flawed assumption, misleading narrative, or hidden structural dynamic. The intellectual core.",
+  "mechanism": ["Step 1 — Trigger: ...", "Step 2 — Immediate reaction: ...", "Step 3 — System response: ...", "Step 4 — Secondary effects: ..."],
+  "implificationsForLeaders": ["actionable implication with what/when/risk 1", "implication 2", "implication 3"],
+  "constraintsAndRisks": ["assumption 1 and how being wrong changes conclusion", "assumption 2", "assumption 3"],
+  "rgiTake": "string — agrees/partially agrees/disagrees + what is being missed + one concrete leader action",
   "whatChangedSinceYesterday": ["shift 1", "shift 2", "shift 3"],
   "whatToWatch": ["signal 1 with timeframe", "signal 2", "signal 3"],
   "summaryTakeaways": ["takeaway 1", "takeaway 2", "takeaway 3"],
@@ -353,6 +386,10 @@ export async function generateDigestArticle(
       rgiTake: parsed.rgiTake || "",
       keyTakeaways: Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : []),
       whatToWatch: Array.isArray(parsed.whatToWatch) ? parsed.whatToWatch : [],
+      whatMostAreMissing: typeof parsed.whatMostAreMissing === "string" ? parsed.whatMostAreMissing : null,
+      mechanism: Array.isArray(parsed.mechanism) ? parsed.mechanism : [],
+      constraintsAndRisks: Array.isArray(parsed.constraintsAndRisks) ? parsed.constraintsAndRisks : [],
+      implificationsForLeaders: Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.implificationsForLeaders) ? parsed.implificationsForLeaders : []),
       topicTags: parsed.topicTags || [],
       discipline: parsed.discipline || "Multiple",
       relevancyScore: parsed.relevancyScore || 7,
@@ -737,6 +774,9 @@ export async function generateDailyBrief(
       rgiTake: parsed.rgiTake || "",
       keyTakeaways: Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : []),
       implificationsForLeaders: Array.isArray(parsed.implificationsForLeaders) ? parsed.implificationsForLeaders : [],
+      whatMostAreMissing: typeof parsed.whatMostAreMissing === "string" ? parsed.whatMostAreMissing : null,
+      mechanism: Array.isArray(parsed.mechanism) ? parsed.mechanism : [],
+      constraintsAndRisks: Array.isArray(parsed.constraintsAndRisks) ? parsed.constraintsAndRisks : [],
       whatChangedSinceYesterday: Array.isArray(parsed.whatChangedSinceYesterday) ? parsed.whatChangedSinceYesterday : [],
       whatToWatch: Array.isArray(parsed.whatToWatch) ? parsed.whatToWatch : [],
       summaryTakeaways: Array.isArray(parsed.summaryTakeaways) ? parsed.summaryTakeaways : [],

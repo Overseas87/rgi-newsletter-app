@@ -64,6 +64,10 @@ interface GeneratedArticle {
   executiveSummary: string[];
   rgiTake: string;
   keyTakeaways: string[];
+  implificationsForLeaders: string[];
+  whatMostAreMissing: string | null;
+  mechanism: string[];
+  constraintsAndRisks: string[];
   whatToWatch: string[];
   topicTags: string[];
   discipline: string;
@@ -250,6 +254,10 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
           executiveSummary: data.executiveSummary || [],
           rgiTake: data.rgiTake,
           keyTakeaways: data.keyTakeaways || [],
+          implificationsForLeaders: data.implificationsForLeaders || [],
+          whatMostAreMissing: data.whatMostAreMissing ?? null,
+          mechanism: data.mechanism || [],
+          constraintsAndRisks: data.constraintsAndRisks || [],
           whatToWatch: data.whatToWatch || [],
           topicTags: data.topicTags || [],
           discipline: data.discipline || "Multiple",
@@ -310,6 +318,10 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
           executiveSummary: data.executiveSummary || [],
           rgiTake: data.rgiTake,
           keyTakeaways: data.keyTakeaways || [],
+          implificationsForLeaders: data.implificationsForLeaders || [],
+          whatMostAreMissing: data.whatMostAreMissing ?? null,
+          mechanism: data.mechanism || [],
+          constraintsAndRisks: data.constraintsAndRisks || [],
           whatToWatch: data.whatToWatch || [],
           topicTags: data.topicTags || [],
           discipline: data.discipline || "Multiple",
@@ -357,6 +369,10 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
         executiveSummary: refined.executiveSummary || prev.executiveSummary,
         rgiTake: refined.rgiTake,
         keyTakeaways: refined.keyTakeaways,
+        implificationsForLeaders: refined.implificationsForLeaders || prev.implificationsForLeaders,
+        whatMostAreMissing: refined.whatMostAreMissing ?? prev.whatMostAreMissing,
+        mechanism: refined.mechanism || prev.mechanism,
+        constraintsAndRisks: refined.constraintsAndRisks || prev.constraintsAndRisks,
         whatToWatch: refined.whatToWatch || prev.whatToWatch,
       } : prev);
       setRefineHistory((h) => [...h, instruction]);
@@ -608,6 +624,44 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
                   </p>
                   <ul className="space-y-1">
                     {generatedArticle.keyTakeaways.slice(0, 3).map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
+                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* What Most Are Missing */}
+              {generatedArticle.whatMostAreMissing && (
+                <div className="rounded-lg border-2 border-rose-300/60 bg-rose-50/40 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-rose-700 mb-1">What Most Are Missing</p>
+                  <p className="text-xs leading-relaxed text-foreground/80">{generatedArticle.whatMostAreMissing}</p>
+                </div>
+              )}
+
+              {/* Mechanism */}
+              {generatedArticle.mechanism.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Mechanism</p>
+                  <ul className="space-y-1">
+                    {generatedArticle.mechanism.map((step, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
+                        <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[9px] font-bold text-slate-600">{i + 1}</span>
+                        {step.replace(/^Step \d+\s*[—-]\s*[^:]+:\s*/, "")}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Constraints & Risks */}
+              {generatedArticle.constraintsAndRisks.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">Constraints & Risks</p>
+                  <ul className="space-y-1">
+                    {generatedArticle.constraintsAndRisks.slice(0, 2).map((item, i) => (
                       <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
                         <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
                         {item}

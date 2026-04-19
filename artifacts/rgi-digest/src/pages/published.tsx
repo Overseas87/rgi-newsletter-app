@@ -133,14 +133,52 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
                 </div>
               )}
 
-              {/* Implications for Leaders (new format only) */}
+              {/* What Most Are Missing — CORE SECTION */}
+              {isStructured && (article as any).whatMostAreMissing && (
+                <div className="rounded-xl border-2 border-rose-300/70 bg-rose-50/50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-rose-700 mb-3">What Most Are Missing</p>
+                  <p className="text-sm text-foreground/90 leading-relaxed">{(article as any).whatMostAreMissing}</p>
+                </div>
+              )}
+
+              {/* Mechanism — Step-by-Step Causal Logic */}
+              {isStructured && (article as any).mechanism && (article as any).mechanism.length > 0 && (
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-600 mb-3">Mechanism</p>
+                  <ul className="space-y-2">
+                    {(article as any).mechanism.map((step: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                        <span className="mt-0.5 shrink-0 w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">{i + 1}</span>
+                        {step.replace(/^Step \d+\s*[—-]\s*[^:]+:\s*/, "")}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Implications for Decision-Makers */}
               {isStructured && article.implificationsForLeaders && article.implificationsForLeaders.length > 0 && (
                 <div className="rounded-xl border border-violet-200/60 bg-violet-50/40 p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-violet-700 mb-3">Implications for Leaders</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-violet-700 mb-3">Implications for Decision-Makers</p>
                   <ul className="space-y-2">
                     {article.implificationsForLeaders.map((item, i) => (
                       <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
                         <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Constraints & Risks to This View */}
+              {isStructured && (article as any).constraintsAndRisks && (article as any).constraintsAndRisks.length > 0 && (
+                <div className="rounded-xl border border-amber-200/60 bg-amber-50/30 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-amber-700 mb-3">Constraints & Risks to This View</p>
+                  <ul className="space-y-2">
+                    {(article as any).constraintsAndRisks.map((item: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
                         {item}
                       </li>
                     ))}
