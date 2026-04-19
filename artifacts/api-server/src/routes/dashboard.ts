@@ -100,10 +100,11 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
   const todayCount = totalArticlesResult[0]?.count ?? 0;
   const recentCount = totalRecentResult[0]?.count ?? 0;
 
-  // Tiered content window: prefer today, fall back to 7 days, then all-time.
-  // This guarantees the dashboard always shows the best available historical data
-  // immediately after a restart or redeploy — never requiring a fresh scrape first.
-  const contentWindow = todayCount >= 5 ? today : sevenDaysAgo;
+  // Tiered content window: prefer today, fall back to 7 days.
+  // Requires at least 15 articles today before using the narrow today window —
+  // prevents sparse early-morning scrapes (when only 5–10 articles exist) from
+  // producing a top-stories list with fewer than 5 candidates.
+  const contentWindow = todayCount >= 15 ? today : sevenDaysAgo;
 
   const [topCandidates, allArticlesWindow, sourcesResult, activeSourcesResult] = await Promise.all([
     // Top Stories candidates: fetch a larger pool so the diversity algorithm has
@@ -113,7 +114,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
       .from(articlesTable)
       .where(and(
         gte(articlesTable.scrapedAt, contentWindow),
-        gte(articlesTable.relevancyScore, 7.0)
+        gte(articlesTable.relevancyScore, 6.0)
       ))
       .orderBy(
         desc(articlesTable.relevancyScore),
@@ -244,9 +245,9 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
     }
   }
 
-  // Tag counts and scores for trending topics — only count articles scoring >= 6.5
+  // Tag counts and scores for trending topics — only count articles scoring >= 6.0
   // to ensure topics reflect genuinely relevant intelligence (not noise)
-  const MIN_TOPIC_SCORE = 7.0;
+  const MIN_TOPIC_SCORE = 6.0;
   const tagData: Record<string, { count: number; totalScore: number; hasEmergingSignal: boolean }> = {};
   let socialSignalsCount = 0;
   let emergingSignalsCount = 0;
@@ -279,9 +280,9 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
   //   volumeFactor   (25%) — how many high-quality sources cover this topic? (log scale, cap ~10)
   //   topStoryFactor (15%) — does this topic appear in the very top-ranked stories?
   //
-  // Topics with fewer than 2 high-relevance articles are filtered out (single-source noise).
+  // All topics with at least 1 high-relevance article are included; score ranking handles prioritization.
   const topicIntelligence = Object.entries(tagData)
-    .filter(([, data]) => data.count >= 2)
+    .filter(([, data]) => data.count >= 1)
     .map(([topic, data]) => {
       const avgScore = data.count > 0 ? data.totalScore / data.count : 0;
       const topStoriesAppearances = topStoryTagCounts[topic] ?? 0;
