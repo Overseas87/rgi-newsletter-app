@@ -164,7 +164,11 @@ If more than one idea is present, you must remove the weaker ones.
 
 # II. INSIGHT DEFINITION
 
-Before writing, explicitly determine:
+Before writing, choose the SINGLE most important pressure point.
+If multiple exist, rank them and focus only on the highest-impact one.
+All other insights must support or derive from it.
+
+Then explicitly determine:
 
 1. What is the single most important hidden dynamic?
 2. What assumption are others getting wrong?
