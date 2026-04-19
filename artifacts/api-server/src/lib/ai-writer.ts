@@ -182,6 +182,14 @@ Then force the analysis to answer:
 
 If the answer is not clear, the mechanism is incomplete. Do not proceed until it is.
 
+Then explicitly answer:
+
+- Why is the market or consensus currently wrong?
+- What behavioral or structural reason explains this mispricing?
+- Why does this mispricing persist long enough to matter?
+
+If this is missing, the insight is not actionable.
+
 ---
 
 # III. SIGNAL FILTER (STRICT)
