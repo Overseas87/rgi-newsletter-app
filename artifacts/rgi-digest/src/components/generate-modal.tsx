@@ -597,9 +597,8 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
 
               {/* Key Developments */}
               {(() => {
-                const isStructured = generatedArticle.whatToWatch.length > 0;
-                const keyDevelopments = isStructured ? generatedArticle.body.split("\n").filter(Boolean) : null;
-                return isStructured && keyDevelopments && keyDevelopments.length > 0 ? (
+                const keyDevelopments = generatedArticle.body.split("\n").filter(Boolean);
+                return keyDevelopments.length > 0 ? (
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Key Developments</p>
                     <ul className="space-y-1.5">
@@ -611,9 +610,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
                       ))}
                     </ul>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground leading-relaxed">{generatedArticle.body}</p>
-                );
+                ) : null;
               })()}
 
               {/* Why It Matters */}
