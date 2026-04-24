@@ -192,6 +192,9 @@ function DigestCard({ article }: { article: DigestArticle }) {
   const [editedHeadline, setEditedHeadline] = useState(article.headline);
   const [editedBody, setEditedBody] = useState(article.body);
   const [editedTake, setEditedTake] = useState(article.rgiTake ?? "");
+  const [editedExecutiveSummary, setEditedExecutiveSummary] = useState((article.executiveSummary ?? []).join("\n"));
+  const [editedKeyTakeaways, setEditedKeyTakeaways] = useState((article.keyTakeaways ?? []).join("\n"));
+  const [editedImplifications, setEditedImplifications] = useState((article.implificationsForLeaders ?? []).join("\n"));
 
   // Sync local edit state when the article prop updates (e.g. after a save or regenerate)
   useEffect(() => {
@@ -199,8 +202,11 @@ function DigestCard({ article }: { article: DigestArticle }) {
       setEditedHeadline(article.headline);
       setEditedBody(article.body);
       setEditedTake(article.rgiTake ?? "");
+      setEditedExecutiveSummary((article.executiveSummary ?? []).join("\n"));
+      setEditedKeyTakeaways((article.keyTakeaways ?? []).join("\n"));
+      setEditedImplifications((article.implificationsForLeaders ?? []).join("\n"));
     }
-  }, [article.headline, article.body, article.rgiTake, isEditing]);
+  }, [article.headline, article.body, article.rgiTake, article.executiveSummary, article.keyTakeaways, article.implificationsForLeaders, isEditing]);
 
   const approve = useApproveDigestArticle();
   const reject = useRejectDigestArticle();
@@ -218,7 +224,14 @@ function DigestCard({ article }: { article: DigestArticle }) {
     update.mutate(
       {
         id: article.id,
-        data: { headline: editedHeadline, body: editedBody, rgiTake: editedTake },
+        data: {
+          headline: editedHeadline,
+          body: editedBody,
+          rgiTake: editedTake,
+          executiveSummary: editedExecutiveSummary.split("\n").filter(Boolean),
+          keyTakeaways: editedKeyTakeaways.split("\n").filter(Boolean),
+          implificationsForLeaders: editedImplifications.split("\n").filter(Boolean),
+        },
       },
       {
         onSuccess: () => {
@@ -340,12 +353,25 @@ function DigestCard({ article }: { article: DigestArticle }) {
             return (
               <>
                 {/* Executive Summary */}
-                {article.executiveSummary && article.executiveSummary.length > 0 && (
+                {(isEditing ? editedExecutiveSummary.length > 0 : (article.executiveSummary && article.executiveSummary.length > 0)) && (
                   <div>
                     <p className="text-xs font-medium text-primary uppercase tracking-wider mb-2">Executive Summary</p>
-                    <div className="text-sm text-foreground/80 leading-relaxed space-y-1">
-                      {article.executiveSummary.map((s, i) => <p key={i}>{s}</p>)}
-                    </div>
+                    {isEditing ? (
+                      <SelectionRegenerateTextarea
+                        value={editedExecutiveSummary}
+                        onChange={setEditedExecutiveSummary}
+                        articleId={article.id}
+                        articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
+                        field="executiveSummary"
+                        className="text-sm leading-relaxed"
+                        minHeight="80px"
+                        placeholder="One sentence per line…"
+                      />
+                    ) : (
+                      <div className="text-sm text-foreground/80 leading-relaxed space-y-1">
+                        {article.executiveSummary.map((s, i) => <p key={i}>{s}</p>)}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -384,34 +410,60 @@ function DigestCard({ article }: { article: DigestArticle }) {
                 </div>
 
                 {/* Why It Matters */}
-                {!isEditing && article.keyTakeaways && article.keyTakeaways.length > 0 && (
+                {(isEditing ? true : (article.keyTakeaways && article.keyTakeaways.length > 0)) && (
                   <div>
                     <p className="text-xs font-medium text-amber-700 uppercase tracking-wider mb-2">
                       Why It Matters
                     </p>
-                    <ul className="space-y-1.5">
-                      {article.keyTakeaways.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                          <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
+                    {isEditing ? (
+                      <SelectionRegenerateTextarea
+                        value={editedKeyTakeaways}
+                        onChange={setEditedKeyTakeaways}
+                        articleId={article.id}
+                        articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
+                        field="keyTakeaways"
+                        className="text-sm leading-relaxed"
+                        minHeight="80px"
+                        placeholder="One bullet per line…"
+                      />
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {article.keyTakeaways.map((item, i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                            <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 )}
 
                 {/* Implications for Decision Makers */}
-                {!isEditing && isStructured && article.implificationsForLeaders && article.implificationsForLeaders.length > 0 && (
+                {(isEditing ? isStructured : (isStructured && article.implificationsForLeaders && article.implificationsForLeaders.length > 0)) && (
                   <div>
                     <p className="text-xs font-medium text-violet-700 uppercase tracking-wider mb-2">Implications for Decision Makers</p>
-                    <ul className="space-y-1.5">
-                      {article.implificationsForLeaders.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                          <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
+                    {isEditing ? (
+                      <SelectionRegenerateTextarea
+                        value={editedImplifications}
+                        onChange={setEditedImplifications}
+                        articleId={article.id}
+                        articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
+                        field="implificationsForLeaders"
+                        className="text-sm leading-relaxed"
+                        minHeight="80px"
+                        placeholder="One bullet per line…"
+                      />
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {article.implificationsForLeaders.map((item, i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                            <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 )}
               </>

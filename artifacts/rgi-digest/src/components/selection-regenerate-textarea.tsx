@@ -9,7 +9,7 @@ interface SelectionRegenerateTa {
   onChange: (val: string) => void;
   articleId: number;
   articleContext: { headline: string; body: string; rgiTake: string };
-  field: "body" | "rgiTake";
+  field: "body" | "rgiTake" | "executiveSummary" | "keyTakeaways" | "implificationsForLeaders";
   placeholder?: string;
   className?: string;
   minHeight?: string;

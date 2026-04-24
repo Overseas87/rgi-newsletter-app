@@ -511,6 +511,9 @@ router.patch("/digest/:id", async (req, res): Promise<void> => {
   if (body.data.headline !== undefined) updateData.headline = body.data.headline;
   if (body.data.body !== undefined) updateData.body = body.data.body;
   if (body.data.rgiTake !== undefined) updateData.rgiTake = body.data.rgiTake;
+  if (body.data.executiveSummary !== undefined) updateData.executiveSummary = body.data.executiveSummary;
+  if (body.data.keyTakeaways !== undefined) updateData.keyTakeaways = body.data.keyTakeaways;
+  if (body.data.implificationsForLeaders !== undefined) updateData.implificationsForLeaders = body.data.implificationsForLeaders;
   if (body.data.topicTags !== undefined) updateData.topicTags = body.data.topicTags;
   if (body.data.editorNotes !== undefined) updateData.editorNotes = body.data.editorNotes;
   if (body.data.status !== undefined) updateData.status = body.data.status as any;

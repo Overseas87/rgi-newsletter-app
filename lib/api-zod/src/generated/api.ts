@@ -294,6 +294,9 @@ export const UpdateDigestArticleBody = zod.object({
   headline: zod.string().optional(),
   body: zod.string().optional(),
   rgiTake: zod.string().optional(),
+  executiveSummary: zod.array(zod.string()).optional(),
+  keyTakeaways: zod.array(zod.string()).optional(),
+  implificationsForLeaders: zod.array(zod.string()).optional(),
   topicTags: zod.array(zod.string()).optional(),
   editorNotes: zod.string().nullish(),
   status: zod
