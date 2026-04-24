@@ -292,7 +292,7 @@ If a paragraph does not strengthen the insight, delete it.
 ## Title
 Reflect the core insight directly.
 
-## Executive Analysis (max 80 words)
+## Executive Summary (max 80 words)
 - State the core insight clearly
 - Explain why it matters now
 
@@ -686,7 +686,7 @@ export async function regenerateSelectionText(options: {
   article: { headline: string; body: string; rgiTake: string };
 }): Promise<{ regeneratedText: string }> {
   const { selectedText, field, instructions, article } = options;
-  const fieldLabel = field === "rgiTake" ? "RGI Take (editorial position)" : "Article Body";
+  const fieldLabel = field === "rgiTake" ? "RGI Editorial" : "Key Developments";
 
   const prompt = `You are line-editing a specific passage within a published RGI intelligence article.
 

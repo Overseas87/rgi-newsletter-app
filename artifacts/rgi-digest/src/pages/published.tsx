@@ -116,11 +116,11 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
                 </div>
               )}
 
-              {/* Why It Matters or Key Takeaways */}
+              {/* Why It Matters */}
               {article.keyTakeaways && article.keyTakeaways.length > 0 && (
                 <div className="rounded-xl border border-amber-200/60 bg-amber-50/40 p-4">
                   <p className="text-xs font-bold uppercase tracking-widest text-amber-700 mb-3">
-                    {isStructured ? "Why It Matters" : "Key Takeaways"}
+                    Why It Matters
                   </p>
                   <ul className="space-y-2">
                     {article.keyTakeaways.map((item, i) => (
@@ -136,7 +136,7 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
               {/* Implications for Decision-Makers */}
               {isStructured && article.implificationsForLeaders && article.implificationsForLeaders.length > 0 && (
                 <div className="rounded-xl border border-violet-200/60 bg-violet-50/40 p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-violet-700 mb-3">Implications for Decision-Makers</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-violet-700 mb-3">Implications for Decision Makers</p>
                   <ul className="space-y-2">
                     {article.implificationsForLeaders.map((item, i) => (
                       <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">

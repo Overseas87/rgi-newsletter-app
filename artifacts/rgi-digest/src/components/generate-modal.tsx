@@ -623,7 +623,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
               {generatedArticle.keyTakeaways.length > 0 && (
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">
-                    {generatedArticle.whatToWatch.length > 0 ? "Why It Matters" : "Key Takeaways"}
+                    Why It Matters
                   </p>
                   <ul className="space-y-1">
                     {generatedArticle.keyTakeaways.slice(0, 3).map((item, i) => (

@@ -127,11 +127,11 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
             </div>
           )}
 
-          {/* Why It Matters (new) / Key Takeaways (legacy) */}
+          {/* Why It Matters */}
           {article.keyTakeaways && article.keyTakeaways.length > 0 && (
             <div className="rounded-xl border border-amber-200/60 bg-amber-50/40 p-4">
               <p className="text-xs font-bold uppercase tracking-widest text-amber-700 mb-3">
-                {isStructured ? "Why It Matters" : "Key Takeaways"}
+                Why It Matters
               </p>
               <BulletList items={article.keyTakeaways} dotColor="text-amber-500" />
             </div>
@@ -140,7 +140,7 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
           {/* Implications for Decision-Makers */}
           {isStructured && article.implificationsForLeaders && article.implificationsForLeaders.length > 0 && (
             <div className="rounded-xl border border-violet-200/60 bg-violet-50/40 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-violet-700 mb-3">Implications for Decision-Makers</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-violet-700 mb-3">Implications for Decision Makers</p>
               <BulletList items={article.implificationsForLeaders} dotColor="text-violet-500" />
             </div>
           )}
@@ -346,10 +346,10 @@ function DigestCard({ article }: { article: DigestArticle }) {
                   </div>
                 )}
 
-                {/* Key Developments or prose body */}
+                {/* Key Developments */}
                 <div>
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                    {isStructured ? "Key Developments" : "Article Body"}
+                    Key Developments
                   </p>
                   {isEditing ? (
                     <SelectionRegenerateTextarea
@@ -380,11 +380,11 @@ function DigestCard({ article }: { article: DigestArticle }) {
                   )}
                 </div>
 
-                {/* Why It Matters (new) or Key Takeaways (legacy) */}
+                {/* Why It Matters */}
                 {!isEditing && article.keyTakeaways && article.keyTakeaways.length > 0 && (
                   <div>
                     <p className="text-xs font-medium text-amber-700 uppercase tracking-wider mb-2">
-                      {isStructured ? "Why It Matters" : "Key Takeaways"}
+                      Why It Matters
                     </p>
                     <ul className="space-y-1.5">
                       {article.keyTakeaways.map((item, i) => (
@@ -397,10 +397,10 @@ function DigestCard({ article }: { article: DigestArticle }) {
                   </div>
                 )}
 
-                {/* Implications for Leaders */}
+                {/* Implications for Decision Makers */}
                 {!isEditing && isStructured && article.implificationsForLeaders && article.implificationsForLeaders.length > 0 && (
                   <div>
-                    <p className="text-xs font-medium text-violet-700 uppercase tracking-wider mb-2">Implications for Leaders</p>
+                    <p className="text-xs font-medium text-violet-700 uppercase tracking-wider mb-2">Implications for Decision Makers</p>
                     <ul className="space-y-1.5">
                       {article.implificationsForLeaders.map((item, i) => (
                         <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
@@ -436,48 +436,9 @@ function DigestCard({ article }: { article: DigestArticle }) {
             )}
           </div>
 
-          {/* What Changed Since Yesterday */}
-          {!isEditing && article.whatChangedSinceYesterday && article.whatChangedSinceYesterday.length > 0 && (
+          {/* (forbidden sections suppressed) */}
+          {false && (
             <div>
-              <p className="text-xs font-medium text-orange-700 uppercase tracking-wider mb-2">What Changed Since Yesterday</p>
-              <ul className="space-y-1.5">
-                {article.whatChangedSinceYesterday.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                    <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-orange-400" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* What to Watch */}
-          {!isEditing && article.whatToWatch && article.whatToWatch.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-blue-700 uppercase tracking-wider mb-2">What to Watch Next</p>
-              <ul className="space-y-1.5">
-                {article.whatToWatch.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                    <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-blue-400" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Key Takeaways summary */}
-          {!isEditing && article.summaryTakeaways && article.summaryTakeaways.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-emerald-700 uppercase tracking-wider mb-2">Key Takeaways</p>
-              <ul className="space-y-1.5">
-                {article.summaryTakeaways.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                    <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
             </div>
           )}
 
