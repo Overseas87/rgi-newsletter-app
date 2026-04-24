@@ -20,8 +20,8 @@ interface CachedArticle {
 const topicArticleCache = new Map<string, CachedArticle>();
 const TOPIC_CACHE_TTL_MS = 60 * 60 * 1000; // 60 minutes
 
-function topicArticleCacheKey(articleIds: number[], editorNotes?: string | null, lengthMode?: LengthMode): string {
-  return `${[...articleIds].sort((a, b) => a - b).join(",")}:${editorNotes?.trim() || ""}:${lengthMode || "standard"}`;
+function topicArticleCacheKey(articleIds: number[], editorNotes?: string | null): string {
+  return `${[...articleIds].sort((a, b) => a - b).join(",")}:${editorNotes?.trim() || ""}`;
 }
 
 interface DailyBriefResult {
@@ -63,67 +63,19 @@ function stripEmDashArray(arr: string[]): string[] {
   return arr.map(stripEmDash);
 }
 
-// ── Length mode ────────────────────────────────────────────────────────────────
-export type LengthMode = "brief" | "standard" | "comprehensive";
-
-const LENGTH_CONFIG: Record<LengthMode, {
-  label: string;
-  total: string;
-  execSummary: string;
-  keyDev: string;
-  whyMatters: string;
-  implications: string;
-  editorial: string;
-  wordTarget: number;
-}> = {
-  brief: {
-    label: "BRIEF",
-    total: "250–350 words",
-    wordTarget: 300,
-    execSummary: "1–2 sentences, max 40 words",
-    keyDev: "2–3 bullets, max 50 words total",
-    whyMatters: "1–2 bullets, max 60 words total",
-    implications: "1–2 bullets, max 60 words total",
-    editorial: "2 sentences, max 60 words",
-  },
-  standard: {
-    label: "STANDARD",
-    total: "400–600 words",
-    wordTarget: 500,
-    execSummary: "2 sentences, max 80 words",
-    keyDev: "3–4 bullets, max 100 words total",
-    whyMatters: "2–3 bullets, max 120 words total",
-    implications: "2–3 bullets, max 120 words total",
-    editorial: "2–3 sentences, max 120 words",
-  },
-  comprehensive: {
-    label: "COMPREHENSIVE",
-    total: "750–900 words",
-    wordTarget: 825,
-    execSummary: "2–3 sentences, max 120 words",
-    keyDev: "4–5 bullets, max 150 words total",
-    whyMatters: "3–4 bullets, max 200 words total",
-    implications: "3–4 bullets, max 200 words total",
-    editorial: "3 sentences, max 180 words",
-  },
-};
-
-function buildLengthConstraints(mode: LengthMode): string {
-  const c = LENGTH_CONFIG[mode];
-  return `LENGTH MODE: ${c.label}
-TOTAL WORD LIMIT: ${c.wordTarget}
-The entire newsletter (from Executive Summary to RGI Editorial) must be within ±10% of this limit.
+// ── Fixed length constraint ─────────────────────────────────────────────────
+const FIXED_LENGTH_CONSTRAINTS = `TOTAL WORD LIMIT: 650
+The entire newsletter (from Executive Summary to RGI Editorial) must be within ±10% of this limit (585–715 words).
 If the output is too long: shorten sentences, remove less important details.
 If the output is too short: expand slightly with relevant insights.
 Do not ignore this constraint.
 Section limits (use these to distribute words across sections):
-  - Executive Summary: ${c.execSummary}
-  - Key Developments: ${c.keyDev}
-  - Why It Matters: ${c.whyMatters}
-  - Implications for Decision Makers: ${c.implications}
-  - RGI Editorial: ${c.editorial}
-Before outputting, silently count your total words. If outside the ±10% window of ${c.wordTarget}, revise until you are within range.`;
-}
+  - Executive Summary: 2 sentences, max 80 words
+  - Key Developments: 3–4 bullets, max 120 words total
+  - Why It Matters: 2–3 bullets, max 130 words total
+  - Implications for Decision Makers: 2–3 bullets, max 130 words total
+  - RGI Editorial: 2–3 sentences, max 120 words
+Before outputting, silently count your total words. If outside the 585–715 window, revise until you are within range.`;
 
 const RGI_SYSTEM_PROMPT = `You are the senior intelligence editor for the Rick Goings Institute (RGI) at Rollins College — a center for rigorous executive education preparing leaders to navigate AI acceleration, geopolitical volatility, and continuous disruption.
 
@@ -460,8 +412,7 @@ Return ONLY valid JSON. No markdown code blocks. No explanation before or after.
 
 export async function generateDigestArticle(
   articleIds: number[],
-  editorNotes?: string | null,
-  lengthMode: LengthMode = "standard"
+  editorNotes?: string | null
 ): Promise<{
   headline: string;
   body: string;
@@ -475,7 +426,7 @@ export async function generateDigestArticle(
   fromCache: boolean;
 }> {
   // ── Cache check ────────────────────────────────────────────────────────────
-  const cacheKey = topicArticleCacheKey(articleIds, editorNotes, lengthMode);
+  const cacheKey = topicArticleCacheKey(articleIds, editorNotes);
   const cached = topicArticleCache.get(cacheKey);
   if (cached && Date.now() - cached.generatedAt < TOPIC_CACHE_TTL_MS) {
     logger.info({ cacheKey }, "Returning cached topic article");
@@ -506,7 +457,7 @@ export async function generateDigestArticle(
   const prompt = SYNTHESIS_PROMPT
     .replace("{SOURCES}", sourcesText)
     .replace("{NOTES}", notesText)
-    .replace("{LENGTH_CONSTRAINTS}", buildLengthConstraints(lengthMode));
+    .replace("{LENGTH_CONSTRAINTS}", FIXED_LENGTH_CONSTRAINTS);
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
@@ -823,8 +774,7 @@ export async function generateDailyBrief(
   articleIds?: number[],
   editorNotes?: string | null,
   excludedTopics?: string[],
-  previousBriefContext?: string | null,
-  lengthMode: LengthMode = "standard"
+  previousBriefContext?: string | null
 ): Promise<DailyBriefResult> {
   // ── Cache check (auto-brief only — specific articleIds always regenerate) ────
   const today = new Date();
@@ -895,7 +845,7 @@ export async function generateDailyBrief(
     .replace("{THEME_COUNT}", String(topicSet.size))
     .replace("{SOURCES}", sourcesText)
     .replace("{PREVIOUS_BRIEF_SECTION}", previousBriefSection)
-    .replace("{LENGTH_CONSTRAINTS}", buildLengthConstraints(lengthMode));
+    .replace("{LENGTH_CONSTRAINTS}", FIXED_LENGTH_CONSTRAINTS);
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",

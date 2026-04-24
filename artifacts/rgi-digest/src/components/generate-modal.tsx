@@ -83,7 +83,6 @@ const ALL_TOPICS = TOPIC_GROUPS.flatMap((g) => g.topics);
 
 export function GenerateModal({ open, onOpenChange, initialMode = "topic_article" }: GenerateModalProps) {
   const [mode, setMode] = useState<Mode>(initialMode);
-  const [lengthMode, setLengthMode] = useState<"brief" | "standard" | "comprehensive">("standard");
   const [stage, setStage] = useState<Stage>("configure");
   const [selectedTopics, setSelectedTopics] = useState<Set<string>>(new Set());
   const [excludedTopics, setExcludedTopics] = useState<Set<string>>(new Set());
@@ -239,7 +238,6 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
         body: JSON.stringify({
           editorNotes: editorNotes.trim() || null,
           excludedTopics: excludedTopics.size > 0 ? Array.from(excludedTopics) : [],
-          lengthMode,
         }),
       });
       if (!res.ok) {
@@ -304,7 +302,6 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
         body: JSON.stringify({
           articleIds: ids,
           editorNotes: editorNotes.trim() || null,
-          lengthMode,
         }),
       });
       if (!res.ok) {
@@ -760,30 +757,6 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
           <div className="flex items-center gap-2 mb-4">
             <Wand2 className="h-5 w-5 text-primary" />
             <DialogTitle className="text-xl font-serif">Generate Intelligence</DialogTitle>
-          </div>
-
-          {/* Length Mode Selector */}
-          <div className="flex gap-1.5 mb-3 p-1 rounded-lg bg-muted/50 border border-border/50">
-            {([
-              { value: "brief", label: "Brief", desc: "~300 words" },
-              { value: "standard", label: "Standard", desc: "~500 words" },
-              { value: "comprehensive", label: "Comprehensive", desc: "~800 words" },
-            ] as const).map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setLengthMode(opt.value)}
-                className={`flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all ${
-                  lengthMode === opt.value
-                    ? "bg-background text-foreground shadow-sm border border-border"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {opt.label}
-                <span className={`block text-[10px] font-normal mt-0.5 ${lengthMode === opt.value ? "text-muted-foreground" : "opacity-60"}`}>
-                  {opt.desc}
-                </span>
-              </button>
-            ))}
           </div>
 
           <div className="grid grid-cols-2 gap-2 mb-2">
