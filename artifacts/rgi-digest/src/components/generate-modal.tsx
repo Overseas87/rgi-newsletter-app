@@ -674,7 +674,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
               {/* RGI Take */}
               {generatedArticle.rgiTake && (
                 <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">RGI Take</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">RGI Editorial</p>
                   <p className="text-xs leading-relaxed text-foreground/80">{generatedArticle.rgiTake}</p>
                 </div>
               )}

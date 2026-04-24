@@ -108,7 +108,7 @@ function FullArticleDialog({ article, open, onClose, onRestore, onDelete, restor
 
           {article.rgiTake && (
             <div className="border-l-4 border-primary/60 pl-5 py-2 bg-primary/5 rounded-r-md">
-              <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">RGI Take</p>
+              <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">RGI Editorial</p>
               <p className="text-sm italic text-foreground/80 leading-relaxed">{article.rgiTake}</p>
             </div>
           )}
@@ -326,7 +326,7 @@ function RejectedCard({ article }: { article: DigestArticle }) {
                 />
               </div>
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">RGI Take</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">RGI Editorial</p>
                 <Textarea
                   value={editedTake}
                   onChange={(e) => setEditedTake(e.target.value)}
