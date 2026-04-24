@@ -242,45 +242,23 @@ Reflect the core insight directly.
 - State the core insight clearly
 - Explain why it matters now
 
-## What Actually Matters (3–4 bullets ONLY)
-Each must directly support the core insight.
+## Key Developments (3–4 bullets ONLY — max 80 words total)
+Each bullet must directly support the core insight. One analytical sentence per bullet. Distinct, no overlap.
 
-## What Most Are Missing (PRIMARY SECTION)
-- Clearly state the incorrect assumption
-- Clearly state the corrected interpretation
-This must be the intellectual center of the article.
+## Why It Matters (2–3 bullets — max 120 words total)
+Apply RGI's executive education lens. For each bullet: name the second-order implication AND the leadership judgment it demands. Surface ethical or civic dimensions where real, not decorative. Connect the event to actual decisions people in positions of responsibility must make.
 
-## Mechanism (MANDATORY – FULL CAUSAL CHAIN)
-Explain the causal chain step-by-step:
-1. Trigger
-2. First actor decision (who moves first and why)
-3. Constraint forcing second-order behavior
-4. Market/system response
-5. Downstream consequence
+## Implications for Decision-Makers (2–3 bullets — max 120 words total)
+Write through RGI's executive education framework. Each bullet addresses leadership judgment under uncertainty — not just operational tactics. Name the decision a leader, board member, or institution must now make or reconsider. Name what is still unknown and how a leader should reason despite that. Where relevant, name the civic or ethical obligation this event creates.
 
-Each step must logically force the next. No jumps. No vague transitions.
-
-## Implications for Decision-Makers
-Write 2–3 bullets through RGI's executive education lens. For each implication:
-- Name the specific decision a leader, board member, or institution must now make or reconsider.
-- Address judgment under uncertainty: what is not yet known, and how should a leader act despite that?
-- Where relevant, surface the ethical or civic obligation this development creates — not as abstraction, but as a concrete responsibility.
-- Connect global events (geopolitical, economic, technological) to executive accountability.
-The implications must be about leadership judgment, not just operational tactics.
-
-## Constraints / Where This Breaks
-- List 2 assumptions
-- Explain what would invalidate the insight and how that changes outcomes
-
-## RGI Editorial
-Write 2–3 sentences interpreting this development through the lens of RGI's executive education mission.
+## RGI Editorial (max 120 words)
+Write 2–3 sentences interpreting this development through RGI's executive education mission.
 Open with: "RGI [agrees / partially agrees / disagrees] with [dominant narrative] because [precise reasoning]."
-Then: apply a liberal arts lens — ask what history, ethics, or institutional theory would say about this moment. What is the deeper question this event raises for people in positions of responsibility?
-Close with: one concrete implication for how leaders should reason or act — not a data point, but a judgment.
-A neutral Editorial is a failure. The voice should be thoughtful and grounded, not promotional or breathless.
+Then: apply a liberal arts lens — history, ethics, or institutional theory — to name what this moment reveals about leadership, power, or collective responsibility.
+Close with: one concrete judgment for how leaders should reason or act.
+A neutral Editorial is a failure. Grounded and interpretive, not promotional or breathless.
 
-## What to Watch
-Only include signals that would confirm OR invalidate the insight. Must be specific and time-bound.
+TOTAL LENGTH CONSTRAINT: The full output (Executive Summary through RGI Editorial) must be 400–550 words. Maximum 550 words. Condense ruthlessly if needed.
 
 ---
 
@@ -305,21 +283,20 @@ Do not use em dashes (the — character) anywhere in your output. Replace them w
 - Is there exactly ONE core insight?
 - Does every section reinforce it?
 - Is any low-signal information included? (remove it)
-- Is the mechanism explicit and complete?
+- Does the total word count fall within 400–550 words?
+- Are forbidden sections absent? (What Changed Since Yesterday, What to Watch, Key Takeaways, Mechanism, What Most Are Missing — do NOT output these)
 
 ---
 
-OUTPUT FORMAT: return ONLY valid JSON, no markdown, no preamble:
+OUTPUT FORMAT: return ONLY valid JSON, no markdown, no preamble.
+ONLY these fields — do NOT add any others:
 {
   "headline": "string: 8-12 words, reflects core insight directly, Bloomberg/Reuters style. No em dashes.",
-  "executiveSummary": ["core insight clearly stated", "why it matters now"],
-  "keyDevelopments": ["bullet directly supporting core insight 1", "bullet 2", "bullet 3", "bullet 4"],
-  "whatMostAreMissing": "string: one paragraph. State the incorrect assumption. State the corrected interpretation. The intellectual center.",
-  "mechanism": ["Step 1: Trigger: ...", "Step 2: First actor decision (who moves first and why): ...", "Step 3: Constraint forcing second-order behavior: ...", "Step 4: Market/system response: ...", "Step 5: Downstream consequence: ..."],
-  "whyItMatters": ["decision or judgment a leader must now make or reconsider 1", "ethical or civic dimension this creates 2", "connection between this event and executive accountability 3"],
-  "constraintsAndRisks": ["assumption 1: what would invalidate the insight and how outcome changes", "assumption 2: invalidation condition and outcome change"],
-  "rgiTake": "string: 2-3 sentences. Agrees/partially agrees/disagrees + liberal arts or institutional lens applied to this moment + one concrete judgment or action leaders must take. Thoughtful, grounded, not promotional. No em dashes.",
-  "whatToWatch": ["confirming/invalidating signal with specific timeframe 1", "signal 2", "signal 3"],
+  "executiveSummary": ["core insight clearly stated (max 80 words total across all items)"],
+  "keyDevelopments": ["bullet 1 (3-4 bullets, max 80 words total)", "bullet 2", "bullet 3"],
+  "whyItMatters": ["RGI executive education lens: leadership judgment + second-order implication (max 120 words total)", "bullet 2"],
+  "implificationsForLeaders": ["leadership judgment under uncertainty + civic/ethical dimension (max 120 words total)", "bullet 2"],
+  "rgiTake": "string: 2-3 sentences, max 120 words. Agrees/partially agrees/disagrees + liberal arts or institutional interpretation + one concrete judgment. Grounded, interpretive, not promotional. No em dashes.",
   "topicTags": ["from the 12 allowed tags only"],
   "discipline": "Strategic Foresight | System Vitality | Civic Stewardship | Multiple",
   "relevancyScore": 1-10
@@ -339,7 +316,7 @@ EDITORIAL DIRECTION — MANDATORY PRIORITY:
 {NOTES}
 Apply this throughout — not just in one section.`;
 
-const DAILY_BRIEF_PROMPT = `You are writing the RGI Daily Intelligence Brief — a concise executive brief readable in under 2 minutes, fully readable in under 5. Every word earns its place. No background. No padding.
+const DAILY_BRIEF_PROMPT = `You are writing the RGI Daily Intelligence Brief — a concise executive brief for senior leaders. Target: 400–550 words total (maximum 550). Every word earns its place. No background. No padding.
 
 Today's Sources ({SOURCE_COUNT} articles across {THEME_COUNT} thematic areas):
 {SOURCES}
@@ -355,67 +332,55 @@ INTERNAL REASONING (silent — do not output)
 5. If yesterday's brief is provided: what materially changed? What reversed? What is new today that was absent?
 
 ═══════════════════════════════════════════════════════
-STRICT FORMAT — 9 sections, ~300–500 words total
+STRICT FORMAT — 6 sections, 400–550 words total (maximum 550)
 ═══════════════════════════════════════════════════════
 
 HEADLINE: 8–12 words maximum. Lead with the key actor and action. Use a colon to add the sharpest consequence. Must be scannable in 3 seconds, no subordinate clauses, no jargon. Think Bloomberg/Reuters, not Foreign Affairs. Format: "[Actor] [Action] [What]: [Consequence]" or "[Event]: [Impact]". Examples: "Trump Threatens Iran: Hormuz Deal at Risk" / "Fed Holds Rates as Trade War Pressure Builds" / "China Dumps Treasuries: Dollar Risk Returns". Do not use em dashes.
 
-EXECUTIVE SUMMARY (2–3 sentences): Core development + most important implication. No hedging. Each sentence adds distinct information; never repeat the headline.
+EXECUTIVE SUMMARY (2 sentences, max 80 words): Core development + most important implication. No hedging. Each sentence adds distinct information; never repeat the headline.
 
-KEY DEVELOPMENTS (3–5 bullets): One analytical sentence per bullet. Name mechanism, actor, timeline. Find the causal thread — do not list disconnected facts. Each bullet must be distinct.
+KEY DEVELOPMENTS (3–4 bullets, max 80 words total): One analytical sentence per bullet. Name mechanism, actor, timeline. Find the causal thread — do not list disconnected facts. Each bullet must be distinct.
 
-WHY IT MATTERS (2–3 bullets): Apply RGI's executive education lens. For each bullet: name the second-order implication AND the leadership judgment it demands. Go beyond mechanism — name what a responsible, well-prepared leader should be thinking about as a result. Surface ethical or civic dimensions where they are real, not decorative. Do not abstract — connect the event to actual decisions people in positions of responsibility must make.
+WHY IT MATTERS (2–3 bullets, max 120 words total): Apply RGI's executive education lens. For each bullet: name the second-order implication AND the leadership judgment it demands. Surface ethical or civic dimensions where real, not decorative. Connect the event to actual decisions people in positions of responsibility must make.
 
-WHAT MOST ARE MISSING (THE CORE SECTION — one paragraph): Identify ONE: a flawed market assumption, a misleading narrative, or a hidden structural dynamic. Be explicit and direct. This is the intellectual center of the brief.
+IMPLICATIONS FOR DECISION-MAKERS (2–3 bullets, max 120 words total): Write through RGI's executive education framework. Each bullet addresses leadership judgment under uncertainty — not just operational tactics. Name the decision a leader, board member, or institution must now make or reconsider. Name what is still unknown and how a leader should reason despite that. Where relevant, name the civic or ethical obligation this event creates. AI accelerates information but does not make the judgment — say where the human call lies.
 
-MECHANISM (exactly 4 steps, every step logically connected):
-  Step 1: Trigger: What set this in motion?
-  Step 2: Immediate reaction: First-order response across markets, actors, institutions.
-  Step 3: System response: How interconnected systems absorb or amplify.
-  Step 4: Secondary effects: What this forces, constrains, or makes inevitable next.
-
-IMPLICATIONS FOR DECISION-MAKERS (2–3 bullets): Write through RGI's executive education framework. Each bullet must address leadership judgment under uncertainty — not just operational tactics. For each: name the decision a leader, board member, or institution must now make or reconsider; name what is still unknown and how a leader should reason despite that; where relevant, name the civic or ethical obligation this event creates. AI accelerates the information but does not make the judgment — say where the human call lies.
-
-CONSTRAINTS AND RISKS TO THIS VIEW (2–3 bullets): State the key assumptions. For each: explain how being wrong changes the conclusion.
-
-RGI EDITORIAL (2–3 sentences):
+RGI EDITORIAL (2–3 sentences, max 120 words):
   Sentence 1: "RGI [agrees / partially agrees / disagrees] with [the dominant narrative] because [precise reasoning]."
-  Sentence 2: Apply a liberal arts lens — draw on history, ethics, institutional theory, or systems thinking to name what this moment actually reveals about leadership, power, or collective responsibility. This is interpretation, not summary. What is the deeper question this event raises for people who bear responsibility for organizations and institutions?
-  Sentence 3: One concrete implication for how leaders should reason or act — not a data point, but a judgment about what the situation demands.
-  A neutral or hedged Editorial is a failure. The voice should be grounded, serious, and interpretive — not promotional, not breathless.
+  Sentence 2: Apply a liberal arts lens — history, ethics, institutional theory, or systems thinking — to name what this moment reveals about leadership, power, or collective responsibility. Interpretation, not summary.
+  Sentence 3: One concrete judgment for how leaders should reason or act.
+  A neutral or hedged Editorial is a failure. Grounded, serious, and interpretive — not promotional, not breathless.
 
-WHAT CHANGED SINCE YESTERDAY (2–3 bullets): Compare with the previous brief. Name meaningful shifts, reversals, or new developments. If no previous brief is available, write: ["No prior brief available for comparison — this is a baseline reading."]
-
-WHAT TO WATCH NEXT (2–3 bullets): Time-bound signals, decision points, or thresholds. Each bullet names what to look for and why it matters if it occurs. (next 24–72 hours / next quarter)
-
-KEY TAKEAWAYS (exactly 3 bullets): The three most important insights from the entire brief. Simple, direct, non-repetitive. A reader who reads only these three points should understand the essence.
+FORBIDDEN — do NOT generate any of the following:
+✗ What Most Are Missing
+✗ Mechanism
+✗ Constraints and Risks
+✗ What Changed Since Yesterday
+✗ What to Watch Next
+✗ Key Takeaways
+✗ Any content after RGI Editorial (except Sources)
 
 ABSOLUTE RULES:
 ✗ No em dashes (the — character) anywhere in output. Use commas, colons, semicolons, or parentheses instead.
-✗ No long paragraphs — bullets everywhere possible
 ✗ No repetition across sections
-✗ No vague language: name the mechanism, actor, timeline
+✗ No vague language: name the actor, decision, timeline
 ✗ No generic phrases: "significant implications," "remains to be seen," "could have major impact"
 ✗ No fabrication: all claims trace to provided sources
 ✓ Surface source conflicts explicitly
 ✓ Every sentence adds new information or analysis
+✓ Total word count: 400–550 words. Condense ruthlessly if over 550.
 
 ═══════════════════════════════════════════════════════
 OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble
 ═══════════════════════════════════════════════════════
+ONLY these fields — do NOT add any others:
 {
   "headline": "string: 8 to 12 words, actor + action + consequence, scannable in 3 seconds, Bloomberg/Reuters style. No em dashes.",
-  "executiveSummary": ["sentence 1", "sentence 2"],
-  "keyDevelopments": ["bullet 1", "bullet 2", "bullet 3", "bullet 4"],
-  "whyItMatters": ["implication 1", "implication 2", "implication 3"],
-  "whatMostAreMissing": "string: one paragraph: the flawed assumption, misleading narrative, or hidden structural dynamic. The intellectual core.",
-  "mechanism": ["Step 1: Trigger: ...", "Step 2: Immediate reaction: ...", "Step 3: System response: ...", "Step 4: Secondary effects: ..."],
-  "implificationsForLeaders": ["leadership judgment + what is unknown + how to act despite it 1", "civic or ethical obligation this creates 2", "where the human call lies despite AI acceleration 3"],
-  "constraintsAndRisks": ["assumption 1 and how being wrong changes conclusion", "assumption 2", "assumption 3"],
-  "rgiTake": "string: 2-3 sentences. Agrees/partially agrees/disagrees + liberal arts or institutional interpretation of what this moment reveals + one concrete judgment leaders must make. Grounded, interpretive, not promotional. No em dashes.",
-  "whatChangedSinceYesterday": ["shift 1", "shift 2", "shift 3"],
-  "whatToWatch": ["signal 1 with timeframe", "signal 2", "signal 3"],
-  "summaryTakeaways": ["takeaway 1", "takeaway 2", "takeaway 3"],
+  "executiveSummary": ["sentence 1 (max 80 words total)", "sentence 2"],
+  "keyDevelopments": ["bullet 1 (3-4 bullets, max 80 words total)", "bullet 2", "bullet 3"],
+  "whyItMatters": ["RGI lens: leadership judgment + second-order implication (max 120 words total)", "bullet 2"],
+  "implificationsForLeaders": ["leadership judgment under uncertainty + civic/ethical dimension (max 120 words total)", "bullet 2"],
+  "rgiTake": "string: 2-3 sentences, max 120 words. Agrees/partially agrees/disagrees + liberal arts interpretation of what this moment reveals + one concrete judgment. Grounded, interpretive, not promotional. No em dashes.",
   "topicTags": ["from the 12 allowed tags only"],
   "discipline": "Strategic Foresight | System Vitality | Civic Stewardship | Multiple",
   "relevancyScore": 1-10
@@ -498,7 +463,7 @@ export async function generateDigestArticle(
       whatMostAreMissing: typeof parsed.whatMostAreMissing === "string" ? stripEmDash(parsed.whatMostAreMissing) : null,
       mechanism: stripEmDashArray(Array.isArray(parsed.mechanism) ? parsed.mechanism : []),
       constraintsAndRisks: stripEmDashArray(Array.isArray(parsed.constraintsAndRisks) ? parsed.constraintsAndRisks : []),
-      implificationsForLeaders: stripEmDashArray(Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.implificationsForLeaders) ? parsed.implificationsForLeaders : [])),
+      implificationsForLeaders: stripEmDashArray(Array.isArray(parsed.implificationsForLeaders) ? parsed.implificationsForLeaders : (Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : [])),
       topicTags: parsed.topicTags || [],
       discipline: parsed.discipline || "Multiple",
       relevancyScore: parsed.relevancyScore || 7,
