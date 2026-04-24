@@ -61,7 +61,7 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
   });
 
   if (!article) return null;
-  const isStructured = article.whatToWatch && article.whatToWatch.length > 0;
+  const isStructured = !!(article.executiveSummary && article.executiveSummary.length > 0);
   const keyDevelopments = isStructured ? article.body.split("\n").filter(Boolean) : null;
 
   return (
@@ -335,7 +335,7 @@ function DigestCard({ article }: { article: DigestArticle }) {
 
         <CardContent className="space-y-4">
           {(() => {
-            const isStructured = article.whatToWatch && article.whatToWatch.length > 0;
+            const isStructured = !!(article.executiveSummary && article.executiveSummary.length > 0);
             const keyDevelopments = isStructured ? article.body.split("\n").filter(Boolean) : null;
             return (
               <>
