@@ -64,18 +64,18 @@ function stripEmDashArray(arr: string[]): string[] {
 }
 
 // ── Fixed length constraint ─────────────────────────────────────────────────
-const FIXED_LENGTH_CONSTRAINTS = `TOTAL WORD LIMIT: 650
-The entire newsletter (from Executive Summary to RGI Editorial) must be within ±10% of this limit (585–715 words).
+const FIXED_LENGTH_CONSTRAINTS = `TOTAL WORD LIMIT: 800
+The entire newsletter (from Executive Summary to RGI Editorial) must be between 750 and 850 words.
 If the output is too long: shorten sentences, remove less important details.
 If the output is too short: expand slightly with relevant insights.
 Do not ignore this constraint.
 Section limits (use these to distribute words across sections):
-  - Executive Summary: 2 sentences, max 80 words
-  - Key Developments: 3–4 bullets, max 120 words total
-  - Why It Matters: 2–3 bullets, max 130 words total
-  - Implications for Decision Makers: 2–3 bullets, max 130 words total
-  - RGI Editorial: 2–3 sentences, max 120 words
-Before outputting, silently count your total words. If outside the 585–715 window, revise until you are within range.`;
+  - Executive Summary: 2–3 sentences, max 100 words
+  - Key Developments: 3–4 bullets, max 150 words total
+  - Why It Matters: 2–3 bullets, max 160 words total
+  - Implications for Decision Makers: 2–3 bullets, max 160 words total
+  - RGI Editorial: 2–3 sentences, max 140 words
+Before outputting, silently count your total words. If outside the 750–850 window, revise until you are within range.`;
 
 const RGI_SYSTEM_PROMPT = `You are the senior intelligence editor for the Rick Goings Institute (RGI) at Rollins College — a center for rigorous executive education preparing leaders to navigate AI acceleration, geopolitical volatility, and continuous disruption.
 
