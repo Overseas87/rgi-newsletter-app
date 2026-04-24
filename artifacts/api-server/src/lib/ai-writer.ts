@@ -54,6 +54,15 @@ function compactSource(a: Record<string, unknown>, i: number): string {
   ].filter(Boolean).join("\n");
 }
 
+// Post-processing sanitizer: strip em dashes from all AI-generated text.
+// " — " becomes ": " (clause separator); bare "—" becomes ", ".
+function stripEmDash(text: string): string {
+  return text.replace(/ — /g, ": ").replace(/—/g, ", ");
+}
+function stripEmDashArray(arr: string[]): string[] {
+  return arr.map(stripEmDash);
+}
+
 const RGI_SYSTEM_PROMPT = `You are the senior intelligence editor for the Rick Goings Institute (RGI) at Rollins College — an institution dedicated to equipping leaders to build organizations that last, contribute, and stay vital in demanding times.
 
 You are an analyst, not a summarizer. You transform raw information into clear, actionable intelligence. You never repeat what sources say — you interpret what it means. Every output must add insight that a reader cannot find by reading the sources themselves.
@@ -265,6 +274,7 @@ Only include signals that would confirm OR invalidate the insight. Must be speci
 # VI. STYLE
 
 Direct and controlled. No performative language. No repetition. No unnecessary adjectives.
+Do not use em dashes (the — character) anywhere in your output. Replace them with commas, colons, semicolons, or parentheses as appropriate.
 
 ---
 
@@ -277,16 +287,16 @@ Direct and controlled. No performative language. No repetition. No unnecessary a
 
 ---
 
-OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble:
+OUTPUT FORMAT: return ONLY valid JSON, no markdown, no preamble:
 {
-  "headline": "string — 8-12 words, reflects core insight directly, Bloomberg/Reuters style",
+  "headline": "string: 8-12 words, reflects core insight directly, Bloomberg/Reuters style. No em dashes.",
   "executiveSummary": ["core insight clearly stated", "why it matters now"],
   "keyDevelopments": ["bullet directly supporting core insight 1", "bullet 2", "bullet 3", "bullet 4"],
-  "whatMostAreMissing": "string — one paragraph. State the incorrect assumption. State the corrected interpretation. The intellectual center.",
-  "mechanism": ["Step 1 — Trigger: ...", "Step 2 — First actor decision (who moves first and why): ...", "Step 3 — Constraint forcing second-order behavior: ...", "Step 4 — Market/system response: ...", "Step 5 — Downstream consequence: ..."],
+  "whatMostAreMissing": "string: one paragraph. State the incorrect assumption. State the corrected interpretation. The intellectual center.",
+  "mechanism": ["Step 1: Trigger: ...", "Step 2: First actor decision (who moves first and why): ...", "Step 3: Constraint forcing second-order behavior: ...", "Step 4: Market/system response: ...", "Step 5: Downstream consequence: ..."],
   "whyItMatters": ["what to do + when + why acting later is worse 1", "implication 2", "implication 3"],
-  "constraintsAndRisks": ["assumption 1 — what would invalidate the insight + how outcome changes", "assumption 2 — invalidation condition + outcome change"],
-  "rgiTake": "string — agrees/partially agrees/disagrees + precise reasoning + one concrete forward-looking implication",
+  "constraintsAndRisks": ["assumption 1: what would invalidate the insight and how outcome changes", "assumption 2: invalidation condition and outcome change"],
+  "rgiTake": "string: agrees/partially agrees/disagrees + precise reasoning + one concrete forward-looking implication. No em dashes.",
   "whatToWatch": ["confirming/invalidating signal with specific timeframe 1", "signal 2", "signal 3"],
   "topicTags": ["from the 12 allowed tags only"],
   "discipline": "Strategic Foresight | System Vitality | Civic Stewardship | Multiple",
@@ -326,9 +336,9 @@ INTERNAL REASONING (silent — do not output)
 STRICT FORMAT — 9 sections, ~300–500 words total
 ═══════════════════════════════════════════════════════
 
-HEADLINE: 8–12 words maximum. Lead with the key actor and action. Use a dash or colon to add the sharpest consequence. Must be scannable in 3 seconds — no subordinate clauses, no jargon. Think Bloomberg/Reuters, not Foreign Affairs. Format: "[Actor] [Action] [What] — [Consequence]" or "[Event]: [Impact]". Examples: "Trump Threatens Iran — Hormuz Deal at Risk" / "Fed Holds Rates as Trade War Pressure Builds" / "China Dumps Treasuries: Dollar Risk Returns".
+HEADLINE: 8–12 words maximum. Lead with the key actor and action. Use a colon to add the sharpest consequence. Must be scannable in 3 seconds, no subordinate clauses, no jargon. Think Bloomberg/Reuters, not Foreign Affairs. Format: "[Actor] [Action] [What]: [Consequence]" or "[Event]: [Impact]". Examples: "Trump Threatens Iran: Hormuz Deal at Risk" / "Fed Holds Rates as Trade War Pressure Builds" / "China Dumps Treasuries: Dollar Risk Returns". Do not use em dashes.
 
-EXECUTIVE SUMMARY (2–3 sentences): Core development + most important implication. No hedging. Each sentence adds distinct information — never repeat the headline.
+EXECUTIVE SUMMARY (2–3 sentences): Core development + most important implication. No hedging. Each sentence adds distinct information; never repeat the headline.
 
 KEY DEVELOPMENTS (3–5 bullets): One analytical sentence per bullet. Name mechanism, actor, timeline. Find the causal thread — do not list disconnected facts. Each bullet must be distinct.
 
@@ -336,11 +346,11 @@ WHY IT MATTERS (2–3 bullets): Second-order implications. Who faces pressure, t
 
 WHAT MOST ARE MISSING (THE CORE SECTION — one paragraph): Identify ONE: a flawed market assumption, a misleading narrative, or a hidden structural dynamic. Be explicit and direct. This is the intellectual center of the brief.
 
-MECHANISM (exactly 4 steps — every step logically connected):
-  Step 1 — Trigger: What set this in motion?
-  Step 2 — Immediate reaction: First-order response across markets, actors, institutions.
-  Step 3 — System response: How interconnected systems absorb or amplify.
-  Step 4 — Secondary effects: What this forces, constrains, or makes inevitable next.
+MECHANISM (exactly 4 steps, every step logically connected):
+  Step 1: Trigger: What set this in motion?
+  Step 2: Immediate reaction: First-order response across markets, actors, institutions.
+  Step 3: System response: How interconnected systems absorb or amplify.
+  Step 4: Secondary effects: What this forces, constrains, or makes inevitable next.
 
 IMPLICATIONS FOR DECISION-MAKERS (2–3 bullets): Actionable and specific. For each: what to do, when to act, what risk or opportunity this addresses.
 
@@ -359,11 +369,12 @@ WHAT TO WATCH NEXT (2–3 bullets): Time-bound signals, decision points, or thre
 KEY TAKEAWAYS (exactly 3 bullets): The three most important insights from the entire brief. Simple, direct, non-repetitive. A reader who reads only these three points should understand the essence.
 
 ABSOLUTE RULES:
+✗ No em dashes (the — character) anywhere in output. Use commas, colons, semicolons, or parentheses instead.
 ✗ No long paragraphs — bullets everywhere possible
 ✗ No repetition across sections
-✗ No vague language — name the mechanism, actor, timeline
+✗ No vague language: name the mechanism, actor, timeline
 ✗ No generic phrases: "significant implications," "remains to be seen," "could have major impact"
-✗ No fabrication — all claims trace to provided sources
+✗ No fabrication: all claims trace to provided sources
 ✓ Surface source conflicts explicitly
 ✓ Every sentence adds new information or analysis
 
@@ -371,15 +382,15 @@ ABSOLUTE RULES:
 OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble
 ═══════════════════════════════════════════════════════
 {
-  "headline": "string — 8 to 12 words, actor + action + consequence, scannable in 3 seconds, Bloomberg/Reuters style",
+  "headline": "string: 8 to 12 words, actor + action + consequence, scannable in 3 seconds, Bloomberg/Reuters style. No em dashes.",
   "executiveSummary": ["sentence 1", "sentence 2"],
   "keyDevelopments": ["bullet 1", "bullet 2", "bullet 3", "bullet 4"],
   "whyItMatters": ["implication 1", "implication 2", "implication 3"],
-  "whatMostAreMissing": "string — one paragraph: the flawed assumption, misleading narrative, or hidden structural dynamic. The intellectual core.",
-  "mechanism": ["Step 1 — Trigger: ...", "Step 2 — Immediate reaction: ...", "Step 3 — System response: ...", "Step 4 — Secondary effects: ..."],
+  "whatMostAreMissing": "string: one paragraph: the flawed assumption, misleading narrative, or hidden structural dynamic. The intellectual core.",
+  "mechanism": ["Step 1: Trigger: ...", "Step 2: Immediate reaction: ...", "Step 3: System response: ...", "Step 4: Secondary effects: ..."],
   "implificationsForLeaders": ["actionable implication with what/when/risk 1", "implication 2", "implication 3"],
   "constraintsAndRisks": ["assumption 1 and how being wrong changes conclusion", "assumption 2", "assumption 3"],
-  "rgiTake": "string — agrees/partially agrees/disagrees + what is being missed + one concrete leader action",
+  "rgiTake": "string: agrees/partially agrees/disagrees + what is being missed + one concrete leader action. No em dashes.",
   "whatChangedSinceYesterday": ["shift 1", "shift 2", "shift 3"],
   "whatToWatch": ["signal 1 with timeframe", "signal 2", "signal 3"],
   "summaryTakeaways": ["takeaway 1", "takeaway 2", "takeaway 3"],
@@ -456,16 +467,16 @@ export async function generateDigestArticle(
     const cleanText = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
     const parsed = JSON.parse(cleanText);
     const result = {
-      headline: parsed.headline || "Untitled Brief",
-      body: Array.isArray(parsed.keyDevelopments) ? parsed.keyDevelopments.join("\n") : (parsed.body || ""),
-      executiveSummary: Array.isArray(parsed.executiveSummary) ? parsed.executiveSummary : [],
-      rgiTake: parsed.rgiTake || "",
-      keyTakeaways: Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : []),
-      whatToWatch: Array.isArray(parsed.whatToWatch) ? parsed.whatToWatch : [],
-      whatMostAreMissing: typeof parsed.whatMostAreMissing === "string" ? parsed.whatMostAreMissing : null,
-      mechanism: Array.isArray(parsed.mechanism) ? parsed.mechanism : [],
-      constraintsAndRisks: Array.isArray(parsed.constraintsAndRisks) ? parsed.constraintsAndRisks : [],
-      implificationsForLeaders: Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.implificationsForLeaders) ? parsed.implificationsForLeaders : []),
+      headline: stripEmDash(parsed.headline || "Untitled Brief"),
+      body: Array.isArray(parsed.keyDevelopments) ? stripEmDashArray(parsed.keyDevelopments).join("\n") : stripEmDash(parsed.body || ""),
+      executiveSummary: stripEmDashArray(Array.isArray(parsed.executiveSummary) ? parsed.executiveSummary : []),
+      rgiTake: stripEmDash(parsed.rgiTake || ""),
+      keyTakeaways: stripEmDashArray(Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : [])),
+      whatToWatch: stripEmDashArray(Array.isArray(parsed.whatToWatch) ? parsed.whatToWatch : []),
+      whatMostAreMissing: typeof parsed.whatMostAreMissing === "string" ? stripEmDash(parsed.whatMostAreMissing) : null,
+      mechanism: stripEmDashArray(Array.isArray(parsed.mechanism) ? parsed.mechanism : []),
+      constraintsAndRisks: stripEmDashArray(Array.isArray(parsed.constraintsAndRisks) ? parsed.constraintsAndRisks : []),
+      implificationsForLeaders: stripEmDashArray(Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.implificationsForLeaders) ? parsed.implificationsForLeaders : [])),
       topicTags: parsed.topicTags || [],
       discipline: parsed.discipline || "Multiple",
       relevancyScore: parsed.relevancyScore || 7,
@@ -844,18 +855,18 @@ export async function generateDailyBrief(
     const parsed = JSON.parse(cleanText);
 
     const result: DailyBriefResult = {
-      headline: parsed.headline || "RGI Daily Strategic Intelligence Brief",
-      executiveSummary: Array.isArray(parsed.executiveSummary) ? parsed.executiveSummary : [],
-      body: Array.isArray(parsed.keyDevelopments) ? parsed.keyDevelopments.join("\n") : (parsed.body || ""),
-      rgiTake: parsed.rgiTake || "",
-      keyTakeaways: Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : []),
-      implificationsForLeaders: Array.isArray(parsed.implificationsForLeaders) ? parsed.implificationsForLeaders : [],
-      whatMostAreMissing: typeof parsed.whatMostAreMissing === "string" ? parsed.whatMostAreMissing : null,
-      mechanism: Array.isArray(parsed.mechanism) ? parsed.mechanism : [],
-      constraintsAndRisks: Array.isArray(parsed.constraintsAndRisks) ? parsed.constraintsAndRisks : [],
-      whatChangedSinceYesterday: Array.isArray(parsed.whatChangedSinceYesterday) ? parsed.whatChangedSinceYesterday : [],
-      whatToWatch: Array.isArray(parsed.whatToWatch) ? parsed.whatToWatch : [],
-      summaryTakeaways: Array.isArray(parsed.summaryTakeaways) ? parsed.summaryTakeaways : [],
+      headline: stripEmDash(parsed.headline || "RGI Daily Strategic Intelligence Brief"),
+      executiveSummary: stripEmDashArray(Array.isArray(parsed.executiveSummary) ? parsed.executiveSummary : []),
+      body: Array.isArray(parsed.keyDevelopments) ? stripEmDashArray(parsed.keyDevelopments).join("\n") : stripEmDash(parsed.body || ""),
+      rgiTake: stripEmDash(parsed.rgiTake || ""),
+      keyTakeaways: stripEmDashArray(Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : (Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : [])),
+      implificationsForLeaders: stripEmDashArray(Array.isArray(parsed.implificationsForLeaders) ? parsed.implificationsForLeaders : []),
+      whatMostAreMissing: typeof parsed.whatMostAreMissing === "string" ? stripEmDash(parsed.whatMostAreMissing) : null,
+      mechanism: stripEmDashArray(Array.isArray(parsed.mechanism) ? parsed.mechanism : []),
+      constraintsAndRisks: stripEmDashArray(Array.isArray(parsed.constraintsAndRisks) ? parsed.constraintsAndRisks : []),
+      whatChangedSinceYesterday: stripEmDashArray(Array.isArray(parsed.whatChangedSinceYesterday) ? parsed.whatChangedSinceYesterday : []),
+      whatToWatch: stripEmDashArray(Array.isArray(parsed.whatToWatch) ? parsed.whatToWatch : []),
+      summaryTakeaways: stripEmDashArray(Array.isArray(parsed.summaryTakeaways) ? parsed.summaryTakeaways : []),
       topicTags: parsed.topicTags || [],
       discipline: parsed.discipline || "Multiple",
       relevancyScore: parsed.relevancyScore || 8,
