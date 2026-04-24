@@ -341,8 +341,11 @@ function DigestCard({ article }: { article: DigestArticle }) {
               <>
                 {/* Executive Summary */}
                 {article.executiveSummary && article.executiveSummary.length > 0 && (
-                  <div className="text-sm text-foreground/80 leading-relaxed space-y-1">
-                    {article.executiveSummary.map((s, i) => <p key={i}>{s}</p>)}
+                  <div>
+                    <p className="text-xs font-medium text-primary uppercase tracking-wider mb-2">Executive Summary</p>
+                    <div className="text-sm text-foreground/80 leading-relaxed space-y-1">
+                      {article.executiveSummary.map((s, i) => <p key={i}>{s}</p>)}
+                    </div>
                   </div>
                 )}
 
