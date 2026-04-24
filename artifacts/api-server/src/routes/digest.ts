@@ -108,37 +108,37 @@ router.post("/digest/generate", async (req, res): Promise<void> => {
   }
 
   const requestedIds = [...body.data.articleIds].sort((a, b) => a - b);
+  const idKey = requestedIds.join(",");
   req.log.info({ articleIds: requestedIds }, "Generating digest article");
 
   try {
-    // ── Stale DB check ────────────────────────────────────────────────────────
-    // If same article IDs were already generated in the last 3 hours (no editorial override),
-    // return the existing article immediately instead of calling Claude again.
-    if (!body.data.editorNotes?.trim()) {
-      const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
-      const recentArticles = await db
-        .select()
-        .from(digestArticlesTable)
-        .where(
-          and(
-            gte(digestArticlesTable.createdAt, threeHoursAgo),
-            eq(digestArticlesTable.articleType, "topic_article")
-          )
+    // ── Dedup check (24-hour window, all articles regardless of editor notes) ─
+    // Never create a second article from the same source-ID set within 24 hours.
+    // Exception: if the existing article was rejected, allow regeneration.
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentArticles = await db
+      .select()
+      .from(digestArticlesTable)
+      .where(
+        and(
+          gte(digestArticlesTable.createdAt, twentyFourHoursAgo),
+          eq(digestArticlesTable.articleType, "topic_article")
         )
-        .orderBy(desc(digestArticlesTable.createdAt))
-        .limit(20);
+      )
+      .orderBy(desc(digestArticlesTable.createdAt))
+      .limit(50);
 
-      const idKey = requestedIds.join(",");
-      const staleMatch = recentArticles.find(
-        (a) => [...a.sourceArticleIds].sort((x, y) => x - y).join(",") === idKey
-      );
+    const dedupMatch = recentArticles.find(
+      (a) =>
+        [...a.sourceArticleIds].sort((x, y) => x - y).join(",") === idKey &&
+        a.status !== "rejected"
+    );
 
-      if (staleMatch) {
-        req.log.info({ id: staleMatch.id }, "Returning stale-matched digest article from DB");
-        const enriched = await enrichDigestArticle(staleMatch);
-        res.status(200).json({ ...enriched, fromCache: true });
-        return;
-      }
+    if (dedupMatch) {
+      req.log.info({ id: dedupMatch.id, status: dedupMatch.status }, "Dedup: returning existing article with same source IDs");
+      const enriched = await enrichDigestArticle(dedupMatch);
+      res.status(200).json({ ...enriched, fromCache: true });
+      return;
     }
 
     // ── Generate (or return in-memory cached) ─────────────────────────────────
@@ -147,24 +147,9 @@ router.post("/digest/generate", async (req, res): Promise<void> => {
       body.data.editorNotes
     );
 
-    // If the result was from the in-memory cache, find the most recent matching DB article
-    // so we can return it without creating a duplicate.
+    // If served from in-memory cache, match to a DB row to avoid a duplicate insert.
     if (generated.fromCache) {
-      const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
-      const existing = await db
-        .select()
-        .from(digestArticlesTable)
-        .where(
-          and(
-            gte(digestArticlesTable.createdAt, threeHoursAgo),
-            eq(digestArticlesTable.articleType, "topic_article")
-          )
-        )
-        .orderBy(desc(digestArticlesTable.createdAt))
-        .limit(5);
-
-      const idKey = requestedIds.join(",");
-      const cacheMatch = existing.find(
+      const cacheMatch = recentArticles.find(
         (a) => [...a.sourceArticleIds].sort((x, y) => x - y).join(",") === idKey
       );
       if (cacheMatch) {
@@ -223,6 +208,32 @@ router.post("/digest/daily-brief", async (req, res): Promise<void> => {
   req.log.info({ articleIds, auto: !articleIds, hasNotes: !!editorNotes, excludedTopics }, "Generating daily intelligence brief");
 
   try {
+    // ── Daily brief dedup: one per UTC day ────────────────────────────────────
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayEnd = new Date(todayStart);
+    todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
+
+    const existingToday = await db
+      .select()
+      .from(digestArticlesTable)
+      .where(
+        and(
+          eq(digestArticlesTable.articleType, "daily_brief"),
+          gte(digestArticlesTable.createdAt, todayStart),
+          lt(digestArticlesTable.createdAt, todayEnd)
+        )
+      )
+      .orderBy(desc(digestArticlesTable.createdAt))
+      .limit(1);
+
+    if (existingToday.length > 0 && existingToday[0].status !== "rejected") {
+      req.log.info({ id: existingToday[0].id }, "Dedup: daily brief already exists for today, returning existing");
+      const enriched = await enrichDigestArticle(existingToday[0]);
+      res.status(200).json({ ...enriched, fromCache: true });
+      return;
+    }
+
     const previousBriefContext = await getYesterdayBriefContext();
     const generated = await generateDailyBrief(articleIds, editorNotes, excludedTopics.length > 0 ? excludedTopics : undefined, previousBriefContext);
 
