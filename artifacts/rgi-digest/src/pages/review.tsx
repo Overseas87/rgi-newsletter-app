@@ -137,29 +137,6 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
             </div>
           )}
 
-          {/* What Most Are Missing — CORE SECTION */}
-          {isStructured && (article as any).whatMostAreMissing && (
-            <div className="rounded-xl border-2 border-rose-300/70 bg-rose-50/50 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-rose-700 mb-3">What Most Are Missing</p>
-              <p className="text-sm text-foreground/90 leading-relaxed">{(article as any).whatMostAreMissing}</p>
-            </div>
-          )}
-
-          {/* Mechanism — Step-by-Step Causal Logic */}
-          {isStructured && (article as any).mechanism && (article as any).mechanism.length > 0 && (
-            <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-600 mb-3">Mechanism</p>
-              <ul className="space-y-2">
-                {(article as any).mechanism.map((step: string, i: number) => (
-                  <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                    <span className="mt-0.5 shrink-0 w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">{i + 1}</span>
-                    {step.replace(/^Step \d+\s*[—-]\s*[^:]+:\s*/, "")}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           {/* Implications for Decision-Makers */}
           {isStructured && article.implificationsForLeaders && article.implificationsForLeaders.length > 0 && (
             <div className="rounded-xl border border-violet-200/60 bg-violet-50/40 p-4">
@@ -168,43 +145,11 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
             </div>
           )}
 
-          {/* Constraints & Risks to This View */}
-          {isStructured && (article as any).constraintsAndRisks && (article as any).constraintsAndRisks.length > 0 && (
-            <div className="rounded-xl border border-amber-200/60 bg-amber-50/30 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-amber-700 mb-3">Constraints & Risks to This View</p>
-              <BulletList items={(article as any).constraintsAndRisks} dotColor="text-amber-500" />
-            </div>
-          )}
-
-          {/* RGI Take */}
+          {/* RGI Editorial */}
           {article.rgiTake && (
             <div className="border-l-4 border-primary/60 pl-5 py-2 bg-primary/5 rounded-r-md">
               <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">RGI Editorial</p>
               <p className="text-sm italic text-foreground/80 leading-relaxed">{article.rgiTake}</p>
-            </div>
-          )}
-
-          {/* What Changed Since Yesterday (new format only) */}
-          {isStructured && article.whatChangedSinceYesterday && article.whatChangedSinceYesterday.length > 0 && (
-            <div className="rounded-xl border border-orange-200/60 bg-orange-50/40 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-orange-700 mb-3">What Changed Since Yesterday</p>
-              <BulletList items={article.whatChangedSinceYesterday} dotColor="text-orange-500" />
-            </div>
-          )}
-
-          {/* What to Watch (new format only) */}
-          {isStructured && article.whatToWatch && article.whatToWatch.length > 0 && (
-            <div className="rounded-xl border border-blue-200/60 bg-blue-50/40 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-blue-700 mb-3">What to Watch Next</p>
-              <BulletList items={article.whatToWatch} dotColor="text-blue-500" />
-            </div>
-          )}
-
-          {/* Key Takeaways summary (new format only) */}
-          {isStructured && article.summaryTakeaways && article.summaryTakeaways.length > 0 && (
-            <div className="rounded-xl border border-emerald-200/60 bg-emerald-50/40 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-3">Key Takeaways</p>
-              <BulletList items={article.summaryTakeaways} dotColor="text-emerald-500" />
             </div>
           )}
 

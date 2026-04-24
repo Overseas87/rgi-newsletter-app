@@ -633,37 +633,14 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
                 </div>
               )}
 
-              {/* What Most Are Missing */}
-              {generatedArticle.whatMostAreMissing && (
-                <div className="rounded-lg border-2 border-rose-300/60 bg-rose-50/40 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-rose-700 mb-1">What Most Are Missing</p>
-                  <p className="text-xs leading-relaxed text-foreground/80">{generatedArticle.whatMostAreMissing}</p>
-                </div>
-              )}
-
-              {/* Mechanism */}
-              {generatedArticle.mechanism.length > 0 && (
+              {/* Implications for Decision-Makers */}
+              {generatedArticle.implificationsForLeaders.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Mechanism</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-violet-700">Implications for Decision-Makers</p>
                   <ul className="space-y-1">
-                    {generatedArticle.mechanism.map((step, i) => (
+                    {generatedArticle.implificationsForLeaders.map((item, i) => (
                       <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
-                        <span className="mt-0.5 shrink-0 w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[9px] font-bold text-slate-600">{i + 1}</span>
-                        {step.replace(/^Step \d+\s*[—-]\s*[^:]+:\s*/, "")}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Constraints & Risks */}
-              {generatedArticle.constraintsAndRisks.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">Constraints & Risks</p>
-                  <ul className="space-y-1">
-                    {generatedArticle.constraintsAndRisks.slice(0, 2).map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
-                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400" />
                         {item}
                       </li>
                     ))}
@@ -671,26 +648,11 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
                 </div>
               )}
 
-              {/* RGI Take */}
+              {/* RGI Editorial */}
               {generatedArticle.rgiTake && (
                 <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">RGI Editorial</p>
                   <p className="text-xs leading-relaxed text-foreground/80">{generatedArticle.rgiTake}</p>
-                </div>
-              )}
-
-              {/* What to Watch */}
-              {generatedArticle.whatToWatch.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-700">What to Watch</p>
-                  <ul className="space-y-1">
-                    {generatedArticle.whatToWatch.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
-                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-blue-400" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
                 </div>
               )}
             </div>
