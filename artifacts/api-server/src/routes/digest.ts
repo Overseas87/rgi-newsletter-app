@@ -142,9 +142,11 @@ router.post("/digest/generate", async (req, res): Promise<void> => {
     }
 
     // ── Generate (or return in-memory cached) ─────────────────────────────────
+    const lengthMode = (body.data as any).lengthMode ?? "standard";
     const generated = await generateDigestArticle(
       body.data.articleIds,
-      body.data.editorNotes
+      body.data.editorNotes,
+      lengthMode
     );
 
     // If the result was from the in-memory cache, find the most recent matching DB article
@@ -220,12 +222,13 @@ router.post("/digest/daily-brief", async (req, res): Promise<void> => {
   const excludedTopics: string[] = Array.isArray(req.body?.excludedTopics)
     ? req.body.excludedTopics.filter((t: unknown) => typeof t === "string")
     : [];
+  const lengthMode = req.body?.lengthMode ?? "standard";
 
-  req.log.info({ articleIds, auto: !articleIds, hasNotes: !!editorNotes, excludedTopics }, "Generating daily intelligence brief");
+  req.log.info({ articleIds, auto: !articleIds, hasNotes: !!editorNotes, excludedTopics, lengthMode }, "Generating daily intelligence brief");
 
   try {
     const previousBriefContext = await getYesterdayBriefContext();
-    const generated = await generateDailyBrief(articleIds, editorNotes, excludedTopics.length > 0 ? excludedTopics : undefined, previousBriefContext);
+    const generated = await generateDailyBrief(articleIds, editorNotes, excludedTopics.length > 0 ? excludedTopics : undefined, previousBriefContext, lengthMode);
 
     const [digestArticle] = await db
       .insert(digestArticlesTable)

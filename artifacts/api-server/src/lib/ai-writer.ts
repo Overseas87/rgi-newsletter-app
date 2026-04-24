@@ -20,8 +20,8 @@ interface CachedArticle {
 const topicArticleCache = new Map<string, CachedArticle>();
 const TOPIC_CACHE_TTL_MS = 60 * 60 * 1000; // 60 minutes
 
-function topicArticleCacheKey(articleIds: number[], editorNotes?: string | null): string {
-  return `${[...articleIds].sort((a, b) => a - b).join(",")}:${editorNotes?.trim() || ""}`;
+function topicArticleCacheKey(articleIds: number[], editorNotes?: string | null, lengthMode?: LengthMode): string {
+  return `${[...articleIds].sort((a, b) => a - b).join(",")}:${editorNotes?.trim() || ""}:${lengthMode || "standard"}`;
 }
 
 interface DailyBriefResult {
@@ -61,6 +61,60 @@ function stripEmDash(text: string): string {
 }
 function stripEmDashArray(arr: string[]): string[] {
   return arr.map(stripEmDash);
+}
+
+// ── Length mode ────────────────────────────────────────────────────────────────
+export type LengthMode = "brief" | "standard" | "comprehensive";
+
+const LENGTH_CONFIG: Record<LengthMode, {
+  label: string;
+  total: string;
+  execSummary: string;
+  keyDev: string;
+  whyMatters: string;
+  implications: string;
+  editorial: string;
+}> = {
+  brief: {
+    label: "BRIEF",
+    total: "250–350 words (MAX 350)",
+    execSummary: "1–2 sentences, max 40 words",
+    keyDev: "2–3 bullets, max 50 words total",
+    whyMatters: "1–2 bullets, max 60 words total",
+    implications: "1–2 bullets, max 60 words total",
+    editorial: "2 sentences, max 60 words",
+  },
+  standard: {
+    label: "STANDARD",
+    total: "400–600 words (MAX 600)",
+    execSummary: "2 sentences, max 80 words",
+    keyDev: "3–4 bullets, max 100 words total",
+    whyMatters: "2–3 bullets, max 120 words total",
+    implications: "2–3 bullets, max 120 words total",
+    editorial: "2–3 sentences, max 120 words",
+  },
+  comprehensive: {
+    label: "COMPREHENSIVE",
+    total: "750–900 words (MAX 900)",
+    execSummary: "2–3 sentences, max 120 words",
+    keyDev: "4–5 bullets, max 150 words total",
+    whyMatters: "3–4 bullets, max 200 words total",
+    implications: "3–4 bullets, max 200 words total",
+    editorial: "3 sentences, max 180 words",
+  },
+};
+
+function buildLengthConstraints(mode: LengthMode): string {
+  const c = LENGTH_CONFIG[mode];
+  return `LENGTH MODE: ${c.label}
+TOTAL OUTPUT: ${c.total} — measured from start of Executive Summary to end of RGI Editorial.
+Section limits:
+  - Executive Summary: ${c.execSummary}
+  - Key Developments: ${c.keyDev}
+  - Why It Matters: ${c.whyMatters}
+  - Implications for Decision-Makers: ${c.implications}
+  - RGI Editorial: ${c.editorial}
+FAIL-SAFE: Before finalizing, estimate your total word count. If above the maximum, rewrite shorter — aggressively condense, remove redundancy, shorten sentences. It is better to omit details than to exceed the limit. The word limit is a hard constraint, not a guideline.`;
 }
 
 const RGI_SYSTEM_PROMPT = `You are the senior intelligence editor for the Rick Goings Institute (RGI) at Rollins College — a center for rigorous executive education preparing leaders to navigate AI acceleration, geopolitical volatility, and continuous disruption.
@@ -258,7 +312,7 @@ Then: apply a liberal arts lens — history, ethics, or institutional theory —
 Close with: one concrete judgment for how leaders should reason or act.
 A neutral Editorial is a failure. Grounded and interpretive, not promotional or breathless.
 
-TOTAL LENGTH CONSTRAINT: The full output (Executive Summary through RGI Editorial) must be 400–550 words. Maximum 550 words. Condense ruthlessly if needed.
+{LENGTH_CONSTRAINTS}
 
 ---
 
@@ -283,7 +337,7 @@ Do not use em dashes (the — character) anywhere in your output. Replace them w
 - Is there exactly ONE core insight?
 - Does every section reinforce it?
 - Is any low-signal information included? (remove it)
-- Does the total word count fall within 400–550 words?
+- Does the total word count fall within the selected mode's limit?
 - Are forbidden sections absent? (What Changed Since Yesterday, What to Watch, Key Takeaways, Mechanism, What Most Are Missing — do NOT output these)
 
 ---
@@ -316,7 +370,9 @@ EDITORIAL DIRECTION — MANDATORY PRIORITY:
 {NOTES}
 Apply this throughout — not just in one section.`;
 
-const DAILY_BRIEF_PROMPT = `You are writing the RGI Daily Intelligence Brief — a concise executive brief for senior leaders. Target: 400–550 words total (maximum 550). Every word earns its place. No background. No padding.
+const DAILY_BRIEF_PROMPT = `You are writing the RGI Daily Intelligence Brief — a concise executive brief for senior leaders. Every word earns its place. No background. No padding.
+
+{LENGTH_CONSTRAINTS}
 
 Today's Sources ({SOURCE_COUNT} articles across {THEME_COUNT} thematic areas):
 {SOURCES}
@@ -332,7 +388,7 @@ INTERNAL REASONING (silent — do not output)
 5. If yesterday's brief is provided: what materially changed? What reversed? What is new today that was absent?
 
 ═══════════════════════════════════════════════════════
-STRICT FORMAT — 6 sections, 400–550 words total (maximum 550)
+STRICT FORMAT — 6 sections only (length is set by the mode above)
 ═══════════════════════════════════════════════════════
 
 HEADLINE: 8–12 words maximum. Lead with the key actor and action. Use a colon to add the sharpest consequence. Must be scannable in 3 seconds, no subordinate clauses, no jargon. Think Bloomberg/Reuters, not Foreign Affairs. Format: "[Actor] [Action] [What]: [Consequence]" or "[Event]: [Impact]". Examples: "Trump Threatens Iran: Hormuz Deal at Risk" / "Fed Holds Rates as Trade War Pressure Builds" / "China Dumps Treasuries: Dollar Risk Returns". Do not use em dashes.
@@ -368,7 +424,7 @@ ABSOLUTE RULES:
 ✗ No fabrication: all claims trace to provided sources
 ✓ Surface source conflicts explicitly
 ✓ Every sentence adds new information or analysis
-✓ Total word count: 400–550 words. Condense ruthlessly if over 550.
+✓ Total word count: stay within the mode limit. Condense ruthlessly if over.
 
 ═══════════════════════════════════════════════════════
 OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble
@@ -396,7 +452,8 @@ Return ONLY valid JSON. No markdown code blocks. No explanation before or after.
 
 export async function generateDigestArticle(
   articleIds: number[],
-  editorNotes?: string | null
+  editorNotes?: string | null,
+  lengthMode: LengthMode = "standard"
 ): Promise<{
   headline: string;
   body: string;
@@ -410,7 +467,7 @@ export async function generateDigestArticle(
   fromCache: boolean;
 }> {
   // ── Cache check ────────────────────────────────────────────────────────────
-  const cacheKey = topicArticleCacheKey(articleIds, editorNotes);
+  const cacheKey = topicArticleCacheKey(articleIds, editorNotes, lengthMode);
   const cached = topicArticleCache.get(cacheKey);
   if (cached && Date.now() - cached.generatedAt < TOPIC_CACHE_TTL_MS) {
     logger.info({ cacheKey }, "Returning cached topic article");
@@ -438,7 +495,10 @@ export async function generateDigestArticle(
   const notesText = editorNotes?.trim()
     ? editorNotes.trim()
     : "No specific editorial direction — apply your best analytical judgment to identify the most important pattern across the provided sources.";
-  const prompt = SYNTHESIS_PROMPT.replace("{SOURCES}", sourcesText).replace("{NOTES}", notesText);
+  const prompt = SYNTHESIS_PROMPT
+    .replace("{SOURCES}", sourcesText)
+    .replace("{NOTES}", notesText)
+    .replace("{LENGTH_CONSTRAINTS}", buildLengthConstraints(lengthMode));
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
@@ -755,7 +815,8 @@ export async function generateDailyBrief(
   articleIds?: number[],
   editorNotes?: string | null,
   excludedTopics?: string[],
-  previousBriefContext?: string | null
+  previousBriefContext?: string | null,
+  lengthMode: LengthMode = "standard"
 ): Promise<DailyBriefResult> {
   // ── Cache check (auto-brief only — specific articleIds always regenerate) ────
   const today = new Date();
@@ -825,7 +886,8 @@ export async function generateDailyBrief(
     .replace("{SOURCE_COUNT}", String(articles.length))
     .replace("{THEME_COUNT}", String(topicSet.size))
     .replace("{SOURCES}", sourcesText)
-    .replace("{PREVIOUS_BRIEF_SECTION}", previousBriefSection);
+    .replace("{PREVIOUS_BRIEF_SECTION}", previousBriefSection)
+    .replace("{LENGTH_CONSTRAINTS}", buildLengthConstraints(lengthMode));
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
