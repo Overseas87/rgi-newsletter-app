@@ -74,10 +74,12 @@ const LENGTH_CONFIG: Record<LengthMode, {
   whyMatters: string;
   implications: string;
   editorial: string;
+  wordTarget: number;
 }> = {
   brief: {
     label: "BRIEF",
-    total: "250–350 words (MAX 350)",
+    total: "250–350 words",
+    wordTarget: 300,
     execSummary: "1–2 sentences, max 40 words",
     keyDev: "2–3 bullets, max 50 words total",
     whyMatters: "1–2 bullets, max 60 words total",
@@ -86,7 +88,8 @@ const LENGTH_CONFIG: Record<LengthMode, {
   },
   standard: {
     label: "STANDARD",
-    total: "400–600 words (MAX 600)",
+    total: "400–600 words",
+    wordTarget: 500,
     execSummary: "2 sentences, max 80 words",
     keyDev: "3–4 bullets, max 100 words total",
     whyMatters: "2–3 bullets, max 120 words total",
@@ -95,7 +98,8 @@ const LENGTH_CONFIG: Record<LengthMode, {
   },
   comprehensive: {
     label: "COMPREHENSIVE",
-    total: "750–900 words (MAX 900)",
+    total: "750–900 words",
+    wordTarget: 825,
     execSummary: "2–3 sentences, max 120 words",
     keyDev: "4–5 bullets, max 150 words total",
     whyMatters: "3–4 bullets, max 200 words total",
@@ -107,14 +111,18 @@ const LENGTH_CONFIG: Record<LengthMode, {
 function buildLengthConstraints(mode: LengthMode): string {
   const c = LENGTH_CONFIG[mode];
   return `LENGTH MODE: ${c.label}
-TOTAL OUTPUT: ${c.total} — measured from start of Executive Summary to end of RGI Editorial.
-Section limits:
+TOTAL WORD LIMIT: ${c.wordTarget}
+The entire newsletter (from Executive Summary to RGI Editorial) must be within ±10% of this limit.
+If the output is too long: shorten sentences, remove less important details.
+If the output is too short: expand slightly with relevant insights.
+Do not ignore this constraint.
+Section limits (use these to distribute words across sections):
   - Executive Summary: ${c.execSummary}
   - Key Developments: ${c.keyDev}
   - Why It Matters: ${c.whyMatters}
-  - Implications for Decision-Makers: ${c.implications}
+  - Implications for Decision Makers: ${c.implications}
   - RGI Editorial: ${c.editorial}
-FAIL-SAFE: Before finalizing, estimate your total word count. If above the maximum, rewrite shorter — aggressively condense, remove redundancy, shorten sentences. It is better to omit details than to exceed the limit. The word limit is a hard constraint, not a guideline.`;
+Before outputting, silently count your total words. If outside the ±10% window of ${c.wordTarget}, revise until you are within range.`;
 }
 
 const RGI_SYSTEM_PROMPT = `You are the senior intelligence editor for the Rick Goings Institute (RGI) at Rollins College — a center for rigorous executive education preparing leaders to navigate AI acceleration, geopolitical volatility, and continuous disruption.
