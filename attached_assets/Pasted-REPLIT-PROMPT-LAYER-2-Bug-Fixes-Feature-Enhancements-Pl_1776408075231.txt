@@ -1,0 +1,34 @@
+REPLIT PROMPT — LAYER 2: Bug Fixes & Feature Enhancements
+Please build upon the existing RGI Daily Intelligence Digest Tool with the following fixes and improvements:
+
+BUG FIXES (Critical — fix these first)
+The Approve button must work correctly. When clicked, the article should visually move to an "Approved" tab, show a green confirmation message, and never stay in the pending queue. The Regenerate button must actually trigger the AI to rewrite the article and display a brand new version. Every single button in the app must work reliably and give clear visual feedback on every click — no silent failures.
+
+DATA SOURCES — Expand Significantly
+Keep all existing sources but add many more across these categories:
+
+AI & Technology: MIT Technology Review, Wired, TechCrunch, The Verge, VentureBeat, Ars Technica, IEEE Spectrum, DeepMind Blog, OpenAI Blog, Stanford HAI
+Leadership & Management: Harvard Business Review, McKinsey Quarterly, Korn Ferry Insights, Deloitte Insights, Forbes Leadership, Fast Company
+Global Politics & Geopolitics: Foreign Affairs, Foreign Policy, The Atlantic, Politico, Al Jazeera, BBC News, The Guardian, Axios, Council on Foreign Relations
+Finance & Economics: Bloomberg, Financial Times, Wall Street Journal, The Economist, Reuters, MarketWatch, Barron's
+Environmental & Health: Nature, Science Magazine, WHO News, National Geographic
+Social Media: Twitter/X and LinkedIn public posts from influential figures in leadership, politics, technology, and economics
+
+The source list should be easily expandable by the editor at any time through the Source Management panel.
+
+SCRAPING — Speed & Visibility
+Move the "Scrape Now" button and last scraped timestamp to the very top of the dashboard, always visible. The timestamp must show the exact date, hour, and minute of the last scrape (e.g. "Last scraped: April 17, 2026 at 9:32 AM"). Optimize scraping speed so results load significantly faster than the current version.
+
+ARTICLE LENGTH & FULL-PAGE VIEW
+Every AI-generated article must be substantially longer — at minimum half a page, ideally a full page. When the editor clicks on an article, it must open a full-page reading view showing the complete article including the RGI perspective section, topic tags, relevancy score, and link to the original source. The RGI Take section must always be present and clearly labeled within the article body.
+
+TOPIC RANKING DASHBOARD
+Add a new "Today's Topics" ranking section that shows:
+
+A ranked list of the biggest topics of the day based on how many articles and posts were published about each topic across all sources
+For each topic: the topic name, number of articles found, a brief explanation of why it matters today, and its relevance to RGI's three disciplines (Strategic Foresight, System Vitality, Civic Stewardship)
+Everything framed from RGI's perspective and values — rigorous, pragmatic, leadership-focused, grounded in the belief that AI accelerates complexity and human leaders must navigate it with judgment, values, and civic responsibility
+
+
+CUSTOM SOURCE ADDITION
+The editor must be able to add their own custom sources at any time — paste a URL, a Twitter/LinkedIn handle, or a publication name — and the tool will immediately include it in future scrapes.

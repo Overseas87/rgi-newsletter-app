@@ -1,0 +1,21 @@
+Improve the system so that the user can interact directly with the AI agent using both text and voice, especially for article generation and editing.
+
+When generating a topic article or daily brief, the user must be able to provide editorial direction not only through text input but also through voice input. Add a voice input feature (for example, a microphone button) that allows the user to speak instructions. The system must convert the voice input into text and use it as editorial direction for the AI.
+
+The editorial direction must strongly influence the output. Whether the user provides instructions via text or voice, the AI must adjust tone, structure, focus, and argumentation accordingly. The system must treat user input as high-priority guidance and not ignore it.
+
+After an article is generated, the user must be able to refine it through an interactive editing process. This should work like a conversation with the AI. The user can either type or speak commands such as “make this more focused on geopolitics,” “shorten this,” or “add more analysis on AI regulation,” and the AI must update the article accordingly.
+
+The system must support iterative editing. Each time the user gives feedback (text or voice), the article should be updated while preserving structure and improving quality. The user should feel like they are collaborating with the AI, not just generating a static output.
+
+Ensure that the AI used for generation is the same system that responds to the user’s instructions. The editing interface should act as a direct communication layer between the user and the AI that generates the article.
+
+In addition, give the user the option to choose the output format after generation. The user should be able to select whether the article is presented as written text or converted into an audio version. If audio is selected, generate a natural-sounding spoken version of the article.
+
+Maintain the existing workflow where generated articles are saved as drafts and can be accepted or rejected. The user must still have full control over what gets published.
+
+Also keep the existing concept of topic-based tagging for all articles. These tags must be used later for the personalized newsletter system.
+
+For the newsletter system, ensure that users can subscribe by selecting topics of interest. The system must generate a weekly digest that summarizes all relevant articles (AI-generated and human-written) based on the selected topics. The digest should be concise, well-structured, and include links to the original articles.
+
+The overall goal is to turn the system into an interactive editorial tool where the user can guide, refine, and shape content dynamically using both text and voice, while maintaining high-quality, relevant output aligned with the RGI perspective.

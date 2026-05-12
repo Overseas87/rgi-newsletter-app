@@ -1,0 +1,601 @@
+import { useState, useEffect } from "react";
+import {
+  useListDigestArticles,
+  useApproveDigestArticle,
+  useRejectDigestArticle,
+  useRegenerateDigestArticle,
+  useUpdateDigestArticle,
+  DigestArticle,
+} from "@workspace/api-client-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useQueryClient } from "@tanstack/react-query";
+import { asArray, asNumber, asString, asStringArray, safeDate, safeLines, safeTextBlocks } from "@/lib/arrays";
+import { useToast } from "@/hooks/use-toast";
+import { stripMarkdown } from "@/lib/utils";
+import { CheckCircle, XCircle, RefreshCw, Edit3, Save, X, Eye, ExternalLink, Globe, Tag, Clock, Download, Loader2 } from "lucide-react";
+import { usePdfDownload } from "@/hooks/use-pdf-download";
+import { SelectionRegenerateTextarea } from "@/components/selection-regenerate-textarea";
+import { format, formatDistanceToNow } from "date-fns";
+
+function ArticleTypeBadge({ articleType }: { articleType: string }) {
+  if (articleType === "daily_brief") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wide">
+        <Globe className="h-2.5 w-2.5" />Daily Brief
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wide">
+      <Tag className="h-2.5 w-2.5" />Topic Article
+    </span>
+  );
+}
+
+function BulletList({ items, dotColor = "text-primary" }: { items: string[]; dotColor?: string }) {
+  return (
+    <ul className="space-y-2">
+      {asStringArray(items).map((item, i) => (
+        <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+          <span className={`mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-current ${dotColor}`} />
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function FullArticleDialog({ article, open, onClose }: { article: DigestArticle | null; open: boolean; onClose: () => void }) {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const slugified = article
+    ? asString(article.headline, "brief").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)
+    : "";
+  const { download: downloadPdf, isDownloading } = usePdfDownload({
+    url: article ? `${base}/api/digest/${article.id}/pdf` : "",
+    filename: article ? `rgi-brief-${slugified}.pdf` : "rgi-brief.pdf",
+  });
+
+  if (!article) return null;
+  const executiveSummary = asStringArray(article.executiveSummary);
+  const keyTakeaways = asStringArray(article.keyTakeaways);
+  const implications = asStringArray(article.implificationsForLeaders);
+  const topicTags = asStringArray(article.topicTags);
+  const sourceArticles = asArray<{ id: number; url: string; headline: string; sourceName?: string | null }>(article.sourceArticles);
+  const isStructured = executiveSummary.length > 0;
+  const keyDevelopments = isStructured ? safeLines(article.body) : null;
+  const createdAt = safeDate(article.createdAt, new Date());
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <ArticleTypeBadge articleType={article.articleType} />
+            <Badge variant="outline" className="text-xs">{article.discipline}</Badge>
+            <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
+              Score: {asNumber(article.relevancyScore).toFixed(1)}/10
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs h-7 ml-auto"
+              onClick={downloadPdf}
+              disabled={isDownloading}
+            >
+              {isDownloading
+                ? <Loader2 className="h-3 w-3 animate-spin" />
+                : <Download className="h-3 w-3" />}
+              {isDownloading ? "Generating…" : "Download PDF"}
+            </Button>
+          </div>
+          <DialogTitle className="text-2xl font-serif leading-tight text-left">{asString(article.headline, "Untitled brief")}</DialogTitle>
+          <div className="flex items-center gap-4 pt-2 flex-wrap">
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3 shrink-0" />
+              <span className="font-medium">RGI generated:</span>
+              {format(createdAt, "MMMM d, yyyy")}
+              {" — "}
+              {format(createdAt, "HH:mm")}
+              <span className="text-muted-foreground/50">({formatDistanceToNow(createdAt, { addSuffix: true })})</span>
+            </span>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-5 mt-2">
+          {/* Executive Summary — shown for all articles when present */}
+          {executiveSummary.length > 0 && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Executive Summary</p>
+              <div className="space-y-1.5">
+                {executiveSummary.map((s, i) => (
+                  <p key={i} className="text-sm text-foreground/90 leading-relaxed">{s}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Key Developments (new format) OR prose body (legacy) */}
+          {isStructured && keyDevelopments && keyDevelopments.length > 0 ? (
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Key Developments</p>
+              <BulletList items={keyDevelopments} dotColor="text-foreground/40" />
+            </div>
+          ) : (
+            <div>
+              {safeTextBlocks(article.body).map((para, i) => (
+                <p key={i} className="text-sm leading-relaxed text-foreground/90 mb-4">{stripMarkdown(para)}</p>
+              ))}
+            </div>
+          )}
+
+          {/* Why It Matters */}
+          {keyTakeaways.length > 0 && (
+            <div className="rounded-xl border border-amber-200/60 bg-amber-50/40 p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-amber-700 mb-3">
+                Why It Matters
+              </p>
+              <BulletList items={keyTakeaways} dotColor="text-amber-500" />
+            </div>
+          )}
+
+          {/* Implications for Decision-Makers */}
+          {isStructured && implications.length > 0 && (
+            <div className="rounded-xl border border-violet-200/60 bg-violet-50/40 p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-violet-700 mb-3">Implications for Decision Makers</p>
+              <BulletList items={implications} dotColor="text-violet-500" />
+            </div>
+          )}
+
+          {/* RGI Editorial */}
+          {asString(article.rgiTake).length > 0 && (
+            <div className="border-l-4 border-primary/60 pl-5 py-2 bg-primary/5 rounded-r-md">
+              <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">RGI Editorial</p>
+              <p className="text-sm italic text-foreground/80 leading-relaxed">{asString(article.rgiTake)}</p>
+            </div>
+          )}
+
+          {/* Topic tags */}
+          {topicTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {topicTags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-xs font-normal">{tag}</Badge>
+              ))}
+            </div>
+          )}
+
+          {/* Sources */}
+          {sourceArticles.length > 0 && (
+            <div className="border-t pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Sources</p>
+              {sourceArticles.map((src) => (
+                <a
+                  key={src.id}
+                  href={src.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-sm text-primary hover:underline mb-1"
+                >
+                  {asString(src.sourceName, "Source")}: {asString(src.headline, "Untitled article")}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DigestCard({ article }: { article: DigestArticle }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [editedHeadline, setEditedHeadline] = useState(asString(article.headline));
+  const [editedBody, setEditedBody] = useState(asString(article.body));
+  const [editedTake, setEditedTake] = useState(asString(article.rgiTake));
+  const [editedExecutiveSummary, setEditedExecutiveSummary] = useState(asStringArray(article.executiveSummary).join("\n"));
+  const [editedKeyTakeaways, setEditedKeyTakeaways] = useState(asStringArray(article.keyTakeaways).join("\n"));
+  const [editedImplifications, setEditedImplifications] = useState(asStringArray(article.implificationsForLeaders).join("\n"));
+
+  // Sync local edit state when the article prop updates (e.g. after a save or regenerate)
+  useEffect(() => {
+    if (!isEditing) {
+      setEditedHeadline(asString(article.headline));
+      setEditedBody(asString(article.body));
+      setEditedTake(asString(article.rgiTake));
+      setEditedExecutiveSummary(asStringArray(article.executiveSummary).join("\n"));
+      setEditedKeyTakeaways(asStringArray(article.keyTakeaways).join("\n"));
+      setEditedImplifications(asStringArray(article.implificationsForLeaders).join("\n"));
+    }
+  }, [article.headline, article.body, article.rgiTake, article.executiveSummary, article.keyTakeaways, article.implificationsForLeaders, isEditing]);
+
+  const approve = useApproveDigestArticle();
+  const reject = useRejectDigestArticle();
+  const regenerate = useRegenerateDigestArticle();
+  const update = useUpdateDigestArticle();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/digest"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+  };
+
+  const handleSave = () => {
+    update.mutate(
+      {
+        id: article.id,
+        data: {
+          headline: editedHeadline,
+          body: editedBody,
+          rgiTake: editedTake,
+          executiveSummary: safeLines(editedExecutiveSummary),
+          keyTakeaways: safeLines(editedKeyTakeaways),
+          implificationsForLeaders: safeLines(editedImplifications),
+        } as any,
+      },
+      {
+        onSuccess: () => {
+          setIsEditing(false);
+          invalidate();
+          toast({ title: "Changes saved", description: "Your edits have been saved successfully." });
+        },
+        onError: () => {
+          toast({ title: "Save failed", description: "Could not save your changes. Please try again.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleApprove = () => {
+    approve.mutate(
+      { id: article.id },
+      {
+        onSuccess: () => {
+          invalidate();
+          toast({ title: "Article approved", description: "The article has been published to the archive." });
+        },
+        onError: () => {
+          toast({ title: "Approval failed", description: "Could not approve the article. Please try again.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleReject = () => {
+    reject.mutate(
+      { id: article.id, data: {} },
+      {
+        onSuccess: () => {
+          invalidate();
+          toast({ title: "Article rejected", description: "The article has been moved to Rejected." });
+        },
+        onError: () => {
+          toast({ title: "Rejection failed", description: "Could not reject the article.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleRegenerate = () => {
+    regenerate.mutate(
+      { id: article.id, data: {} },
+      {
+        onSuccess: () => {
+          invalidate();
+          toast({ title: "Article regenerated", description: "Claude has written a new version of this article." });
+        },
+        onError: () => {
+          toast({ title: "Regeneration failed", description: "Could not regenerate the article. Please try again.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  return (
+    <>
+      <Card className="relative" data-testid={`digest-card-${article.id}`}>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1.5 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <ArticleTypeBadge articleType={article.articleType} />
+                <Badge variant="outline" className="text-xs">{article.discipline}</Badge>
+                <Badge variant="outline" className="text-xs text-muted-foreground">
+                  Score: {asNumber(article.relevancyScore).toFixed(1)}/10
+                </Badge>
+                {asStringArray(article.topicTags).map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs font-normal">{tag}</Badge>
+                ))}
+              </div>
+              {isEditing ? (
+                <Input
+                  value={editedHeadline}
+                  onChange={(e) => setEditedHeadline(e.target.value)}
+                  className="text-lg font-semibold"
+                  data-testid="input-headline"
+                />
+              ) : (
+                <CardTitle className="text-xl font-serif leading-snug">{asString(article.headline, "Untitled brief")}</CardTitle>
+              )}
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70 pt-0.5">
+                <Clock className="h-3 w-3 shrink-0" />
+                <span className="font-medium">RGI generated:</span>
+                <span>{format(safeDate(article.createdAt, new Date()), "MMMM d, yyyy")} — {format(safeDate(article.createdAt, new Date()), "HH:mm")}</span>
+                <span className="text-muted-foreground/40">({formatDistanceToNow(safeDate(article.createdAt, new Date()), { addSuffix: true })})</span>
+              </div>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="ghost" onClick={() => setViewOpen(true)} data-testid="btn-preview">
+                <Eye className="h-4 w-4" />
+              </Button>
+              {isEditing ? (
+                <>
+                  <Button size="sm" onClick={handleSave} disabled={update.isPending} data-testid="btn-save">
+                    <Save className="h-4 w-4 mr-1" /> Save
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)} data-testid="btn-cancel">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => setIsEditing(true)} data-testid="btn-edit">
+                  <Edit3 className="h-4 w-4 mr-1" /> Edit
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {(() => {
+            const executiveSummary = asStringArray(article.executiveSummary);
+            const keyTakeaways = asStringArray(article.keyTakeaways);
+            const implications = asStringArray(article.implificationsForLeaders);
+            const isStructured = executiveSummary.length > 0;
+            const keyDevelopments = isStructured ? safeLines(article.body) : null;
+            return (
+              <>
+                {/* Executive Summary */}
+                {(isEditing ? editedExecutiveSummary.length > 0 : executiveSummary.length > 0) && (
+                  <div>
+                    <p className="text-xs font-medium text-primary uppercase tracking-wider mb-2">Executive Summary</p>
+                    {isEditing ? (
+                      <SelectionRegenerateTextarea
+                        value={editedExecutiveSummary}
+                        onChange={setEditedExecutiveSummary}
+                        articleId={article.id}
+                        articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
+                        field="executiveSummary"
+                        className="text-sm leading-relaxed"
+                        minHeight="80px"
+                        placeholder="One sentence per line…"
+                      />
+                    ) : (
+                      <div className="text-sm text-foreground/80 leading-relaxed space-y-1">
+                        {executiveSummary.map((s, i) => <p key={i}>{s}</p>)}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Key Developments */}
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                    Key Developments
+                  </p>
+                  {isEditing ? (
+                    <SelectionRegenerateTextarea
+                      value={editedBody}
+                      onChange={setEditedBody}
+                      articleId={article.id}
+                      articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
+                      field="body"
+                      className="text-sm leading-relaxed"
+                      minHeight="180px"
+                      data-testid="textarea-body"
+                    />
+                  ) : isStructured && keyDevelopments ? (
+                    <ul className="space-y-1.5">
+                      {keyDevelopments.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                          <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-foreground/30" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-sm leading-relaxed text-foreground/90">
+                      {safeTextBlocks(article.body).map((para, i) => (
+                        <p key={i} className="mb-3">{stripMarkdown(para)}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Why It Matters */}
+                {(isEditing ? true : keyTakeaways.length > 0) && (
+                  <div>
+                    <p className="text-xs font-medium text-amber-700 uppercase tracking-wider mb-2">
+                      Why It Matters
+                    </p>
+                    {isEditing ? (
+                      <SelectionRegenerateTextarea
+                        value={editedKeyTakeaways}
+                        onChange={setEditedKeyTakeaways}
+                        articleId={article.id}
+                        articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
+                        field="keyTakeaways"
+                        className="text-sm leading-relaxed"
+                        minHeight="80px"
+                        placeholder="One bullet per line…"
+                      />
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {keyTakeaways.map((item, i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                            <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                {/* Implications for Decision Makers */}
+                {(isEditing ? isStructured : (isStructured && implications.length > 0)) && (
+                  <div>
+                    <p className="text-xs font-medium text-violet-700 uppercase tracking-wider mb-2">Implications for Decision Makers</p>
+                    {isEditing ? (
+                      <SelectionRegenerateTextarea
+                        value={editedImplifications}
+                        onChange={setEditedImplifications}
+                        articleId={article.id}
+                        articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
+                        field="implificationsForLeaders"
+                        className="text-sm leading-relaxed"
+                        minHeight="80px"
+                        placeholder="One bullet per line…"
+                      />
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {implications.map((item, i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                            <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
+          <div className="border-l-2 border-primary/40 pl-4">
+            <p className="text-xs font-medium text-primary/80 uppercase tracking-wider mb-2">RGI Editorial</p>
+            {isEditing ? (
+              <SelectionRegenerateTextarea
+                value={editedTake}
+                onChange={setEditedTake}
+                articleId={article.id}
+                articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
+                field="rgiTake"
+                className="text-sm"
+                minHeight="80px"
+                placeholder="The RGI editorial perspective..."
+                data-testid="textarea-rgi-take"
+              />
+            ) : (
+              <p className="text-sm italic text-muted-foreground leading-relaxed">
+                {asString(article.rgiTake, "No RGI Take provided.")}
+              </p>
+            )}
+          </div>
+
+          {/* (forbidden sections suppressed) */}
+          {false && (
+            <div>
+            </div>
+          )}
+
+          {asArray<{ id: number; url: string; headline: string; sourceName?: string | null }>(article.sourceArticles).length > 0 && (
+            <div className="text-xs text-muted-foreground border-t pt-3">
+              <span className="font-medium">Source: </span>
+              {asArray<{ id: number; url: string; headline: string; sourceName?: string | null }>(article.sourceArticles).map((src) => (
+                <a
+                  key={src.id}
+                  href={src.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary/70 hover:underline inline-flex items-center gap-0.5"
+                >
+                  {asString(src.sourceName, "Source")}
+                  <ExternalLink className="h-3 w-3 ml-0.5" />
+                </a>
+              ))}
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex gap-3 pt-4 border-t">
+          <Button
+            size="sm"
+            onClick={handleApprove}
+            disabled={approve.isPending}
+            data-testid="btn-approve"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            <CheckCircle className="h-4 w-4 mr-1" />
+            {approve.isPending ? "Approving..." : "Approve"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRegenerate}
+            disabled={regenerate.isPending}
+            data-testid="btn-regenerate"
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 ${regenerate.isPending ? "animate-spin" : ""}`} />
+            {regenerate.isPending ? "Regenerating with Claude..." : "Regenerate"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleReject}
+            disabled={reject.isPending}
+            className="text-destructive border-destructive/30 hover:bg-destructive/5 ml-auto"
+            data-testid="btn-reject"
+          >
+            <XCircle className="h-4 w-4 mr-1" />
+            {reject.isPending ? "Rejecting..." : "Reject"}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <FullArticleDialog article={article} open={viewOpen} onClose={() => setViewOpen(false)} />
+    </>
+  );
+}
+
+export default function Review() {
+  const { data: articles = [], isLoading } = useListDigestArticles({ status: "pending_review" });
+  const safeArticles = asArray<DigestArticle>(articles);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-serif tracking-tight text-foreground">Pending Review</h1>
+        <p className="text-muted-foreground mt-1">
+          Approve, edit, or reject AI-written digest entries before publication.
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-64 w-full" />)}
+        </div>
+      ) : safeArticles.length === 0 ? (
+        <div className="py-24 text-center text-muted-foreground">
+          <p className="text-lg font-medium">No items pending review</p>
+          <p className="text-sm mt-1">Select articles from Today's Topics and generate digest entries to begin.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <Badge variant="outline">{safeArticles.length} pending</Badge>
+          {safeArticles.map((article) => (
+            <DigestCard key={article.id} article={article} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,19 @@
+Improve the speed, efficiency, and responsiveness of AI article generation.
+
+First, optimize how data is passed to the AI. Do not send all scraped articles or raw data directly into the model. Instead, pre-filter and select only the most relevant inputs before generating the article. Limit the number of articles sent to the AI to a small, high-quality subset (for example 3 to 7 top articles).
+
+Second, reduce token usage by summarizing inputs before generation. Instead of sending full article content, extract only the key points or short summaries of each source and pass those into the AI. This will significantly reduce processing time and improve speed.
+
+Third, implement asynchronous generation. When the user clicks “Generate Brief” or “Generate Topic Article,” do not block the UI. Immediately show a loading state and allow the rest of the interface to remain interactive. Display a progress indicator such as “Analyzing sources,” “Building narrative,” and “Generating article.”
+
+Fourth, add a fast preview mode. First generate a short draft or outline (for example headline + bullet points + short summary), display it quickly, and then optionally expand it into a full article. This creates the perception of speed and gives the user early feedback.
+
+Fifth, cache generated articles. If the same topic combination or similar request is made within a short time window, reuse or partially reuse previous outputs instead of generating everything from scratch.
+
+Sixth, reduce unnecessary regeneration. If no new data has been scraped, do not regenerate the same article repeatedly. Instead, notify the user that the content is already up to date.
+
+Seventh, optimize prompt efficiency. Ensure that the prompt sent to the AI is concise, structured, and avoids unnecessary repetition. Remove redundant instructions and keep the input focused.
+
+Eighth, ensure that article generation strictly follows the selected topics and editorial direction, without adding unrelated content. This reduces unnecessary processing and improves quality.
+
+The goal is to make AI generation feel fast, efficient, and responsive, while maintaining high-quality output. The user should feel that the system reacts quickly and intelligently without long delays.

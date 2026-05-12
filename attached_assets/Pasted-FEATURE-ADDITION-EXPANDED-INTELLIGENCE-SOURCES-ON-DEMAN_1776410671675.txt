@@ -1,0 +1,131 @@
+FEATURE ADDITION: EXPANDED INTELLIGENCE SOURCES + ON-DEMAND ARTICLE GENERATION
+🧠 1. MULTI-TYPE INTELLIGENCE SOURCES (MAJOR EXPANSION)
+
+The system must go beyond traditional news sources.
+
+Add support for multiple types of information sources:
+
+A. News (already exists)
+Newspapers, media outlets
+B. Social Signals (already added)
+Twitter/X, LinkedIn
+C. Institutional & Research Sources (NEW)
+think tanks (Brookings, CFR, etc.)
+academic institutions (Harvard, MIT, Stanford)
+policy organizations (IMF, World Bank, WHO)
+government publications
+D. Company & Corporate Signals (NEW)
+company blogs (Tesla, OpenAI, Google, etc.)
+press releases
+earnings reports
+official announcements
+E. Market & Economic Signals (NEW)
+financial market summaries
+macroeconomic indicators (optional)
+major movements (stocks, commodities)
+🧩 2. SOURCE TYPE TAGGING (IMPORTANT)
+
+Each item must be tagged as:
+
+News
+Social
+Institutional
+Corporate
+Market
+
+This must influence:
+
+scoring
+display
+AI synthesis
+⚡ 3. INCREASE CONTENT VOLUME (FIX CURRENT PROBLEM)
+
+Current issue:
+👉 too few articles generated
+
+Fix:
+
+scrape more sources in parallel
+increase number of candidate items
+ensure at least:
+20–50 relevant items per day
+✋ 4. “GENERATE ARTICLE NOW” FEATURE (CRITICAL)
+
+Add a new main button:
+
+👉 “Generate Article Now”
+
+When clicked:
+
+Open a modal or panel where the user can:
+
+Select topics:
+AI
+Geopolitics
+Finance
+Climate
+Leadership
+etc.
+Select number of topics:
+1 topic → focused article
+multiple topics → broad intelligence article
+🧠 5. AI MUST GENERATE ARTICLE BASED ON USER INTENT
+
+When user clicks generate:
+
+AI must:
+
+pull relevant data from:
+last 24 hours
+selected topics
+synthesize across:
+multiple sources
+create one coherent article
+✍️ 6. CUSTOMIZED ARTICLE GENERATION
+
+Article must:
+
+include all selected topics
+balance coverage across topics
+not over-focus on one topic
+Structure:
+Headline
+Executive summary
+Section per topic
+Cross-topic insight
+RGI perspective
+leadership takeaway
+📈 7. ENSURE ARTICLE PIPELINE (FIX EMPTY PENDING REVIEW)
+
+The system must ALWAYS:
+
+have multiple generated drafts available
+automatically generate:
+at least 3–5 draft articles per day
+🧠 8. SMART GENERATION LOGIC
+
+System should:
+
+auto-generate:
+top daily brief
+topic-specific briefs
+AND allow:
+manual generation
+🎯 9. GOAL
+
+The user must be able to:
+
+👉 open the app
+👉 instantly see:
+
+what matters
+multiple article options
+generate new ones on demand
+⚠️ FINAL RULE
+
+The system must:
+
+never rely on a single source
+always synthesize across multiple inputs
+always generate meaningful, decision-relevant content
+END OF PROMPT

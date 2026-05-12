@@ -1,0 +1,25 @@
+Improve the performance of the scraping system and enhance the topic selection logic for article generation.
+
+First, significantly optimize the scraping speed. The current scraping process is too slow and must be improved. Implement parallel fetching so that multiple sources are scraped simultaneously instead of sequentially. Use asynchronous requests (for example Promise.all or equivalent) to fetch data from all sources at the same time.
+
+Introduce timeouts for slow sources. If a source does not respond within a short time window (for example 2–3 seconds), skip it and continue. Do not let one slow source delay the entire scraping process.
+
+Cache previously scraped results and reuse them when possible. If a source has already been scraped recently (for example within the last 10–15 minutes), reuse the cached data instead of scraping again. This will significantly reduce load times.
+
+Limit the number of articles fetched per source. Instead of pulling large volumes of data, fetch only the top 3–5 most relevant articles per source. Focus on quality rather than quantity.
+
+Implement incremental updates. When scraping, do not reload everything. Only fetch new or updated articles and merge them into the existing dataset.
+
+Ensure that scraping runs in the background. When the user clicks “Scrape Now,” keep existing articles visible and update the dashboard progressively as new data arrives. Do not block the interface or show empty states during scraping.
+
+Second, improve the logic for the General Brief topic selection. By default, all available topics should be selected when generating a General Brief. However, the user must have the ability to exclude specific topics.
+
+Add a selection interface where all topics are pre-selected for the General Brief. Allow the user to deselect any topics they do not want to include. The system should then generate the General Brief using only the remaining selected topics.
+
+Ensure that this behavior is clearly different from the Topic Article flow. For Topic Articles, the user actively selects which topics to include. For the General Brief, all topics are included by default, and the user selectively removes unwanted topics.
+
+Make sure the UI clearly reflects this logic. The user should easily understand which topics are included and which are excluded before generating the article.
+
+Ensure that the article generation strictly follows the selected or excluded topics. The AI must not include topics that the user explicitly deselected.
+
+The overall goal is to make the system faster, more responsive, and give the user more precise control over what content is generated, while maintaining clarity and simplicity in the interface.

@@ -1,0 +1,135 @@
+FEATURE ADDITION: RELEVANCE PRECISION, REAL-TIME TIMING, AND RGI INTELLIGENCE LOGIC
+🧠 1. RELEVANCY SCORE STANDARDIZATION
+
+All articles must display a:
+
+👉 Relevancy Score out of 10 (e.g. 8.7 / 10)
+
+Requirements:
+always visible on article cards
+consistent format (no percentages, no mixed scales)
+visually clear (badge or highlighted number)
+Logic:
+
+Score must reflect:
+
+alignment with RGI disciplines
+strategic importance
+impact on business / markets / systems
+not just keyword matching
+⏱️ 2. TIME & RECENCY DISPLAY (VERY IMPORTANT)
+
+Each article must show:
+
+full publish date
+exact time
+relative time (e.g. “3 hours ago”)
+Example:
+
+“Published: April 17, 2026 — 08:45 AM (3 hours ago)”
+
+Rule:
+prioritize same-day content
+older content must be clearly deprioritized
+⚡ 3. FAST SCRAPING + REAL-TIME REFRESH
+
+Improve scraping system:
+
+“Scrape Now” must:
+trigger immediate refresh
+pull newest available content
+prioritize recent publications
+Requirements:
+fast execution (parallel processing if possible)
+clear loading indicator
+show last scrape timestamp at top
+Example:
+
+“Last scraped: April 17, 2026 — 10:32 AM”
+
+🧩 4. FLEXIBLE DATA SOURCE SYSTEM
+
+The system must:
+
+allow unlimited sources
+allow user to:
+add new sources
+remove sources
+prioritize sources
+Rule:
+
+More sources ≠ better
+👉 relevance filtering must still apply
+
+⚖️ 5. INTELLIGENCE-BASED FILTERING SYSTEM
+
+The system must:
+
+filter out irrelevant content automatically
+prioritize:
+business relevance
+financial impact
+technological change
+geopolitical developments
+The system must reject:
+low-impact news
+local or lifestyle stories
+non-strategic content
+🧠 6. TRUE RGI PERSPECTIVE (CRITICAL UPGRADE)
+
+The “RGI Take” must NOT be:
+
+👉 a generic summary
+
+It must be:
+
+👉 a clear interpretation and opinion
+
+Each article must include:
+what this means
+why it matters
+how it connects to:
+Strategic Foresight
+System Vitality
+Civic Stewardship
+Tone:
+analytical
+confident
+leadership-focused
+📊 7. “TODAY’S TOPICS” SECTION (IMPROVED)
+
+Add a strong section:
+
+👉 “Today’s Topics”
+
+Display:
+top topics of the day
+number of relevant articles
+short explanation
+Example:
+
+AI & Technology — 14 articles
+→ “Acceleration in enterprise AI adoption and regulatory pressure signals structural shift”
+
+🎯 8. SYSTEM PURPOSE (IMPORTANT CONTEXT)
+
+This tool is:
+
+👉 internal RGI intelligence system
+
+Therefore:
+no unnecessary features for public users
+focus on:
+speed
+clarity
+insight
+decision relevance
+⚠️ FINAL RULE
+
+The system must answer:
+
+👉 “What is happening today that actually matters?”
+
+NOT:
+
+👉 “What content exists today?”

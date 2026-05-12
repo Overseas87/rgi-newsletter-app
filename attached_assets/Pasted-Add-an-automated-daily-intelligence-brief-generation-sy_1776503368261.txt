@@ -1,0 +1,43 @@
+Add an automated daily intelligence brief generation system that runs reliably every day at a fixed time and creates a high-quality summary of the last 24 hours.
+
+Implement a scheduled background job (cron job or equivalent scheduler supported by the environment) that runs every day at 6:00 AM based on a defined timezone (for example, user-configurable or default to system timezone). This job must execute automatically without requiring any user interaction.
+
+When triggered, the system must:
+
+fetch all relevant articles and data from the last 24 hours only
+filter for high-relevance content using the existing scoring system
+select the most important topics and developments
+generate a “Daily Intelligence Brief” article
+
+The generated article must follow the optimized short-format structure:
+
+headline
+executive summary (2–3 sentences)
+key developments (3–5 bullet points)
+why it matters (2–3 bullet points)
+RGI Take (short, clear opinion)
+what to watch next (2–3 bullet points)
+
+The total length should be concise (approximately 300–500 words maximum) and highly scannable.
+
+After generation, the system must:
+
+automatically save the article to the database
+set its status to “pending”
+add a clear tag such as “Daily Brief”
+timestamp it correctly (created_at = generation time)
+
+The article must appear immediately in the “Pending Review” section of the application when the user opens it.
+
+Ensure that this process is reliable and does not create duplicate daily briefs. There must be exactly one daily brief per day. Before generating a new one, check whether a daily brief for the current day already exists. If it does, do not generate a duplicate.
+
+Ensure that the system handles edge cases:
+
+if no new articles exist, generate a brief based on the most recent available data and indicate limited updates
+if scraping has not run recently, trigger a lightweight scrape before generating the brief
+
+Add logging for this process so that failures can be detected. If the generation fails, log the error and retry once after a short delay.
+
+Ensure that the system runs independently of the UI and continues to function after deployment and restarts. The scheduling must persist and not break after publishing.
+
+The goal is that every morning at 6:00 AM, a fresh, high-quality daily brief is automatically created and available in the Pending section, ready for review and publishing, without any manual action required.

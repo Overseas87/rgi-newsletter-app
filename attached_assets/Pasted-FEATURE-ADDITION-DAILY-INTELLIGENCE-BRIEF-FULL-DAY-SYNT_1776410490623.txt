@@ -1,0 +1,129 @@
+FEATURE ADDITION: DAILY INTELLIGENCE BRIEF (FULL-DAY SYNTHESIS)
+Objective
+
+Upgrade the system from generating single-article summaries to producing a comprehensive daily intelligence brief.
+
+The system must:
+
+analyze ALL relevant content from the day
+identify what actually matters
+synthesize it into ONE coherent, high-quality article
+🧠 1. DAILY AGGREGATION LAYER (CRITICAL)
+
+Instead of treating each article independently:
+
+The system must:
+
+collect all relevant items from the last 24 hours:
+news articles
+social media signals (Twitter/X, LinkedIn)
+group them by:
+topic
+event
+narrative
+🔍 2. SIGNAL vs NOISE FILTERING (VERY IMPORTANT)
+
+The system must NOT include everything.
+
+It must:
+
+filter out low-relevance content
+prioritize:
+high-impact developments
+emerging trends
+strategic signals
+
+Goal:
+👉 reduce 100+ inputs → 5–10 key themes
+
+🧩 3. THEMATIC CLUSTERING
+
+Group content into major themes such as:
+
+AI & Technology
+Geopolitics
+Markets & Economy
+Leadership & Organizations
+Environmental / Societal
+
+Each theme must:
+
+contain multiple sources
+represent a real “storyline” of the day
+✍️ 4. DAILY BRIEF GENERATION (CORE OUTPUT)
+
+Generate ONE main article per day:
+
+👉 “RGI Daily Strategic Intelligence Brief”
+
+Structure:
+1. Headline
+
+Clear, high-level summary of the day
+
+2. Executive Summary (VERY IMPORTANT)
+5–7 bullet points
+what matters today
+quick overview for busy leaders
+3. Main Sections (by Theme)
+
+For each key theme:
+
+short explanation of what happened
+synthesis across multiple sources
+key developments
+integration of:
+news
+social signals
+4. Cross-Theme Insight (CRITICAL)
+identify connections between topics
+highlight patterns
+explain broader implications
+5. RGI Perspective
+interpret events through:
+Strategic Foresight
+System Vitality
+Civic Stewardship
+6. Why This Matters for Leaders
+practical takeaway
+decision-relevant insight
+📏 5. LENGTH REQUIREMENT
+minimum: 800–1200 words
+must feel like:
+executive briefing
+not a blog post
+🧠 6. SOURCE INTEGRATION
+
+The article must:
+
+combine multiple sources
+explicitly reference:
+news reports
+direct statements (social media)
+
+Example:
+
+“According to Bloomberg…”
+“In a statement on X…”
+⚙️ 7. USER CONTROL OPTION
+
+Allow editor to choose:
+
+“Auto-generate Daily Brief”
+OR
+“Select articles manually → generate brief”
+🧠 8. PRIORITY RULE
+
+The system must:
+
+prioritize insight over completeness
+focus on what matters, not everything
+avoid repetition
+⚠️ FINAL RULE
+
+The output must answer:
+
+👉 “What happened today — and why does it matter for leaders?”
+
+NOT:
+👉 “What articles exist today?”

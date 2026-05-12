@@ -1,0 +1,122 @@
+FEATURE ADDITION: DUAL INTELLIGENCE ARTICLE SYSTEM
+Objective
+
+Upgrade the system to generate two distinct types of articles:
+
+A Daily Intelligence Brief (macro overview of what matters today)
+Multiple Topic-Specific Articles (deep dives into individual topics)
+
+Both must coexist and serve different purposes.
+
+🧠 1. DAILY INTELLIGENCE BRIEF (MACRO VIEW)
+
+The system must generate:
+
+👉 1 main article per day
+
+This article must:
+
+synthesize all major developments
+connect different topics
+explain what matters overall
+Structure:
+Headline (broad, high-level)
+Executive summary (5–7 bullet points)
+Key themes of the day
+Cross-topic connections
+RGI perspective
+Leadership implications
+Goal:
+
+👉 Answer:
+“What happened today — and why does it matter?”
+
+🧩 2. TOPIC-SPECIFIC ARTICLES (MICRO VIEW)
+
+The system must ALSO generate:
+
+👉 multiple topic-based articles per day
+
+Each article:
+
+focuses on ONE topic only
+uses multiple sources
+provides deeper analysis
+Example topics:
+AI & Technology
+Geopolitics
+Finance & Markets
+Leadership & Organizations
+Climate & Environment
+Structure:
+Topic-specific headline
+Executive summary
+Key developments within that topic
+Supporting signals (news + social)
+RGI perspective
+Leadership implications
+⚖️ 3. CLEAR SEPARATION BETWEEN BOTH TYPES
+
+The system must:
+
+NOT mix unrelated topics into topic articles
+NOT oversimplify the daily brief
+Rule:
+Daily Brief = broad + connected
+Topic Articles = focused + deep
+🧠 4. GENERATION LOGIC
+
+Each day:
+
+The system must:
+
+analyze all incoming data
+identify key themes
+generate:
+1 Daily Brief
+3–6 Topic Articles (if enough data exists)
+✋ 5. USER CONTROL
+
+Allow user to:
+
+manually trigger:
+“Generate Daily Brief”
+“Generate Topic Article”
+select:
+specific topic(s)
+or let system auto-detect
+📊 6. DASHBOARD STRUCTURE
+
+Separate clearly:
+
+Section 1:
+
+👉 Daily Intelligence Brief
+
+Section 2:
+
+👉 Topic-Based Articles
+
+Each must be visually distinct.
+
+🎯 7. PRIORITY RULE
+
+The system must:
+
+prioritize high-impact developments
+avoid weak or redundant articles
+focus on:
+business
+finance
+AI
+geopolitics
+leadership
+⚠️ FINAL RULE
+
+The system must behave like:
+
+👉 an intelligence platform
+
+NOT:
+
+👉 a blog generator

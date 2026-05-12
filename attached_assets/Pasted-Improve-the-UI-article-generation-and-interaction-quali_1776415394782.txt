@@ -1,0 +1,23 @@
+Improve the UI, article generation, and interaction quality of the app based on the following changes.
+
+First, update the color system for the relevancy score and ratings. The current red color creates a negative or alarming feeling. Replace it with a more neutral or professional color scheme. Use gold, blue, or a gradient scale (for example light gray to gold or blue) to represent the score out of 10. The score should feel like a quality indicator, not a warning signal.
+
+Second, improve the editorial direction feature when generating topic articles. When the user writes something in the editorial direction input field, the AI must strongly follow and incorporate those instructions. The system should clearly adjust tone, focus, structure, and emphasis based on what the user writes. The editorial direction must have a visible and meaningful impact on the generated article and should not be ignored.
+
+Third, reduce the article length. The system must no longer target 900 to 1200 words. All generated articles, including daily briefs and topic articles, should be between 400 and 600 words, with a target around 500 words. The content must be concise, high-quality, and focused only on the most important insights.
+
+Fourth, improve the article structure so that the bullet points always appear. Every article must include a “Key Takeaways” section with 3 to 5 bullet points. These bullet points can be full sentences, but they must always be visible and clearly formatted.
+
+Fifth, fix the edit functionality. When the user edits an article and clicks save, the changes must actually be applied and persist. The system must update the article content in real time and reflect the user’s edits immediately. Editing must be reliable and fully functional.
+
+Sixth, improve the Intelligence Feed selection behavior. If users can select items with checkboxes, there must be a clear purpose. Either connect this selection to generating articles from selected sources or remove the selection feature entirely if it has no function. The UI must not contain unclear or unused interactions.
+
+Seventh, improve the overall article clarity and focus. Articles should feel more structured and less overloaded with too many topics. Even in the daily brief, prioritize clarity and readability over listing many themes. The article should feel intentional and easy to follow.
+
+Eighth, add an “About” section instead of or in addition to settings. This section should explain the RGI mission, values, code of ethics, and the purpose of the platform. It should describe how the RGI perspective shapes the articles and what the intention of the tool is. This should act as a guiding framework for the entire system.
+
+Ninth, fix the logo visibility issue. The RGI logo must always be visible in the interface, including in full screen or preview mode. It should be consistently placed in the top navigation and properly loaded in all views.
+
+Tenth, improve performance when generating the daily brief. The generation process should be faster and feel more responsive. Add a loading indicator so the user understands that content is being generated.
+
+The overall goal is to make the product feel clean, reliable, professional, and intentional. Every feature must work correctly, every interaction must have a purpose, and the output must be concise, readable, and valuable.

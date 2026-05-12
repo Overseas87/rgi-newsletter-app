@@ -1,0 +1,39 @@
+Improve the topic system so it becomes more relevant, structured, and aligned with the RGI focus.
+
+First, redefine the topic list to include only high-quality, strategically relevant topics that align with RGI interests. Remove vague or low-value topics and replace them with a clear, curated set of topics focused on areas such as:
+
+AI & Artificial Intelligence
+Technology & Digital Innovation
+Geopolitics
+Global Politics
+Wars & Crisis
+Finance & Markets
+Macroeconomics
+Business & Strategy
+Leadership & Organizations
+Energy & Oil
+Climate & Environmental Health
+Supply Chains & Trade
+Policy & Regulation
+Future of Work
+Innovation & Startups
+
+Ensure that topics are only assigned to articles when they are truly relevant. Avoid over-tagging or assigning topics loosely.
+
+Second, improve the “What Matters Today” section. Keep the top five topics as the primary highlighted topics, based on aggregated relevance and article support. These should stand out visually and represent the most important themes of the day.
+
+Third, add a secondary section below or expandable from “What Matters Today” called something like “All Topics” or “All Active Topics.” This section should list all other topics that have articles associated with them.
+
+For each topic in this list, display:
+
+topic name
+number of related articles
+average relevancy score (optional but preferred)
+
+Ensure that this list is sorted by importance or activity level, not randomly.
+
+Fourth, ensure consistency between topics and articles. All topics shown must be derived directly from the articles that were scraped and ranked. A topic should only appear if there are actual articles supporting it.
+
+Fifth, make topics interactive. When a user clicks on any topic (from either the top five or the full list), they should be able to see all related articles for that topic.
+
+The goal is to transform the topic system into a structured, transparent, and useful layer that helps the user understand what themes are driving the most important developments, while still giving access to the full range of relevant topics.

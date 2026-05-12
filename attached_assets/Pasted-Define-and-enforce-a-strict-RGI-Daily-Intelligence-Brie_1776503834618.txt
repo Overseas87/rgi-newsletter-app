@@ -1,0 +1,36 @@
+Define and enforce a strict “RGI Daily Intelligence Brief” template that all generated daily briefs must follow. The goal is to produce highly readable, concise, and actionable intelligence that can be understood in under 2 minutes and fully read in under 5 minutes.
+
+The total length of the brief must be approximately 300–500 words maximum. Avoid long paragraphs. Use bullet points wherever possible. Every sentence must add value.
+
+The structure must always follow this exact format:
+
+Headline
+Short, sharp, and informative. Clearly reflect the most important development of the last 24 hours.
+Executive Summary
+Maximum 2–3 sentences. Immediately explain what happened and why it matters.
+Key Developments
+3–5 bullet points. Each bullet must be one concise, high-signal sentence describing a major development from the last 24 hours.
+Why It Matters
+2–3 bullet points. Focus only on implications. Explain how this affects markets, institutions, leadership, or global systems.
+Implications for Leaders
+2–3 bullet points. These must be practical and actionable. Explain what decision-makers, executives, or institutions should consider or do based on this information.
+RGI Take
+Short, clear, and opinionated. The system must explicitly state whether RGI agrees, disagrees, or has a mixed view on the dominant narrative. It must explain why and highlight what others may be missing.
+What Changed Since Yesterday
+2–3 bullet points. Compare with the previous day’s brief and highlight meaningful shifts, new developments, or reversals.
+What to Watch Next
+2–3 bullet points. Provide forward-looking insights for the next 24–72 hours. Focus on signals, risks, or events that could change the situation.
+Key Takeaways
+3 short bullet points summarizing the most important insights from the entire brief in a very simple and direct way.
+
+Strict rules:
+
+No long paragraphs
+No repetition
+No vague or generic language
+No unnecessary background explanations
+Focus only on high-signal information
+
+Ensure the tone is analytical, clear, and professional. Avoid academic or overly complex language. The output must feel like a high-quality executive intelligence brief.
+
+The goal is that a user can open the brief and immediately understand what matters, why it matters, and what to watch next, without needing to read long text.

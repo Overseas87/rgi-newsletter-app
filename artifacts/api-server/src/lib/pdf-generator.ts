@@ -1,0 +1,572 @@
+import PDFDocument from "pdfkit";
+import { type InferSelectModel } from "drizzle-orm";
+import { digestArticlesTable, articlesTable } from "@workspace/db";
+
+type DigestArticle = InferSelectModel<typeof digestArticlesTable>;
+type Article = InferSelectModel<typeof articlesTable>;
+
+export interface ArticleWithSources extends DigestArticle {
+  sourceArticles?: Article[];
+}
+
+// ── Palette ────────────────────────────────────────────────────────────────────
+const C = {
+  navy:     "#0B1F3B" as string,   // header & section labels
+  ink:      "#111111" as string,   // title, bold emphasis
+  body:     "#1A1A1A" as string,   // body text — near-black for readability
+  mid:      "#555555" as string,   // secondary text
+  muted:    "#888888" as string,   // footer, captions
+  hairline: "#CCCCCC" as string,   // horizontal rules
+  white:    "#FFFFFF" as string,
+};
+
+// ── Layout constants ───────────────────────────────────────────────────────────
+const W = 612;           // LETTER width  (8.5 in)
+const H = 792;           // LETTER height (11 in)
+const ML = 72;           // left margin  — exactly 1 inch
+const MR = 72;           // right margin — exactly 1 inch
+const MT = 56;           // top margin (body start, after header)
+const MB = 62;           // bottom margin
+const CW = W - ML - MR; // content width = 468 pt
+
+// ── Page state ─────────────────────────────────────────────────────────────────
+let currentPage = 0;
+let publishDate = "";
+
+// ── Low-level helpers ──────────────────────────────────────────────────────────
+function hex(doc: PDFKit.PDFDocument, color: string): PDFKit.PDFDocument {
+  return doc.fillColor(color);
+}
+function strokeHex(doc: PDFKit.PDFDocument, color: string): PDFKit.PDFDocument {
+  return doc.strokeColor(color);
+}
+
+function hRule(doc: PDFKit.PDFDocument, y: number, color: string, weight = 0.5) {
+  doc.save();
+  strokeHex(doc, color).lineWidth(weight)
+    .moveTo(ML, y).lineTo(W - MR, y).stroke();
+  doc.restore();
+}
+
+// ── Content page header ────────────────────────────────────────────────────────
+function drawPageHeader(doc: PDFKit.PDFDocument) {
+  const HEADER_H = 68;
+
+  // Wordmark line — "RICK GOINGS INSTITUTE  •  Strategic Intelligence Analysis"
+  doc.save();
+  hex(doc, C.navy)
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .text("RICK GOINGS INSTITUTE", ML, 26, { characterSpacing: 0.8, width: CW, continued: true });
+  hex(doc, C.mid)
+    .font("Helvetica")
+    .fontSize(8)
+    .text("  \u2022  Strategic Intelligence Analysis", { characterSpacing: 0.2 });
+  doc.restore();
+
+  // Thin rule under header
+  hRule(doc, HEADER_H, C.hairline, 0.5);
+
+  doc.x = ML;
+  doc.y = HEADER_H + 18;
+}
+
+// ── Article cover page — premium, no background fills ─────────────────────────
+function drawArticleCover(
+  doc: PDFKit.PDFDocument,
+  headline: string,
+  subtitle: string,
+) {
+  currentPage++;
+  doc.addPage();
+
+  const today = new Date().toLocaleDateString("en-US", {
+    month: "long", day: "numeric", year: "numeric",
+  });
+
+  // ── Top branding block ────────────────────────────────────────────────────
+  doc.save();
+  hex(doc, C.navy)
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text("RICK GOINGS INSTITUTE", ML, 46, { characterSpacing: 1.0, width: CW });
+  doc.restore();
+
+  doc.save();
+  hex(doc, C.mid)
+    .font("Helvetica")
+    .fontSize(8)
+    .text("Strategic Intelligence Analysis", ML, 62, { characterSpacing: 0.4, width: CW });
+  doc.restore();
+
+  hRule(doc, 82, C.hairline, 0.5);
+
+  // ── Title — positioned at ~36% down the page ──────────────────────────────
+  const titleY = 290;
+  doc.font("Helvetica-Bold").fontSize(26);
+  const titleH = doc.heightOfString(headline, { width: CW, lineGap: 6 });
+
+  doc.save();
+  hex(doc, C.ink)
+    .font("Helvetica-Bold")
+    .fontSize(26)
+    .text(headline, ML, titleY, { width: CW, lineGap: 6, align: "left" });
+  doc.restore();
+
+  // ── Subtitle ──────────────────────────────────────────────────────────────
+  if (subtitle) {
+    const subY = titleY + titleH + 20;
+    doc.save();
+    hex(doc, C.mid)
+      .font("Helvetica-Oblique")
+      .fontSize(10.5)
+      .text(subtitle, ML, subY, { width: CW, lineGap: 4, align: "left" });
+    doc.restore();
+  }
+
+  // ── Bottom rule + metadata ────────────────────────────────────────────────
+  hRule(doc, 700, C.hairline, 0.5);
+
+  doc.save();
+  hex(doc, C.muted)
+    .font("Helvetica")
+    .fontSize(8)
+    .text(today, ML, 714, { width: CW, align: "left" });
+  doc.restore();
+
+  doc.save();
+  hex(doc, C.muted)
+    .font("Helvetica")
+    .fontSize(8)
+    .text("Prepared for academic use", ML, 714, { width: CW, align: "right" });
+  doc.restore();
+}
+
+// ── Footer ─────────────────────────────────────────────────────────────────────
+function drawPageFooter(doc: PDFKit.PDFDocument, pageNum: number) {
+  const footerY = H - MB + 4;
+
+  const page = (doc as unknown as { page: { margins: { bottom: number } } }).page;
+  const savedBottom = page.margins.bottom;
+  page.margins.bottom = 0;
+
+  hRule(doc, footerY, C.hairline, 0.5);
+
+  doc.save();
+  hex(doc, C.muted)
+    .font("Helvetica")
+    .fontSize(7)
+    .text("RGI  ·  Confidential", ML, footerY + 10, {
+      characterSpacing: 0.1,
+      width: CW / 2,
+      align: "left",
+    });
+  doc.restore();
+
+  doc.save();
+  hex(doc, C.muted)
+    .font("Helvetica")
+    .fontSize(7)
+    .text(`${pageNum}`, ML, footerY + 10, { width: CW, align: "center" });
+  doc.restore();
+
+  if (publishDate) {
+    doc.save();
+    hex(doc, C.muted)
+      .font("Helvetica")
+      .fontSize(7)
+      .text(publishDate, ML, footerY + 10, {
+        width: CW,
+        align: "right",
+        characterSpacing: 0.1,
+      });
+    doc.restore();
+  }
+
+  page.margins.bottom = savedBottom;
+}
+
+function newPage(doc: PDFKit.PDFDocument): number {
+  currentPage++;
+  doc.addPage();
+  drawPageHeader(doc);
+  drawPageFooter(doc, currentPage);
+  doc.x = ML;
+  doc.y = 90;
+  return currentPage;
+}
+
+function ensureSpace(doc: PDFKit.PDFDocument, needed: number) {
+  if (doc.y + needed > H - MB - 36) {
+    newPage(doc);
+  }
+}
+
+// ── Section heading — 13pt bold, consulting-grade weight ──────────────────────
+function sectionHeading(doc: PDFKit.PDFDocument, label: string) {
+  doc.save();
+  hex(doc, C.navy)
+    .font("Helvetica-Bold")
+    .fontSize(13)
+    .text(label, ML, doc.y, { width: CW });
+  doc.restore();
+  // ~10pt of space below heading before body text starts
+  doc.moveDown(0.6);
+}
+
+// ── Body paragraph ─────────────────────────────────────────────────────────────
+// lineGap=5 at 10.5pt gives 10.5+5=15.5pt line height → ratio 1.48 (spec: 1.4–1.6)
+function para(doc: PDFKit.PDFDocument, text: string, opts: {
+  color?: string;
+  font?: string;
+  size?: number;
+  lineGap?: number;
+  width?: number;
+} = {}) {
+  const {
+    color = C.body,
+    font = "Helvetica",
+    size = 10.5,
+    lineGap = 5,
+    width = CW,
+  } = opts;
+  doc.save();
+  hex(doc, color).font(font).fontSize(size)
+    .text(text, ML, doc.y, { width, lineGap, align: "left" });
+  doc.restore();
+}
+
+// ── Bullet list ────────────────────────────────────────────────────────────────
+// 10.5pt body size, lineGap 5 → 1.48× line height (spec: 1.4–1.6)
+function bulletList(
+  doc: PDFKit.PDFDocument,
+  items: string[],
+  opts: { size?: number } = {}
+) {
+  const { size = 10.5 } = opts;
+  const LGAP = 5;
+  const indent = 16;
+  const textX = ML + indent;
+  const textW = CW - indent;
+
+  items.forEach((item) => {
+    const text = item.trim();
+    doc.font("Helvetica").fontSize(size);
+    const textH = doc.heightOfString(text, { width: textW, lineGap: LGAP });
+    ensureSpace(doc, textH + 56);
+    const y = doc.y;
+
+    // Bullet dot — drawn after ensureSpace so it's always on the same page as text
+    doc.save();
+    hex(doc, C.body)
+      .rect(ML + 2, y + size * 0.35, 3.5, 3.5)
+      .fill();
+    doc.restore();
+
+    doc.save();
+    hex(doc, C.body)
+      .font("Helvetica")
+      .fontSize(size)
+      .text(text, textX, y, { width: textW, lineGap: LGAP, align: "left" });
+    doc.restore();
+
+    doc.y += 8;
+  });
+}
+
+// ── RGI Take — clean italic paragraph, no box ──────────────────────────────────
+function rgiTakePara(doc: PDFKit.PDFDocument, text: string) {
+  const LGAP = 5;
+  doc.font("Helvetica-Oblique").fontSize(10.5);
+  // Reserve space for 3 lines only — PDFKit auto-pages the rest of the text
+  ensureSpace(doc, 50);
+
+  doc.save();
+  hex(doc, C.body)
+    .font("Helvetica-Oblique")
+    .fontSize(10.5)
+    .text(text, ML, doc.y, { width: CW, lineGap: LGAP });
+  doc.restore();
+
+  // Reset font so subsequent measurements use correct metrics
+  doc.font("Helvetica").fontSize(10.5);
+}
+
+// ── Sources section ────────────────────────────────────────────────────────────
+function sourcesSection(doc: PDFKit.PDFDocument, sources: Article[]) {
+  if (sources.length === 0) return;
+
+  ensureSpace(doc, 56);
+  hRule(doc, doc.y, C.hairline, 0.5);
+  doc.moveDown(1.2);
+
+  sectionHeading(doc, `Sources (${sources.length})`);
+
+  sources.forEach((src, i) => {
+    ensureSpace(doc, 22);
+
+    let domain = "";
+    try { domain = new URL(src.url ?? "").hostname.replace(/^www\./, ""); } catch {}
+
+    const rawHeadline = src.headline ?? "Untitled";
+    const shortHeadline = rawHeadline.length > 100
+      ? rawHeadline.slice(0, 97) + "\u2026"
+      : rawHeadline;
+
+    const lineParts = [
+      src.sourceName ?? null,
+      shortHeadline,
+    ].filter(Boolean).join(": ");
+
+    // 8.5pt references — readable but clearly subordinate to body text
+    doc.fillColor(C.mid).font("Helvetica").fontSize(8.5)
+      .text(lineParts, ML, doc.y, {
+        width: CW,
+        lineGap: 3,
+        link: src.url ?? undefined,
+      });
+
+    doc.moveDown(0.4);
+  });
+}
+
+// ── Combined report cover page ─────────────────────────────────────────────────
+function drawCombinedCover(doc: PDFKit.PDFDocument, articles: ArticleWithSources[]) {
+  currentPage++;
+  doc.addPage();
+
+  const today = new Date().toLocaleDateString("en-US", {
+    month: "long", day: "numeric", year: "numeric",
+  });
+
+  // ── Top branding block ──────────────────────────────────────────────────────
+  doc.save();
+  hex(doc, C.navy)
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text("RICK GOINGS INSTITUTE", ML, 46, { characterSpacing: 1.0, width: CW });
+  doc.restore();
+
+  doc.save();
+  hex(doc, C.mid)
+    .font("Helvetica")
+    .fontSize(8)
+    .text("Strategic Intelligence Analysis", ML, 62, { characterSpacing: 0.4, width: CW });
+  doc.restore();
+
+  hRule(doc, 82, C.hairline, 0.5);
+
+  // ── Report label ────────────────────────────────────────────────────────────
+  doc.save();
+  hex(doc, C.ink)
+    .font("Helvetica-Bold")
+    .fontSize(22)
+    .text("Daily Intelligence Digest", ML, 200, { width: CW, lineGap: 5 });
+  doc.restore();
+
+  doc.save();
+  hex(doc, C.mid)
+    .font("Helvetica")
+    .fontSize(10.5)
+    .text(today, ML, 240, { width: CW, lineGap: 4 });
+  doc.restore();
+
+  hRule(doc, 276, C.hairline, 0.5);
+
+  // ── Table of contents ───────────────────────────────────────────────────────
+  doc.save();
+  hex(doc, C.navy)
+    .font("Helvetica-Bold")
+    .fontSize(7.5)
+    .text("CONTENTS", ML, 294, { characterSpacing: 1.6, width: CW });
+  doc.restore();
+
+  let itemY = 316;
+  articles.forEach((a, i) => {
+    if (itemY > H - 110) return;
+
+    doc.save();
+    hex(doc, C.muted)
+      .font("Helvetica")
+      .fontSize(8)
+      .text(`${i + 1}`, ML, itemY, { width: 18 });
+    doc.restore();
+
+    doc.save();
+    hex(doc, C.ink)
+      .font("Helvetica")
+      .fontSize(9.5)
+      .text(a.headline, ML + 18, itemY, { width: CW - 18, lineGap: 2 });
+    doc.restore();
+
+    const lineH = doc.heightOfString(a.headline, { width: CW - 18, lineGap: 2 });
+    itemY += lineH + 10;
+    hRule(doc, itemY, C.hairline, 0.3);
+    itemY += 12;
+  });
+
+  // ── Bottom metadata ─────────────────────────────────────────────────────────
+  hRule(doc, 700, C.hairline, 0.5);
+
+  doc.save();
+  hex(doc, C.muted)
+    .font("Helvetica")
+    .fontSize(8)
+    .text(today, ML, 714, { width: CW, align: "left" });
+  doc.restore();
+
+  doc.save();
+  hex(doc, C.muted)
+    .font("Helvetica")
+    .fontSize(8)
+    .text("Prepared for academic use", ML, 714, { width: CW, align: "right" });
+  doc.restore();
+}
+
+// ── Strip markdown markers ─────────────────────────────────────────────────────
+function cleanText(t: string): string {
+  return t.replace(/\*\*/g, "").replace(/\*/g, "").trim();
+}
+
+function visibleLines(value: string | null | undefined): string[] {
+  return String(value ?? "")
+    .split("\n")
+    .map(cleanText)
+    .filter(Boolean);
+}
+
+function visibleTextBlocks(value: string | null | undefined): string[] {
+  return String(value ?? "")
+    .split(/\n{2,}/)
+    .map(cleanText)
+    .filter(Boolean);
+}
+
+function arr(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((item) => cleanText(String(item))).filter(Boolean) : [];
+}
+
+function uiCardSection(
+  doc: PDFKit.PDFDocument,
+  heading: string,
+  opts: {
+    items?: string[];
+    paragraphs?: string[];
+    border?: string;
+    label?: string;
+    italic?: boolean;
+  }
+) {
+  const items = opts.items ?? [];
+  const paragraphs = opts.paragraphs ?? [];
+  if (items.length === 0 && paragraphs.length === 0) return;
+
+  sectionGuardForCard(doc);
+  sectionHeading(doc, heading);
+  if (items.length > 0) bulletList(doc, items, { size: 10 });
+  for (const text of paragraphs) {
+    const clean = cleanText(text);
+    doc.font(opts.italic ? "Helvetica-Oblique" : "Helvetica").fontSize(10);
+    ensureSpace(doc, doc.heightOfString(clean, { width: CW, lineGap: 4 }) + 8);
+    para(doc, clean, { font: opts.italic ? "Helvetica-Oblique" : "Helvetica", size: 10, lineGap: 4 });
+    doc.moveDown(0.45);
+  }
+  doc.moveDown(0.8);
+  hRule(doc, doc.y, C.hairline, 0.35);
+  doc.y += 16;
+}
+
+function sectionGuardForCard(doc: PDFKit.PDFDocument) {
+  ensureSpace(doc, 70);
+}
+
+// ── Main export ────────────────────────────────────────────────────────────────
+export function generateArticlePdf(
+  articles: ArticleWithSources[],
+  options: { combined?: boolean } = {}
+): PDFKit.PDFDocument {
+  currentPage = 0;
+  publishDate = new Date().toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+  });
+
+  const doc = new PDFDocument({
+    size: "LETTER",
+    margins: { top: MT, bottom: MB, left: ML, right: MR },
+    info: {
+      Title: articles.length === 1
+        ? articles[0].headline
+        : `RGI Intelligence Analysis — ${publishDate}`,
+      Author: "Rick Goings Institute",
+      Subject: "Strategic Intelligence Analysis",
+      Keywords: "RGI, intelligence, strategy, leadership",
+      Creator: "RGI Intelligence Platform",
+    },
+    autoFirstPage: false,
+  });
+
+  if (options.combined && articles.length > 1) {
+    drawCombinedCover(doc, articles);
+  }
+
+  for (const article of articles) {
+    const execSummary = arr(article.executiveSummary);
+    const keyTakeaways = arr(article.keyTakeaways);
+    const implificationsForLeaders = arr((article as unknown as Record<string, unknown>).implificationsForLeaders);
+    const topicTags = arr(article.topicTags);
+    const sources = article.sourceArticles ?? [];
+    const isStructured = execSummary.length > 0 || (Array.isArray(article.whatToWatch) && article.whatToWatch.length > 0);
+    const keyDevelopments = isStructured ? visibleLines(article.body) : [];
+    const proseBlocks = isStructured ? [] : visibleTextBlocks(article.body);
+
+    newPage(doc);
+
+    // Headline and metadata mirror the modal/page header.
+    doc.save();
+    hex(doc, C.ink)
+      .font("Helvetica-Bold")
+      .fontSize(22)
+      .text(article.headline, ML, doc.y, { width: CW, lineGap: 5 });
+    doc.restore();
+    // ~14pt gap between headline and rule
+    doc.moveDown(0.7);
+
+    hRule(doc, doc.y, C.hairline, 0.5);
+
+    doc.y += 18;
+
+    uiCardSection(doc, "Executive Summary", { paragraphs: execSummary });
+
+    if (isStructured && keyDevelopments.length > 0) {
+      uiCardSection(doc, "Key Developments", { items: keyDevelopments });
+    } else if (proseBlocks.length > 0) {
+      uiCardSection(doc, "Analysis", { paragraphs: proseBlocks });
+    }
+
+    uiCardSection(doc, "Why It Matters", { items: keyTakeaways });
+
+    if (isStructured) {
+      uiCardSection(doc, "Implications for Decision Makers", { items: implificationsForLeaders });
+    }
+
+    if (article.rgiTake) {
+      uiCardSection(doc, "RGI Editorial", { paragraphs: [article.rgiTake], italic: true });
+    }
+
+    if (topicTags.length > 0) {
+      sectionGuardForCard(doc);
+      sectionHeading(doc, "Topics");
+      doc.save();
+      hex(doc, C.mid).font("Helvetica").fontSize(9)
+        .text(topicTags.join("  •  "), ML, doc.y, { width: CW, lineGap: 3 });
+      doc.restore();
+      doc.moveDown(1);
+      hRule(doc, doc.y, C.hairline, 0.35);
+      doc.y += 16;
+    }
+
+    sourcesSection(doc, sources);
+  }
+
+  return doc;
+}

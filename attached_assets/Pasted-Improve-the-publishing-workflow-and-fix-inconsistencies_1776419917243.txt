@@ -1,0 +1,24 @@
+Improve the publishing workflow and fix inconsistencies between topics and top stories so the system behaves logically and reliably.
+
+First, implement a clear publishing and newsletter workflow. When an article is accepted, it must automatically move into the “Published” section. In the Published section, add a clear option to “Send as Newsletter.” This action should allow the user to send the selected article to all subscribed users via email. The system must make it easy to select one or multiple published articles and distribute them as a newsletter. This feature should only be available for published articles, not drafts or rejected ones.
+
+Second, fix the internal consistency between “Top Stories Today” and “What Matters Today.” The topics shown in “What Matters Today” must be directly derived from the same dataset as the Top Stories and overall ranked articles. A topic should only appear in “What Matters Today” if there are multiple high-relevance articles supporting it.
+
+The ranking of topics must be based on aggregated relevance. For each topic, calculate a combined score using:
+
+the number of relevant articles in that topic
+the average relevancy score of those articles
+the importance of those articles (especially if they appear in Top Stories)
+
+Topics that appear in Top Stories should have higher weight. A topic that does not appear in any Top Story should not rank above topics that dominate the Top Stories.
+
+Ensure that the system avoids contradictions. For example, if “Culture” is ranked as the number one topic, there must be strong supporting articles and ideally at least one presence in Top Stories. If not, it should not be ranked highly.
+
+The goal is that the user sees a consistent and logical structure:
+
+Top Stories represent the most important individual developments
+What Matters Today represents the dominant themes behind those stories
+
+Both must align and reinforce each other, not contradict each other.
+
+Finally, ensure that topic classification is accurate and not overly broad. Avoid assigning articles to weak or irrelevant topics. Only assign topics that meaningfully reflect the content and its importance for RGI.

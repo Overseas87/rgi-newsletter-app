@@ -1,0 +1,15 @@
+Update the system so that it automatically generates content every time the app is opened. When the user lands on the dashboard, the system should immediately scrape, filter, and analyze the latest data and then generate two things at the same time: one Daily Intelligence Brief and one high-quality featured article based on the single most relevant development from the RGI perspective.
+
+The Daily Intelligence Brief should give a short, structured overview of what matters today across topics. The featured article should focus on the most important single topic or event of the day and go slightly deeper. Both should be generated automatically without requiring the user to click anything, but there should still be buttons available to regenerate them manually.
+
+Reduce the article length significantly. All generated articles should be between 400 and 500 words maximum. They should be concise, high-quality, and focused only on the most important insights. After each article, include an “RGI Take” section that provides a clear interpretation and opinion, followed by a “Key Takeaways” section with 3 to 5 bullet points.
+
+Expand the data sourcing beyond traditional news articles. The system must also include sources from across the web, including Twitter/X and LinkedIn, as well as company blogs, official announcements, and other relevant online sources. These sources must be treated as valid inputs, especially when they come from high-authority accounts such as CEOs, companies, policymakers, or institutions.
+
+The system must recognize that important information does not only come from news articles. If a high-impact statement is made on Twitter/X or LinkedIn, it should be considered a primary signal and can be used directly in article generation, even if no news article exists yet.
+
+Improve the source system so that social media sources actually appear in the data feed and are actively used. Allow the system to pull from a broader set of web-based sources, not just predefined newspapers.
+
+The system must always prioritize relevance to RGI. It should filter out irrelevant or low-impact content and focus only on topics related to business, finance, AI, geopolitics, leadership, and major societal or economic developments.
+
+The overall goal is that when the user opens the app, they immediately see a clear, high-quality output: one strong daily overview and one strong focused article, both short, insightful, and directly useful.

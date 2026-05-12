@@ -1,0 +1,33 @@
+🔧 PROMPT (copy into Replit)
+
+Improve the system by refining the About section, Settings, Sources transparency, publishing workflow, and article generation control.
+
+First, completely rewrite and improve the “About RGI” section. This section must clearly and sharply explain what RGI is, what the purpose of this tool is, why it exists, and what mission it serves. It should communicate the idea that this is an internal intelligence and publishing system designed to identify what matters, interpret it through a clear RGI perspective, and produce high-quality content for leadership and decision-making. The tone should be confident, structured, and professional. The user should immediately understand the vision, the purpose, and the lens through which RGI operates.
+
+Second, clean up the Settings tab. Remove the current RGI-related content from Settings and replace it with useful functional controls. Add settings that allow the user to adjust things such as preferred topics, scraping behavior (for example frequency or aggressiveness), article length preferences, and possibly toggles for automatic generation or manual control. The Settings tab should feel practical and useful, not informational.
+
+Third, improve the Sources section by adding a clear credibility and weighting system. Each source must display a credibility score and an explanation of why it is considered more or less credible. This should include factors such as reputation, authority, type of source (news, institutional, social), and historical reliability. The user must be able to understand why some sources have more influence in the system than others. The weighting of sources should be transparent and visible.
+
+Fourth, improve the publishing workflow. When an article is accepted and moved into the Published section, there must be a clear option to send it out as a newsletter to all subscribed users. This should be a distinct action such as “Send as Newsletter.” The system should allow selecting one or multiple published articles and distributing them via email. This feature should only be available for published articles and must be clearly integrated into the workflow.
+
+Fifth, significantly improve the topic-based article generation flow. When the user selects multiple topics (for example geopolitics, economy, and environmental health), the system should first show a selection screen before generating the article. On this screen, display all relevant articles that match the selected topics. Each article should include a headline, source, short preview, and relevancy score.
+
+Allow the user to:
+
+quickly scan all relevant articles
+select specific articles to include in the generated output
+or choose to include all relevant articles automatically
+
+Add a clear navigation step, such as a “Next” button, that moves the user from topic selection to article selection, and then to generation.
+
+The AI must then generate the final article based on the selected subset of articles or the full set if the user chooses all. This gives the user full editorial control over what inputs are used for generation.
+
+The overall goal is to transform the system into a controlled editorial workflow where:
+
+the user understands the purpose and mission (About section)
+the user can adjust behavior (Settings)
+the user trusts the sources (Sources transparency)
+the user controls publishing (Newsletter sending)
+the user controls inputs for AI generation (article selection flow)
+
+The system should feel structured, transparent, and intentional, not automatic and opaque.

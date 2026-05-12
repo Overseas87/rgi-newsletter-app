@@ -1,0 +1,13 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // The RGI app uses the backend Firebase Admin SDK.
+    // Keep direct browser/client Firestore access closed unless a future client
+    // auth model is explicitly designed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

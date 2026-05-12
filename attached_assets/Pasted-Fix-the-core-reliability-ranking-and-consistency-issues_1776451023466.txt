@@ -1,0 +1,23 @@
+Fix the core reliability, ranking, and consistency issues of the app so it behaves like a stable intelligence system instead of a prototype.
+
+First, fix the data persistence problem. Ensure that all sources, scraped articles, generated articles, and article states are stored in persistent storage and are not lost when the app is republished or restarted. On app startup, automatically load all previously stored data so the dashboard is never empty. If no data exists, initialize the system with a default set of high-quality sources so that scraping always works.
+
+Second, fix the scraping behavior. When the user clicks “Scrape Now,” do not clear existing articles. Keep current articles visible and update the system in the background. Once new data is available, update the feed dynamically. The dashboard must always show existing content immediately and must never appear empty.
+
+Third, fix the ranking logic completely. The order of “Top Stories Today” must always be strictly determined by the relevancy score in descending order. The highest score must always be rank 1, the second-highest must be rank 2, and so on. No other factor may override the final ranking. If two articles have the same score, use authenticity score or recency only as a tie-breaker.
+
+Fourth, fix the relevancy scoring distribution. Avoid assigning maximum scores like 10 out of 10 to multiple items. Introduce a realistic spread of scores so that differences in importance are clearly visible. Ensure that not all topics and articles receive similar scores.
+
+Fifth, fix the consistency between “Top Stories Today” and “What Matters Today.” The topics shown must be derived directly from the same top-ranked articles. A topic should only appear if it is supported by strong articles. A topic that does not appear in the Top Stories should not rank higher than topics that do.
+
+Sixth, simplify the dashboard layout. Remove any duplicate or secondary article lists. There should only be one “Top Stories Today” section in the center. The “What Matters Today” section should be smaller, limited to a maximum of five topics, and positioned on the right. No additional article sections should compete for attention.
+
+Seventh, fix the UI for relevancy scores. Remove the bar-style visualization and replace it with a clean badge format such as “8.7 / 10.” Use neutral or professional colors like blue, gray, or gold. Avoid red unless indicating something negative.
+
+Eighth, fix the article editing functionality. When a user edits an article and clicks save, the changes must persist and be reflected immediately. Editing must work reliably for all article states.
+
+Ninth, fix the Intelligence Feed interactions. If checkboxes exist, they must have a clear function such as selecting articles for generation. If no function is implemented, remove them to avoid confusion.
+
+Tenth, remove or hide features that do not belong to the current internal workflow. Specifically remove the weekly digest and any subscription-related UI elements, since this is an internal RGI tool.
+
+The overall goal is to make the system stable, consistent, and trustworthy. The user should always see data, trust the ranking, and understand the logic behind what is shown.

@@ -1,0 +1,21 @@
+Update the app so that the main dashboard is centered around the Top Stories of the day. When the user opens the app, the first and most prominent thing they should see is a section called “Top Stories Today,” showing the five most important and relevant stories ranked from 1 to 5 based on the RGI relevance score.
+
+Each top story should display the headline, source, author if available, publish time (including how many hours ago), topic, a short description, the relevance score out of 10, and a direct link to the original article.
+
+To the right side of the Top Stories section, add a smaller section called “What Matters Today.” This should show the most important topics of the day, ranked by importance, with the number of relevant articles and a short explanation of why each topic matters from the RGI perspective.
+
+Below or alongside this, keep lightweight system stats like number of articles scraped today, pending review, and active sources, but these should not dominate the page.
+
+At the top of the dashboard, add a clear action bar. This bar must include a “Scrape Now” button that triggers a fast refresh of new data, a “Generate Daily Brief” button that creates a full strategic overview of the day, and an option to generate a topic-specific article.
+
+For topic-based generation, the user must be able to select a topic such as geopolitics, AI, finance, or leadership. Once a topic is selected, the system should generate a full article based on all relevant information from that topic within the last 24 hours, including news, social signals, and other sources. This article must synthesize multiple inputs and explain what happened, what it means, and why it matters.
+
+In addition to topic articles, the system must always support generating a full “Daily Strategic Brief.” This should combine all major developments across topics into one coherent article that explains what happened overall and what is most important from the RGI perspective.
+
+The system must clearly distinguish between these two modes: topic-specific analysis and full-day strategic analysis. Both must be available and easy to trigger from the top action bar.
+
+When generating any article, the system must not summarize a single source. It must always synthesize multiple relevant inputs from that day and produce a structured, thoughtful piece that includes interpretation and insight.
+
+The intelligence feed and underlying system must ensure that only relevant, high-impact information is used. Irrelevant content such as local, lifestyle, or low-impact news must be filtered out before it reaches the Top Stories or article generation.
+
+The overall goal is that when a user opens the app, they immediately understand what matters today, can quickly scan the top five stories, see which topics dominate, and then generate either a deep topic analysis or a full strategic overview of the day.

@@ -1,0 +1,42 @@
+Fix the PDF download feature so that it reliably downloads the currently selected article as a clean PDF document. Right now the PDF export is not working correctly and needs to be made simple and dependable.
+
+The PDF download must work directly from the article view and from published articles. When the user clicks “Download as PDF,” the system should immediately generate and download a PDF of that article.
+
+The PDF must always include:
+
+article headline
+article creation date and time
+source publish date if available
+executive summary
+key developments
+why it matters
+RGI Take
+what to watch next
+key takeaways
+full sources and references
+
+The exported file should reflect the latest saved version of the article, including any edits made by the user.
+
+Keep the layout simple and reliable. Do not overcomplicate the export. The most important thing is that the PDF downloads correctly and includes the full article content in a readable format.
+
+Ensure that:
+
+the download button is properly connected to the PDF generation function
+the browser receives a valid PDF file
+the file is automatically downloaded when clicked
+the export does not fail silently
+if generation fails, show a visible error message
+
+Make sure the PDF generation uses the actual article data from the database or current saved state, not placeholder data or incomplete frontend state.
+
+If needed, rebuild the PDF generation flow entirely so it works consistently. The priority is functionality first: click button → valid PDF downloads → includes full article and references.
+
+The PDF should be clean and professional, but reliability matters more than design right now.
+
+Also verify that the exported content is complete. The PDF must not cut off sections, omit key takeaways, or exclude sources. It should export the full article from beginning to end.
+
+The goal is simple: when I click download, I get a working PDF of the article with the full content, including sources and key takeaways.
+
+Your current PDF output structure is already close to what is needed, since it includes the title, executive summary, key developments, why it matters, RGI Take, what to watch next, and sources. The problem is that the download action itself is not working reliably, so focus on fixing the export pipeline and button behavior first.
+
+One extra improvement to add: after the PDF is generated successfully, show a small confirmation message like “PDF downloaded successfully.”

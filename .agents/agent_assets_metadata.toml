@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "4naqk0UvL47UQfHpPtTBt"
+uri = "file://rgi-digest-app.zip"
+type = "unspecified"
+title = "RGI Daily Intelligence Digest — Source Code"

@@ -1,0 +1,7 @@
+<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <!-- RGI Pinwheel — four curved petals in gold, rotating clockwise -->
+  <path d="M20 20 C16 13, 9 9, 20 3 C27 0, 25 9, 20 20Z" fill="#C9A227"/>
+  <path d="M20 20 C27 16, 31 9, 37 20 C40 27, 31 25, 20 20Z" fill="#C9A227"/>
+  <path d="M20 20 C24 27, 31 31, 20 37 C13 40, 15 31, 20 20Z" fill="#C9A227"/>
+  <path d="M20 20 C13 24, 9 31, 3 20 C0 13, 9 15, 20 20Z" fill="#C9A227"/>
+</svg>

@@ -1,0 +1,21 @@
+Improve the overall quality, reliability, and usability of the RGI intelligence tool so that it feels like a trusted daily decision-making system rather than a generic news dashboard.
+
+First, ensure the system always feels active and populated. The dashboard must never appear empty. Always display cached articles from the last 24 hours immediately when the app loads, even before a new scrape is triggered. Scraping must happen in the background without clearing existing content. The user should always see content instantly.
+
+Second, strengthen the filtering logic so that the system acts as a high-quality intelligence filter. Remove low-impact or irrelevant content such as lifestyle, entertainment, or local stories. Only include content that is relevant to business, finance, AI, geopolitics, leadership, and systems-level developments. If necessary, show fewer items rather than filling the interface with weak content.
+
+Third, improve the scoring system so that it becomes consistent and trustworthy. The relevancy score must be based primarily on strategic importance and RGI relevance, not recency. Recency should only slightly influence the score. Add a short explanation for each score that explains why the item is considered important. Also include an authenticity score that reflects source credibility.
+
+Fourth, significantly improve the RGI Take section. It must no longer summarize the article. It must clearly evaluate the claims of the source and take a position. Each RGI Take should state whether RGI agrees, partially agrees, or disagrees with the narrative and explain why. It should also include a forward-looking insight or implication.
+
+Fifth, improve article generation so that it focuses on clarity and reasoning. Articles should be short (400 to 600 words), structured, and easy to read. When multiple topics are selected, the system must create a single coherent narrative based on the strongest connection between those topics, rather than listing them separately.
+
+Sixth, simplify the user interface. The dashboard should clearly prioritize the Top Stories section. The “What Matters Today” section should be smaller, limited to a maximum of five topics, and positioned as a secondary panel. Remove or redesign any elements that create visual clutter or confusion.
+
+Seventh, improve the reading experience. Use a white or very light background with dark text for all content-heavy sections. Ensure proper spacing, clean typography, and high readability for longer text.
+
+Eighth, fix all interaction issues. Editing an article must work reliably and persist changes. Clicking on topics must open a topic view with relevant articles. Clicking on an article must always open the original source. Remove or fix any UI elements that have no clear function.
+
+Ninth, improve performance and responsiveness. Scraping and article generation should feel fast and should not block the interface. Always show loading states and feedback so the user understands what is happening.
+
+The overall goal is to transform the system into a clean, reliable, high-quality intelligence tool that highlights what truly matters, explains why it matters, and allows the user to quickly understand and act on the information.

@@ -1,0 +1,43 @@
+Add an automated hourly scraping system that refreshes all data sources every hour exactly on the hour.
+
+Implement a background scheduler (cron job or equivalent) that runs every hour at minute 00 (for example 01:00, 02:00, 03:00, etc.) based on a defined timezone. The scheduler must run reliably without user interaction and must continue working after deployment and restarts.
+
+Each time the hourly job runs, the system must:
+
+fetch new articles from all active sources only (ignore inactive sources)
+only retrieve content from the last 24 hours
+avoid re-importing duplicate articles that already exist in the database
+merge new articles into the existing dataset without deleting previous data
+
+Ensure that scraping is efficient:
+
+use parallel/asynchronous requests to fetch multiple sources at the same time
+apply timeouts to skip slow or unresponsive sources
+limit the number of articles per source to a small high-quality set (e.g. top 3–5)
+
+After scraping:
+
+update the database with new articles
+update timestamps (last_scraped)
+update topic assignments
+update story clustering and multi-source confirmations
+recompute relevancy scores for new items only
+
+Do not block the application during scraping. This must run in the background. The user should always see existing articles while new ones are being added.
+
+Ensure that the system logs each hourly run:
+
+start time
+number of sources processed
+number of new articles added
+any errors
+
+If scraping fails, log the error and retry once after a short delay. Do not crash the system.
+
+Add a fallback mechanism:
+
+if the scheduler fails or does not run, trigger scraping automatically when the user opens the app if the last scrape is older than 60 minutes
+
+Ensure that this hourly scraping integrates cleanly with the daily brief system. The daily brief should always use the most recent available data from the last hourly runs.
+
+The goal is to maintain a continuously updated intelligence system where new information is automatically collected every hour without manual intervention, ensuring the application is always current and reliable.
