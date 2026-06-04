@@ -1,35 +1,39 @@
 import { Router, type IRouter } from "express";
 import { runScrape, getScrapeStatus } from "../lib/scraper";
 import { logger } from "../lib/logger";
-import { enqueueUniqueJob } from "../lib/job-queue";
 
 const router: IRouter = Router();
 
 router.post("/scrape/trigger", async (req, res): Promise<void> => {
-  req.log.info("Manual scrape triggered");
-  const job = await enqueueUniqueJob("scrape", "Manual scrape", "manual-scrape", async (record) => {
-    record.progress = 20;
-    const result = await runScrape();
-    record.progress = 95;
-    return result;
-  }, {
-    maxAttempts: 2,
-    handler: "manual-scrape",
-    payload: { requestedBy: "manual" },
-  });
+  const current = getScrapeStatus();
+  if (current.isRunning) {
+    res.status(202).json({
+      message: "Scrape is already running",
+      status: "running",
+      ...current,
+    });
+    return;
+  }
+
+  req.log.info("Manual scrape triggered; running in background");
+  void runScrape({ ignoreSourceCache: true })
+    .then((result) => {
+      logger.info(result, "Manual scrape completed");
+    })
+    .catch((err) => {
+      logger.error({ err }, "Manual scrape failed");
+    });
 
   res.status(202).json({
-    message: "Scrape queued successfully",
-    jobId: job.id,
-    status: job.status,
-    articlesFound: 0,
-    articlesAdded: 0,
+    message: "Scrape started",
+    status: "running",
+    ...getScrapeStatus(),
   });
 });
 
 router.post("/scrape/trigger-legacy", async (req, res): Promise<void> => {
   req.log.info("Manual legacy scrape triggered");
-  runScrape().then((result) => {
+  runScrape({ ignoreSourceCache: true }).then((result) => {
     logger.info(result, "Scrape completed");
   }).catch((err) => {
     logger.error({ err }, "Scrape failed");
@@ -43,6 +47,11 @@ router.post("/scrape/trigger-legacy", async (req, res): Promise<void> => {
 });
 
 router.get("/scrape/status", async (req, res): Promise<void> => {
+  const status = getScrapeStatus();
+  res.json(status);
+});
+
+router.get("/scraper/status", async (req, res): Promise<void> => {
   const status = getScrapeStatus();
   res.json(status);
 });

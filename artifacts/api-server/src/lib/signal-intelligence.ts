@@ -1,4 +1,5 @@
 import type { Article } from "@workspace/db";
+import { DASHBOARD_SIGNAL_SCORE_THRESHOLD } from "./scraper";
 
 type SignalCluster = {
   topic: string;
@@ -65,7 +66,7 @@ function narrativeFor(topic: string, cluster: Article[], sourceCount: number, co
 export function buildSignalClusters(articles: Article[], limit = 12): SignalCluster[] {
   const buckets = new Map<string, Article[]>();
   for (const article of articles) {
-    if (Number(article.relevancyScore ?? 0) < 5.5) continue;
+    if (Number(article.relevancyScore ?? 0) < DASHBOARD_SIGNAL_SCORE_THRESHOLD) continue;
     const primary = tags(article)[0] ?? "Strategic Signals";
     if (!buckets.has(primary)) buckets.set(primary, []);
     buckets.get(primary)!.push(article);

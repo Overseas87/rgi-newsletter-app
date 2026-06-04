@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 
 import Dashboard from "@/pages/dashboard";
 import Feed from "@/pages/feed";
+import ArticleDetail from "@/pages/article-detail";
 import Topics from "@/pages/topics";
 import Review from "@/pages/review";
 import Published from "@/pages/published";
@@ -41,6 +42,7 @@ function Router() {
         <Switch>
           <Route path="/"><SafeRoute><Dashboard /></SafeRoute></Route>
           <Route path="/feed"><SafeRoute><Feed /></SafeRoute></Route>
+          <Route path="/articles/:id"><SafeRoute><ArticleDetail /></SafeRoute></Route>
           <Route path="/topics"><SafeRoute><Topics /></SafeRoute></Route>
           <Route path="/review"><SafeRoute><Review /></SafeRoute></Route>
           <Route path="/published"><SafeRoute><Published /></SafeRoute></Route>

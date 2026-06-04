@@ -1284,7 +1284,7 @@ export const useRegenerateDigestArticle = <
 /**
  * @summary List all sources
  */
-const sourcesApiUrl = "http://localhost:3000/sources";
+const sourcesApiUrl = "/api/sources";
 
 export const getListSourcesUrl = () => {
   return sourcesApiUrl;

@@ -1,28 +1,38 @@
 import { Router, type IRouter } from "express";
 import {
-  countSupabaseArticles,
-  countSupabaseDigests,
-  listSupabaseSources,
-} from "../lib/supabase-data";
-import { getSupabaseSourceSchemaStatus } from "../lib/supabase-sources";
+  countFirestoreArticles,
+  countFirestoreDigests,
+} from "../lib/firestore-data";
+import { getFirestoreSourceSchemaStatus, listFirestoreSources } from "../lib/firestore-sources";
 import { getFirebaseDiagnostics, verifyFirestoreConnection } from "../lib/firebase";
-import { useFirestoreData } from "../lib/firestore-data";
 import { getScrapeStatus } from "../lib/scraper";
 import { durableJobsReady, getQueueSummaryAsync } from "../lib/job-queue";
 
 const router: IRouter = Router();
+const BUILD_MARKER = "rgi-local-2026-05-20-scrape-sync-daily-brief-selection-v2";
+
+router.get("/readyz", async (_req, res) => {
+  res.json({
+    status: "ready",
+    build: BUILD_MARKER,
+    database: "firestore",
+    uptimeSeconds: Math.round(process.uptime()),
+    scheduler: process.env.FUNCTION_TARGET || process.env.K_SERVICE ? "firebase-scheduled-functions" : "local-node-cron",
+  });
+});
 
 router.get("/healthz", async (_req, res) => {
   try {
-    if (useFirestoreData()) await verifyFirestoreConnection();
+    await verifyFirestoreConnection();
     const [sources, articleCount, digestCount] = await Promise.all([
-      listSupabaseSources(),
-      countSupabaseArticles(),
-      countSupabaseDigests(),
+      listFirestoreSources(),
+      countFirestoreArticles(),
+      countFirestoreDigests(),
     ]);
     res.json({
       status: "ok",
-      database: useFirestoreData() ? "firestore" : "supabase",
+      build: BUILD_MARKER,
+      database: "firestore",
       data: {
         sources: sources.length,
         articles: articleCount,
@@ -38,6 +48,7 @@ router.get("/healthz", async (_req, res) => {
     });
     res.status(200).json({
       status: "degraded",
+      build: BUILD_MARKER,
       database: "unverified",
       message: error.message,
       stack: process.env.NODE_ENV === "production" ? undefined : error.stack,
@@ -49,38 +60,41 @@ router.get("/healthz", async (_req, res) => {
 
 router.get("/diagnostics", async (_req, res) => {
   const env = {
-    databaseProvider: process.env.DATABASE_PROVIDER ?? "legacy",
-    supabaseUrl: Boolean(process.env.SUPABASE_URL),
-    supabaseAnonKey: Boolean(process.env.SUPABASE_ANON_KEY),
+    databaseProvider: "firestore",
     firebaseProjectId: Boolean(process.env.FIREBASE_PROJECT_ID),
     firebaseServiceAccount: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS),
-    anthropicApiKey: Boolean(process.env.ANTHROPIC_API_KEY),
+    aiProvider: process.env.OPENAI_API_KEY ? "openai" : process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY ? "anthropic" : "fallback",
+    openAiApiKey: Boolean(process.env.OPENAI_API_KEY),
+    anthropicApiKey: Boolean(process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY),
     nodeEnv: process.env.NODE_ENV ?? "development",
   };
 
   try {
-    if (useFirestoreData()) await verifyFirestoreConnection();
+    await verifyFirestoreConnection();
     const [sources, articleCount, pendingArticleCount, digestCount, pendingReviewCount, sourceSchema, jobs, durableReady] = await Promise.all([
-      listSupabaseSources(),
-      countSupabaseArticles(),
-      countSupabaseArticles({ status: "pending" }),
-      countSupabaseDigests(),
-      countSupabaseDigests({ status: "pending_review" }),
-      getSupabaseSourceSchemaStatus(),
+      listFirestoreSources(),
+      countFirestoreArticles(),
+      countFirestoreArticles({ status: "pending" }),
+      countFirestoreDigests(),
+      countFirestoreDigests({ status: "pending_review" }),
+      getFirestoreSourceSchemaStatus(),
       getQueueSummaryAsync(),
       durableJobsReady(),
     ]);
     const blockers = [
       !durableReady ? "Firestore is active; background jobs currently use the in-process queue until a Firestore durable jobs adapter is added." : null,
       !sourceSchema.supportsHealth ? "Source health metadata is not fully available for feed scoring diagnostics." : null,
-      !env.anthropicApiKey ? "Configure ANTHROPIC_API_KEY for full provider-backed editorial synthesis." : null,
+      env.aiProvider === "fallback" ? "Configure OPENAI_API_KEY or AI_INTEGRATIONS_ANTHROPIC_API_KEY for full provider-backed editorial synthesis." : null,
       process.env.NODE_ENV !== "production" ? "Run with NODE_ENV=production for live website deployment." : null,
-      process.env.RGI_INLINE_JOBS !== "false" ? "Run API with RGI_INLINE_JOBS=false and a separate worker process for production isolation." : null,
+      process.env.RGI_INLINE_JOBS !== "false" && !(process.env.FUNCTION_TARGET || process.env.K_SERVICE)
+        ? "Run API with RGI_INLINE_JOBS=false and a separate worker process for production isolation."
+        : null,
     ].filter((item): item is string => Boolean(item));
 
     res.json({
       status: "ok",
-      database: useFirestoreData() ? "firestore" : "supabase",
+      build: BUILD_MARKER,
+      database: "firestore",
       env,
       deployment: {
         readyForLiveSite: blockers.length === 0,
@@ -108,6 +122,7 @@ router.get("/diagnostics", async (_req, res) => {
     });
     res.status(200).json({
       status: "degraded",
+      build: BUILD_MARKER,
       database: "unreachable",
       env,
       deployment: {

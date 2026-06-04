@@ -12,14 +12,14 @@ const WORKFLOW_STEPS = [
   {
     num: "02",
     label: "Analyze",
-    desc: "Claude AI scores every article 1–10 against RGI's three core disciplines — Strategic Foresight, System Vitality, and Civic Stewardship. Articles scoring below 6.5 are discarded. Each article receives an RGI Editorial: a two-sentence editorial stance with a forward implication for senior leaders.",
+    desc: "Claude AI scores every article 1–10 against RGI's three core disciplines — Strategic Foresight, System Vitality, and Civic Stewardship. Articles scoring below 6.5 are discarded. Each article receives an RGI judgment lens that identifies the decision pressure, institutional consequence, and leadership implication.",
     color: "border-violet-200 bg-violet-50 text-violet-700",
     numColor: "text-violet-300",
   },
   {
     num: "03",
     label: "Generate",
-    desc: "Editors use the Intelligence Feed and Today's Topics panels to select source material. The system then synthesizes selected articles into polished Daily Intelligence Briefs or focused Topic Articles — with executive summaries, key takeaways, and an RGI perspective.",
+    desc: "Editors use the Intelligence Feed and Today's Topics panels to select source material. The system then turns selected articles into concise RGI Strategic Judgment Essays built around timely signals, second-order consequences, misread risks, and an institutional judgment.",
     color: "border-amber-200 bg-amber-50 text-amber-700",
     numColor: "text-amber-300",
   },
@@ -70,7 +70,7 @@ const ETHICS = [
   },
   {
     title: "Opinion, clearly labeled",
-    desc: "The RGI Editorial section expresses a considered editorial view — marked as interpretation, not neutral fact. Readers are trusted to think for themselves.",
+    desc: "The RGI Analysis section expresses a considered institutional view, marked as interpretation rather than neutral fact. Readers are trusted to think for themselves.",
   },
   {
     title: "No sensationalism",

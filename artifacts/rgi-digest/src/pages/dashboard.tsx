@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
-import { useGetDashboardSummary, useGetScrapeStatus, useTriggerScrape, useListArticles, type Article, type TopicIntelligence } from "@workspace/api-client-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useGetDashboardSummary, useGetScrapeStatus, useListArticles, type Article, type TopicIntelligence } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,12 +9,8 @@ import {
   CheckCircle,
   Database,
   Clock,
-  RefreshCw,
   Zap,
   ChevronRight,
-  Globe,
-  Tag,
-  Loader2,
   ExternalLink,
   ChevronDown,
   ChevronUp,
@@ -24,10 +19,7 @@ import {
   BarChart2,
   ArrowRight,
 } from "lucide-react";
-import { GenerateModal } from "@/components/generate-modal";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { asArray, asNumber, asString, asStringArray, safeDate } from "@/lib/arrays";
 
@@ -274,7 +266,7 @@ function TopStoriesSection({ articles, onNavigateFeed }: { articles: TopArticle[
       {articles.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <p className="text-base font-medium mb-1">No articles yet</p>
-          <p className="text-sm">Click "Scrape Now" to fetch today's intelligence feed.</p>
+          <p className="text-sm">Automated scraping will populate the intelligence feed as new signals arrive.</p>
         </div>
       ) : (
         <div className="flex flex-col">
@@ -642,51 +634,11 @@ function WhatMattersTodayPanel({
 }
 
 export default function Dashboard() {
-  const [briefLoading, setBriefLoading] = useState(false);
-  const [topicModalOpen, setTopicModalOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [topicArticlesOpen, setTopicArticlesOpen] = useState(false);
   const { data: summary, isLoading } = useGetDashboardSummary();
   const { data: scrapeStatus } = useGetScrapeStatus();
-  const triggerScrape = useTriggerScrape();
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [, navigate] = useLocation();
-
-  const handleScrape = () => {
-    triggerScrape.mutate(undefined, {
-      onSuccess: () => {
-        toast({ title: "Scrape started", description: "Fetching articles from all active sources. Check back in a moment." });
-        setTimeout(() => queryClient.invalidateQueries(), 5000);
-      },
-      onError: () => {
-        toast({ title: "Scrape failed", description: "Could not trigger a scrape. Please try again.", variant: "destructive" });
-      },
-    });
-  };
-
-  const handleGenerateDailyBrief = async () => {
-    setBriefLoading(true);
-    try {
-      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const res = await fetch(`${base}/api/digest/daily-brief`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(err.error || "Generation failed");
-      }
-      toast({ title: "Daily Intelligence Brief generated", description: "The comprehensive brief is now in Pending Review." });
-      queryClient.invalidateQueries();
-      navigate("/review");
-    } catch (e) {
-      toast({ title: "Brief generation failed", description: String(e instanceof Error ? e.message : e), variant: "destructive" });
-    } finally {
-      setBriefLoading(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -709,8 +661,6 @@ export default function Dashboard() {
     );
   }
 
-  const hasArticles = asNumber(summary.totalArticlesToday) > 0;
-
   const handleTopicClick = (topic: string) => {
     setSelectedTopic(topic);
     setTopicArticlesOpen(true);
@@ -718,7 +668,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <GenerateModal open={topicModalOpen} onOpenChange={setTopicModalOpen} initialMode="topic_article" />
       <TopicArticlesModal
         topic={selectedTopic}
         open={topicArticlesOpen}
@@ -742,34 +691,6 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-          <Button
-            onClick={handleGenerateDailyBrief}
-            disabled={briefLoading || !hasArticles}
-            size="sm"
-            className="gap-1.5 text-xs h-9"
-            style={{ backgroundColor: "#0B1F3B", color: "white" }}
-            data-testid="btn-generate-daily-brief"
-          >
-            {briefLoading ? (
-              <><Loader2 className="h-3.5 w-3.5 animate-spin" />Generating…</>
-            ) : (
-              <><Globe className="h-3.5 w-3.5" />Daily Brief</>
-            )}
-          </Button>
-
-          <Button
-            onClick={() => setTopicModalOpen(true)}
-            disabled={!hasArticles}
-            size="sm"
-            className="gap-1.5 text-xs h-9"
-            style={{ backgroundColor: "#0B1F3B", color: "white" }}
-            data-testid="btn-generate-topic-article"
-          >
-            <Tag className="h-3.5 w-3.5" />
-            Topic Article
-          </Button>
-        </div>
       </div>
 
       {/* ── Main: Top Stories + What Matters Today ── */}

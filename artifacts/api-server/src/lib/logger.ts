@@ -1,6 +1,7 @@
 import pino from "pino";
 
 const isProduction = process.env.NODE_ENV === "production";
+const usePrettyLogs = process.env.RGI_PRETTY_LOGS === "true" && !process.env.FUNCTION_TARGET;
 
 export const logger = pino({
   level: process.env.LOG_LEVEL ?? "info",
@@ -9,7 +10,7 @@ export const logger = pino({
     "req.headers.cookie",
     "res.headers['set-cookie']",
   ],
-  ...(isProduction
+  ...(isProduction || !usePrettyLogs
     ? {}
     : {
         transport: {

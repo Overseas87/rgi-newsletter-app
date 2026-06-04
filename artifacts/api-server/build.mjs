@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm, copyFile } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -126,16 +126,7 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
   });
 }
 
-async function copyAssets(distDir) {
-  // Copy the production data seed SQL alongside the compiled binary
-  const src = path.resolve(artifactDir, "src/lib/seed-production.sql");
-  const dest = path.resolve(distDir, "seed-production.sql");
-  await copyFile(src, dest);
-  console.log("✓ seed-production.sql copied to dist/");
-}
-
 buildAll()
-  .then(() => copyAssets(path.resolve(artifactDir, "dist")))
   .catch((err) => {
     console.error(err);
     process.exit(1);

@@ -56,7 +56,7 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
   const slugified = article
     ? asString(article.headline, "brief").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)
     : "";
-  const { download: downloadPdf, isDownloading } = usePdfDownload({
+  const { download: downloadPdf, open: openPdf, isDownloading } = usePdfDownload({
     url: article ? `${base}/api/digest/${article.id}/pdf` : "",
     filename: article ? `rgi-brief-${slugified}.pdf` : "rgi-brief.pdf",
   });
@@ -69,6 +69,12 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
   const sourceArticles = asArray<{ id: number; url: string; headline: string; sourceName?: string | null }>(article.sourceArticles);
   const isStructured = executiveSummary.length > 0;
   const keyDevelopments = isStructured ? safeLines(article.body) : null;
+  const essayParagraphs = [
+    ...(keyTakeaways.length > 0 ? keyTakeaways : []),
+    ...implications,
+    ...(asString(article.rgiTake).length > 0 ? [asString(article.rgiTake)] : []),
+    ...(keyTakeaways.length === 0 ? safeTextBlocks(article.body).map(stripMarkdown) : []),
+  ].filter(Boolean);
   const createdAt = safeDate(article.createdAt, new Date());
 
   return (
@@ -93,6 +99,15 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
                 : <Download className="h-3 w-3" />}
               {isDownloading ? "Generating…" : "Download PDF"}
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs h-7"
+              onClick={openPdf}
+            >
+              <ExternalLink className="h-3 w-3" />
+              Open PDF
+            </Button>
           </div>
           <DialogTitle className="text-2xl font-serif leading-tight text-left">{asString(article.headline, "Untitled brief")}</DialogTitle>
           <div className="flex items-center gap-4 pt-2 flex-wrap">
@@ -107,58 +122,12 @@ function FullArticleDialog({ article, open, onClose }: { article: DigestArticle 
           </div>
         </DialogHeader>
 
-        <div className="space-y-5 mt-2">
-          {/* Executive Summary — shown for all articles when present */}
-          {executiveSummary.length > 0 && (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Executive Summary</p>
-              <div className="space-y-1.5">
-                {executiveSummary.map((s, i) => (
-                  <p key={i} className="text-sm text-foreground/90 leading-relaxed">{s}</p>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Key Developments (new format) OR prose body (legacy) */}
-          {isStructured && keyDevelopments && keyDevelopments.length > 0 ? (
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Key Developments</p>
-              <BulletList items={keyDevelopments} dotColor="text-foreground/40" />
-            </div>
-          ) : (
-            <div>
-              {safeTextBlocks(article.body).map((para, i) => (
-                <p key={i} className="text-sm leading-relaxed text-foreground/90 mb-4">{stripMarkdown(para)}</p>
-              ))}
-            </div>
-          )}
-
-          {/* Why It Matters */}
-          {keyTakeaways.length > 0 && (
-            <div className="rounded-xl border border-amber-200/60 bg-amber-50/40 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-amber-700 mb-3">
-                Why It Matters
-              </p>
-              <BulletList items={keyTakeaways} dotColor="text-amber-500" />
-            </div>
-          )}
-
-          {/* Implications for Decision-Makers */}
-          {isStructured && implications.length > 0 && (
-            <div className="rounded-xl border border-violet-200/60 bg-violet-50/40 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-violet-700 mb-3">Implications for Decision Makers</p>
-              <BulletList items={implications} dotColor="text-violet-500" />
-            </div>
-          )}
-
-          {/* RGI Editorial */}
-          {asString(article.rgiTake).length > 0 && (
-            <div className="border-l-4 border-primary/60 pl-5 py-2 bg-primary/5 rounded-r-md">
-              <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">RGI Editorial</p>
-              <p className="text-sm italic text-foreground/80 leading-relaxed">{asString(article.rgiTake)}</p>
-            </div>
-          )}
+        <div className="space-y-4 mt-2">
+          {[...executiveSummary, ...(essayParagraphs.length > 0 ? essayParagraphs : keyDevelopments ?? [])].map((paragraph, i) => (
+            <p key={i} className="text-sm leading-relaxed text-foreground/90">
+              {paragraph}
+            </p>
+          ))}
 
           {/* Topic tags */}
           {topicTags.length > 0 && (
@@ -360,13 +329,18 @@ function DigestCard({ article }: { article: DigestArticle }) {
             const implications = asStringArray(article.implificationsForLeaders);
             const isStructured = executiveSummary.length > 0;
             const keyDevelopments = isStructured ? safeLines(article.body) : null;
-            return (
+            const essayParagraphs = [
+              ...keyTakeaways,
+              ...implications,
+              ...(asString(article.rgiTake).length > 0 ? [asString(article.rgiTake)] : []),
+              ...(keyTakeaways.length === 0 ? safeTextBlocks(article.body).map(stripMarkdown) : []),
+            ].filter(Boolean);
+            const articleParagraphs = [...executiveSummary, ...essayParagraphs];
+            return isEditing ? (
               <>
-                {/* Executive Summary */}
-                {(isEditing ? editedExecutiveSummary.length > 0 : executiveSummary.length > 0) && (
+                {editedExecutiveSummary.length > 0 && (
                   <div>
-                    <p className="text-xs font-medium text-primary uppercase tracking-wider mb-2">Executive Summary</p>
-                    {isEditing ? (
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Summary</p>
                       <SelectionRegenerateTextarea
                         value={editedExecutiveSummary}
                         onChange={setEditedExecutiveSummary}
@@ -375,113 +349,39 @@ function DigestCard({ article }: { article: DigestArticle }) {
                         field="executiveSummary"
                         className="text-sm leading-relaxed"
                         minHeight="80px"
-                        placeholder="One sentence per line…"
+                        placeholder="Brief summary paragraph..."
                       />
-                    ) : (
-                      <div className="text-sm text-foreground/80 leading-relaxed space-y-1">
-                        {executiveSummary.map((s, i) => <p key={i}>{s}</p>)}
-                      </div>
-                    )}
                   </div>
                 )}
 
-                {/* Key Developments */}
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                    Key Developments
-                  </p>
-                  {isEditing ? (
-                    <SelectionRegenerateTextarea
-                      value={editedBody}
-                      onChange={setEditedBody}
-                      articleId={article.id}
-                      articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
-                      field="body"
-                      className="text-sm leading-relaxed"
-                      minHeight="180px"
-                      data-testid="textarea-body"
-                    />
-                  ) : isStructured && keyDevelopments ? (
-                    <ul className="space-y-1.5">
-                      {keyDevelopments.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                          <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-foreground/30" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="text-sm leading-relaxed text-foreground/90">
-                      {safeTextBlocks(article.body).map((para, i) => (
-                        <p key={i} className="mb-3">{stripMarkdown(para)}</p>
-                      ))}
-                    </div>
-                  )}
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Article text</p>
+                  <SelectionRegenerateTextarea
+                    value={editedKeyTakeaways}
+                    onChange={setEditedKeyTakeaways}
+                    articleId={article.id}
+                    articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
+                    field="keyTakeaways"
+                    className="text-sm leading-relaxed"
+                    minHeight="180px"
+                    placeholder="One paragraph per line..."
+                  />
                 </div>
-
-                {/* Why It Matters */}
-                {(isEditing ? true : keyTakeaways.length > 0) && (
-                  <div>
-                    <p className="text-xs font-medium text-amber-700 uppercase tracking-wider mb-2">
-                      Why It Matters
-                    </p>
-                    {isEditing ? (
-                      <SelectionRegenerateTextarea
-                        value={editedKeyTakeaways}
-                        onChange={setEditedKeyTakeaways}
-                        articleId={article.id}
-                        articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
-                        field="keyTakeaways"
-                        className="text-sm leading-relaxed"
-                        minHeight="80px"
-                        placeholder="One bullet per line…"
-                      />
-                    ) : (
-                      <ul className="space-y-1.5">
-                        {keyTakeaways.map((item, i) => (
-                          <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                            <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
-
-                {/* Implications for Decision Makers */}
-                {(isEditing ? isStructured : (isStructured && implications.length > 0)) && (
-                  <div>
-                    <p className="text-xs font-medium text-violet-700 uppercase tracking-wider mb-2">Implications for Decision Makers</p>
-                    {isEditing ? (
-                      <SelectionRegenerateTextarea
-                        value={editedImplifications}
-                        onChange={setEditedImplifications}
-                        articleId={article.id}
-                        articleContext={{ headline: editedHeadline, body: editedBody, rgiTake: editedTake }}
-                        field="implificationsForLeaders"
-                        className="text-sm leading-relaxed"
-                        minHeight="80px"
-                        placeholder="One bullet per line…"
-                      />
-                    ) : (
-                      <ul className="space-y-1.5">
-                        {implications.map((item, i) => (
-                          <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                            <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
               </>
+            ) : (
+              <div className="space-y-3">
+                {(articleParagraphs.length > 0 ? articleParagraphs : keyDevelopments ?? []).map((item, i) => (
+                  <p key={i} className="text-sm text-foreground/90 leading-relaxed">
+                    {item}
+                  </p>
+                ))}
+              </div>
             );
           })()}
 
+          {isEditing && (
           <div className="border-l-2 border-primary/40 pl-4">
-            <p className="text-xs font-medium text-primary/80 uppercase tracking-wider mb-2">RGI Editorial</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Closing paragraph</p>
             {isEditing ? (
               <SelectionRegenerateTextarea
                 value={editedTake}
@@ -491,7 +391,7 @@ function DigestCard({ article }: { article: DigestArticle }) {
                 field="rgiTake"
                 className="text-sm"
                 minHeight="80px"
-                placeholder="The RGI editorial perspective..."
+                placeholder="Final essay paragraph..."
                 data-testid="textarea-rgi-take"
               />
             ) : (
@@ -500,6 +400,7 @@ function DigestCard({ article }: { article: DigestArticle }) {
               </p>
             )}
           </div>
+          )}
 
           {/* (forbidden sections suppressed) */}
           {false && (
@@ -567,7 +468,7 @@ function DigestCard({ article }: { article: DigestArticle }) {
 }
 
 export default function Review() {
-  const { data: articles = [], isLoading } = useListDigestArticles({ status: "pending_review" });
+  const { data: articles = [], isLoading, isError } = useListDigestArticles({ status: "pending_review" });
   const safeArticles = asArray<DigestArticle>(articles);
 
   return (
@@ -582,6 +483,11 @@ export default function Review() {
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-64 w-full" />)}
+        </div>
+      ) : isError ? (
+        <div className="py-24 text-center text-muted-foreground">
+          <p className="text-lg font-medium">Pending Review is temporarily unavailable</p>
+          <p className="text-sm mt-1">The generated briefs are still saved, but the review list could not be loaded.</p>
         </div>
       ) : safeArticles.length === 0 ? (
         <div className="py-24 text-center text-muted-foreground">

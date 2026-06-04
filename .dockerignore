@@ -1,0 +1,15 @@
+.git
+.firebase
+.local-run
+.pnpm-store
+node_modules
+**/node_modules
+**/dist
+**/.env
+firebase-debug.log
+*.log
+*.zip
+attached_assets
+*firebase-adminsdk*.json
+firebase-service-account.json
+service-account*.json

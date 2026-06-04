@@ -62,8 +62,8 @@
   --sidebar-accent-foreground: 210 30% 92%;
   --sidebar-ring: 215 60% 52%;
 
-  /* Single font stack — Inter throughout */
-  --app-font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* RGI brief typography: Aptos when available, with stable web-safe fallbacks */
+  --app-font-sans: Aptos, Arial, Helvetica, sans-serif;
 
   --radius: 0.5rem;
 
@@ -124,7 +124,7 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Inter throughout — bold weight for major headings */
+  /* Aptos-first stack throughout — bold weight for major headings */
   h1 {
     font-family: var(--app-font-sans);
     font-weight: 700;
@@ -148,7 +148,7 @@
 }
 
 @layer utilities {
-  /* Bold display text — Inter 700, tight tracking */
+  /* Bold display text — Aptos-first stack, tight tracking */
   .font-display {
     font-family: var(--app-font-sans);
     font-weight: 700;

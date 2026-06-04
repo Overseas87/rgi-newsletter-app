@@ -1,8 +1,7 @@
-import { db, digestArticlesTable, articlesTable } from "@workspace/db";
-import { eq, gte, lt, desc, and, count } from "drizzle-orm";
 import { logger } from "./logger";
 import { generateDailyBrief } from "./ai-writer";
 import { runScrape } from "./scraper";
+import { createFirestoreDigest, listFirestoreArticles, listFirestoreDigests } from "./firestore-data";
 
 /** Fetches yesterday's daily_brief and formats it as context for "What Changed Since Yesterday". */
 async function getYesterdayBriefContext(): Promise<string | null> {
@@ -12,31 +11,28 @@ async function getYesterdayBriefContext(): Promise<string | null> {
   const yesterdayStart = new Date(todayStart);
   yesterdayStart.setUTCDate(yesterdayStart.getUTCDate() - 1);
 
-  const rows = await db
-    .select()
-    .from(digestArticlesTable)
-    .where(
-      and(
-        eq(digestArticlesTable.articleType, "daily_brief"),
-        gte(digestArticlesTable.createdAt, yesterdayStart),
-        lt(digestArticlesTable.createdAt, todayStart)
-      )
+  const prev = (await listFirestoreDigests({ limit: 100 }))
+    .filter((row) =>
+      row.articleType === "daily_brief" &&
+      new Date(row.createdAt).getTime() >= yesterdayStart.getTime() &&
+      new Date(row.createdAt).getTime() < todayStart.getTime()
     )
-    .orderBy(desc(digestArticlesTable.createdAt))
-    .limit(1);
-
-  const prev = rows[0];
+    .sort((a, b) => Number(b.createdAt) - Number(a.createdAt))[0];
   if (!prev) return null;
 
-  const keyDevs = prev.body.split("\n").filter(Boolean);
+  const analysis = [
+    ...(prev.keyTakeaways ?? []),
+    ...(prev.implificationsForLeaders ?? []),
+    ...(prev.rgiTake ? [prev.rgiTake] : []),
+    ...(prev.keyTakeaways?.length ? [] : prev.body.split("\n\n").filter(Boolean)),
+  ].filter(Boolean);
   const lines: string[] = [
     `Headline: ${prev.headline}`,
-    `Key Developments:\n${keyDevs.map((d) => `- ${d}`).join("\n")}`,
+    `BRIEF SUMMARY:\n${(prev.executiveSummary ?? []).join("\n\n")}`,
   ];
-  if (prev.keyTakeaways?.length) {
-    lines.push(`Why It Matters:\n${prev.keyTakeaways.map((t) => `- ${t}`).join("\n")}`);
+  if (analysis.length) {
+    lines.push(`RGI ANALYSIS:\n${analysis.join("\n\n")}`);
   }
-  if (prev.rgiTake) lines.push(`RGI Take: ${prev.rgiTake}`);
   return lines.join("\n\n");
 }
 
@@ -53,27 +49,19 @@ function getTodayBounds(): { start: Date; end: Date } {
 /** Returns true if a daily_brief already exists with createdAt in today's UTC window */
 async function dailyBriefExistsForToday(): Promise<boolean> {
   const { start, end } = getTodayBounds();
-  const rows = await db
-    .select({ n: count() })
-    .from(digestArticlesTable)
-    .where(
-      and(
-        eq(digestArticlesTable.articleType, "daily_brief"),
-        gte(digestArticlesTable.createdAt, start),
-        lt(digestArticlesTable.createdAt, end)
-      )
-    );
-  return (rows[0]?.n ?? 0) > 0;
+  return (await listFirestoreDigests({ limit: 100 })).some((row) =>
+    row.articleType === "daily_brief" &&
+    new Date(row.createdAt).getTime() >= start.getTime() &&
+    new Date(row.createdAt).getTime() < end.getTime()
+  );
 }
 
 /** Returns the number of articles scraped within the last hoursBack hours */
 async function recentArticleCount(hoursBack: number): Promise<number> {
   const cutoff = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
-  const rows = await db
-    .select({ n: count() })
-    .from(articlesTable)
-    .where(gte(articlesTable.scrapedAt, cutoff));
-  return rows[0]?.n ?? 0;
+  return (await listFirestoreArticles({ limit: 1000 }))
+    .filter((article) => new Date(article.scrapedAt).getTime() >= cutoff.getTime())
+    .length;
 }
 
 /**
@@ -103,12 +91,10 @@ async function attemptBriefGeneration(
       );
 
       const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const fallbackRows = await db
-        .select({ id: articlesTable.id })
-        .from(articlesTable)
-        .where(gte(articlesTable.scrapedAt, cutoff))
-        .orderBy(desc(articlesTable.relevancyScore))
-        .limit(7);
+      const fallbackRows = (await listFirestoreArticles({ limit: 500 }))
+        .filter((article) => new Date(article.scrapedAt).getTime() >= cutoff.getTime())
+        .sort((a, b) => b.relevancyScore - a.relevancyScore)
+        .slice(0, 7);
 
       if (fallbackRows.length === 0) {
         throw new Error("No articles available for brief generation");
@@ -123,7 +109,7 @@ async function attemptBriefGeneration(
       usedFallback = true;
     }
 
-    await db.insert(digestArticlesTable).values({
+    await createFirestoreDigest({
       articleType: "daily_brief",
       headline: brief.headline,
       body: brief.body,

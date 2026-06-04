@@ -52,3 +52,14 @@ Thumbs.db
 *firebase-adminsdk*.json
 firebase-service-account.json
 service-account*.json
+
+# Local environment and runtime files
+.env
+.env.*
+.local-run/
+.firebase/
+.firebase-cli-config/
+
+# Local packaged/exported artifacts
+*.zip
+migration-reports/

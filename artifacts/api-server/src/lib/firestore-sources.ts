@@ -1,5 +1,13 @@
 import type { Source } from "@workspace/db/schema";
-import { getFirebaseBundle, isFirebaseConfigured } from "./firebase";
+import { getFirebaseBundle, isFirestoreTemporarilyDegraded, withFirestoreRetry, withTimeout } from "./firebase";
+import {
+  createLocalSource,
+  deleteLocalSource,
+  listLocalSources,
+  localFallback,
+  updateLocalSource,
+} from "./local-store";
+import { logger } from "./logger";
 
 type SourcePatch = Partial<
   Pick<
@@ -28,9 +36,10 @@ type SourceHealth = {
 };
 
 const COLLECTION = "sources";
+let lastGoodSources: { items: Source[]; loadedAt: Date } | null = null;
 
 export function useFirestoreData(): boolean {
-  return process.env.DATABASE_PROVIDER === "firestore" && isFirebaseConfigured();
+  return true;
 }
 
 function dateFrom(value: unknown): Date {
@@ -116,70 +125,111 @@ export async function getFirestoreSourceSchemaStatus(): Promise<{
 }
 
 export async function listFirestoreSources(): Promise<Source[]> {
-  const { db } = await getFirebaseBundle();
-  const snapshot = await db.collection(COLLECTION).get();
-  return snapshot.docs
-    .map(sourceFromDoc)
-    .sort((a: Source, b: Source) => a.tier - b.tier || a.name.localeCompare(b.name));
+  try {
+    const { db } = await getFirebaseBundle();
+    const snapshot: any = await withFirestoreRetry("List Firestore sources", () => db.collection(COLLECTION).get());
+    const sources = snapshot.docs
+      .map(sourceFromDoc)
+      .sort((a: Source, b: Source) => a.tier - b.tier || a.name.localeCompare(b.name));
+    lastGoodSources = { items: sources, loadedAt: new Date() };
+    logger.info(
+      { collection: COLLECTION, count: sources.length, activeCount: sources.filter((source: Source) => source.isActive).length },
+      "Listed Firestore sources"
+    );
+    return sources;
+  } catch (error) {
+    if (lastGoodSources?.items.length) {
+      logger.warn(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          count: lastGoodSources.items.length,
+          loadedAt: lastGoodSources.loadedAt.toISOString(),
+        },
+        "Firestore sources unavailable; serving last-known-good Firestore sources"
+      );
+      return lastGoodSources.items;
+    }
+    return localFallback("list sources", error, listLocalSources);
+  }
 }
 
 export async function createFirestoreSource(source: SourcePatch): Promise<Source> {
-  const { db, FieldValue } = await getFirebaseBundle();
-  const ref = db.collection(COLLECTION).doc();
-  const doc = {
-    ...patchToDoc(source),
-    id: ref.id,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-    healthStatus: "unknown",
-    reliabilityScore: 100,
-  };
-  await ref.set(doc);
-  const saved = await ref.get();
-  return sourceFromDoc(saved);
+  try {
+    if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
+    const { db, FieldValue } = await getFirebaseBundle();
+    const ref = db.collection(COLLECTION).doc();
+    const doc = {
+      ...patchToDoc(source),
+      id: ref.id,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      healthStatus: "unknown",
+      reliabilityScore: 100,
+    };
+    await withTimeout("Create Firestore source", ref.set(doc));
+    const saved: any = await withTimeout("Read created Firestore source", ref.get());
+    return sourceFromDoc(saved);
+  } catch (error) {
+    return localFallback("create source", error, () => createLocalSource(source as Partial<Source>));
+  }
 }
 
 export async function updateFirestoreSource(id: number | string, patch: SourcePatch): Promise<Source | null> {
-  const { db, FieldValue } = await getFirebaseBundle();
-  const ref = db.collection(COLLECTION).doc(String(id));
-  const snapshot = await ref.get();
-  if (!snapshot.exists) return null;
-  await ref.set({ ...patchToDoc(patch), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-  return sourceFromDoc(await ref.get());
+  try {
+    if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
+    const { db, FieldValue } = await getFirebaseBundle();
+    const ref = db.collection(COLLECTION).doc(String(id));
+    const snapshot: any = await withTimeout("Read Firestore source", ref.get());
+    if (!snapshot.exists) return null;
+    await withTimeout("Update Firestore source", ref.set({ ...patchToDoc(patch), updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
+    return sourceFromDoc(await withTimeout("Read updated Firestore source", ref.get()));
+  } catch (error) {
+    return localFallback("update source", error, () => updateLocalSource(id, patch as Partial<Source>));
+  }
 }
 
 export async function deleteFirestoreSource(id: number | string): Promise<boolean> {
-  const { db } = await getFirebaseBundle();
-  const ref = db.collection(COLLECTION).doc(String(id));
-  const snapshot = await ref.get();
-  if (!snapshot.exists) return false;
-  await ref.delete();
-  return true;
+  try {
+    if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
+    const { db } = await getFirebaseBundle();
+    const ref = db.collection(COLLECTION).doc(String(id));
+    const snapshot: any = await withTimeout("Read Firestore source before delete", ref.get());
+    if (!snapshot.exists) return false;
+    await withTimeout("Delete Firestore source", ref.delete());
+    return true;
+  } catch (error) {
+    return localFallback("delete source", error, () => deleteLocalSource(id));
+  }
 }
 
 export async function updateFirestoreSourceHealth(id: number | string, health: SourceHealth): Promise<void> {
-  const { db, FieldValue } = await getFirebaseBundle();
-  const failures = health.consecutiveFailures ?? 0;
-  const reliabilityScore = health.status === "healthy"
-    ? 100
-    : health.status === "warning"
-      ? Math.max(45, 85 - failures * 10)
-      : Math.max(0, 35 - failures * 5);
+  try {
+    if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
+    const { db, FieldValue } = await getFirebaseBundle();
+    const failures = health.consecutiveFailures ?? 0;
+    const reliabilityScore = health.status === "healthy"
+      ? 100
+      : health.status === "warning"
+        ? Math.max(45, 85 - failures * 10)
+        : Math.max(0, 35 - failures * 5);
 
-  await db.collection(COLLECTION).doc(String(id)).set({
-    healthStatus: health.status,
-    lastScrapeAt: health.lastScrapeAt ?? new Date(),
-    lastSuccessAt: health.lastSuccessAt ?? null,
-    lastScrapeError: health.lastError ?? null,
-    failureReason: health.lastError ?? null,
-    consecutiveFailures: failures,
-    totalArticlesCollected: health.articlesCollected ?? 0,
-    totalArticlesSaved: health.articlesSaved ?? 0,
-    avgArticleYield: health.articlesSaved ?? 0,
-    reliabilityScore,
-    cooldownUntil: health.status === "failed"
-      ? new Date(Date.now() + Math.min(24, Math.max(1, failures)) * 60 * 60 * 1000)
-      : null,
-    updatedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
+    await withTimeout("Update Firestore source health", db.collection(COLLECTION).doc(String(id)).set({
+      healthStatus: health.status,
+      lastScrapeAt: health.lastScrapeAt ?? new Date(),
+      lastSuccessAt: health.lastSuccessAt ?? null,
+      lastScrapeError: health.lastError ?? null,
+      failureReason: health.lastError ?? null,
+      consecutiveFailures: failures,
+      totalArticlesCollected: health.articlesCollected ?? 0,
+      totalArticlesSaved: health.articlesSaved ?? 0,
+      avgArticleYield: health.articlesSaved ?? 0,
+      reliabilityScore,
+      cooldownUntil: health.status === "failed"
+        ? new Date(Date.now() + Math.min(24, Math.max(1, failures)) * 60 * 60 * 1000)
+        : null,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true }), 5000);
+  } catch (error) {
+    await localFallback("update source health", error, async () => {});
+  }
 }

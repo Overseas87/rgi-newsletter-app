@@ -10,23 +10,25 @@ if (!rawPort) {
 }
 
 const port = Number(rawPort);
+const host = process.env.HOST || "127.0.0.1";
 
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-try {
-  await initializeApp();
-} catch (err) {
-  const error = err instanceof Error ? err : new Error(String(err));
-  logger.warn({ message: error.message, stack: error.stack }, "Backend initialization failed; continuing local startup");
-}
-
-app.listen(port, (err) => {
+app.listen(port, host, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
 
-  logger.info({ port }, "Server listening");
+  logger.info({ host, port }, "Server listening");
+
+  void initializeApp().catch((initErr) => {
+    const error = initErr instanceof Error ? initErr : new Error(String(initErr));
+    logger.warn(
+      { message: error.message, stack: error.stack },
+      "Backend background initialization failed; server remains online"
+    );
+  });
 });

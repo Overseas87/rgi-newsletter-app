@@ -1,16 +1,15 @@
-import { db, sourcesTable, articlesTable } from "@workspace/db";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
-import { eq, and, gte, sql, desc } from "drizzle-orm";
 import { logger } from "./logger";
 import {
-  createSupabaseArticle,
-  getSupabaseArticleByUrl,
-  latestSupabaseScrapedAt,
-  listSupabaseArticles,
-  listActiveSupabaseSources,
-  useSupabaseData,
-} from "./supabase-data";
-import { updateSupabaseSourceHealth } from "./supabase-sources";
+  createFirestoreArticle,
+  getFirestoreArticleByUrl,
+  latestFirestoreScrapedAt,
+  listFirestoreArticles,
+  listActiveFirestoreSources,
+  updateFirestoreArticle,
+} from "./firestore-data";
+import { updateFirestoreSourceHealth } from "./firestore-sources";
+import { RGI_PROFILE, recommendedUseForScores, type RgiRecommendedUse } from "./rgi-relevance";
 
 // Some feed/parser dependencies assume the browser File API exists. Node provides
 // Blob, but older runtimes do not expose File globally, which can break RSS parsing.
@@ -51,6 +50,62 @@ type ScrapeFeedResult = {
   lastScrapeAt: string;
 };
 
+type LowScoreRejectedArticle = {
+  headline: string;
+  source: string;
+  url: string;
+  relevancyScore: number;
+  scoreBreakdown: StrategicScoreBreakdown;
+  reason: string;
+  scoreExplanation: string;
+};
+
+type ScrapeExampleArticle = {
+  headline: string;
+  source: string;
+  url: string;
+  relevancyScore: number;
+  recommendedUse?: RgiRecommendedUse | null;
+  reason: string;
+};
+
+type ArticleDispositionOutcome =
+  | "saved"
+  | "duplicate"
+  | "already_exists"
+  | "low_relevance"
+  | "validation_failure"
+  | "rejected_by_recommendation_logic"
+  | "rejected_by_insertion_threshold"
+  | "write_failure"
+  | "other";
+
+type ArticleDispositionRecord = {
+  headline: string;
+  source: string;
+  url: string;
+  score: number;
+  recommendation: RgiRecommendedUse | null;
+  rejectionReason: string | null;
+  insertionDecision: string;
+  outcome: ArticleDispositionOutcome;
+  writeAttempted: boolean;
+  writeSucceeded: boolean;
+};
+
+type AcceptedArticleOutcomeCounts = {
+  saved: number;
+  duplicate: number;
+  alreadyExistsInFirestore: number;
+  lowRelevance: number;
+  validationFailure: number;
+  rejectedByRecommendationLogic: number;
+  rejectedByInsertionThreshold: number;
+  writeFailure: number;
+  other: number;
+  total: number;
+};
+
 type ScrapeSummary = {
   startedAt: string | null;
   finishedAt: string | null;
@@ -61,9 +116,26 @@ type ScrapeSummary = {
   articlesCollected: number;
   articlesAccepted: number;
   articlesSaved: number;
+  articlesAlreadyExisting: number;
+  totalFetched: number;
+  rejectedTooOld: number;
+  rejectedLowRelevance: number;
+  acceptedForFeed: number;
+  acceptedForDashboard: number;
+  acceptedForDailyBrief: number;
+  needsReview: number;
   duplicatesSkipped: number;
   malformedSkipped: number;
   lowScoreSkipped: number;
+  lowScoreRejectedArticles: LowScoreRejectedArticle[];
+  topAcceptedArticles: ScrapeExampleArticle[];
+  topRejectedArticles: ScrapeExampleArticle[];
+  acceptedArticleOutcomes: AcceptedArticleOutcomeCounts;
+  firestoreWriteAttempts: number;
+  firestoreWriteSuccesses: number;
+  firestoreWriteFailures: number;
+  topAcceptedButNotSaved: ArticleDispositionRecord[];
+  articleDispositions: ArticleDispositionRecord[];
   feedResults: ScrapeFeedResult[];
 };
 
@@ -74,6 +146,40 @@ type ValidScrapedItem = ScrapedItem & {
   titleFingerprint: string;
   content: string;
 };
+
+function emptyAcceptedArticleOutcomes(): AcceptedArticleOutcomeCounts {
+  return {
+    saved: 0,
+    duplicate: 0,
+    alreadyExistsInFirestore: 0,
+    lowRelevance: 0,
+    validationFailure: 0,
+    rejectedByRecommendationLogic: 0,
+    rejectedByInsertionThreshold: 0,
+    writeFailure: 0,
+    other: 0,
+    total: 0,
+  };
+}
+
+function countAcceptedArticleOutcomes(records: ArticleDispositionRecord[]): AcceptedArticleOutcomeCounts {
+  const counts = emptyAcceptedArticleOutcomes();
+
+  for (const record of records) {
+    counts.total++;
+    if (record.outcome === "saved") counts.saved++;
+    else if (record.outcome === "duplicate") counts.duplicate++;
+    else if (record.outcome === "already_exists") counts.alreadyExistsInFirestore++;
+    else if (record.outcome === "low_relevance") counts.lowRelevance++;
+    else if (record.outcome === "validation_failure") counts.validationFailure++;
+    else if (record.outcome === "rejected_by_recommendation_logic") counts.rejectedByRecommendationLogic++;
+    else if (record.outcome === "rejected_by_insertion_threshold") counts.rejectedByInsertionThreshold++;
+    else if (record.outcome === "write_failure") counts.writeFailure++;
+    else counts.other++;
+  }
+
+  return counts;
+}
 
 export interface ScrapedItem {
   headline: string;
@@ -153,68 +259,55 @@ function fallbackTopicAnalysis(headline: string, content: string, sourceName: st
   };
 }
 
-const RGI_RELEVANCY_PROMPT = `You are a structured scoring AI for the Rick Goings Institute (RGI) at Rollins College. RGI serves senior leaders — CEOs, board members, policymakers, institutional executives. You evaluate articles using a fixed five-component formula that always produces a deterministic, transparent score.
+const RGI_RELEVANCY_PROMPT = `You are the RGI Strategic Intelligence Analyst for the Rick Goings Institute. Your job is not to count keywords. Your job is to judge whether an article contains strategic intelligence that would matter to executives, investors, board members, policymakers, institutional leaders, and geopolitical strategists.
 
-RGI's three core disciplines:
-1. Strategic Foresight — AI acceleration, geopolitical volatility, market transitions, weak signals, long-range pattern recognition
-2. System Vitality — organizational culture, leadership effectiveness, human energy, trust, institutional health, future of work
-3. Civic Stewardship — corporate responsibility, civic institutions, community impact, legitimacy of firms in society, democracy, policy reform
+RGI analytical doctrine:
+- Strategic Foresight: geopolitical volatility, strategic competition, macro shocks, technology acceleration, weak signals, long-range pattern recognition.
+- System Vitality: business resilience, leadership effectiveness, institutional trust, organizational adaptation, capital allocation, operational resilience.
+- Civic Stewardship: governance, legitimacy, regulation, democratic institutions, public-private responsibility, societal stability.
 
-═══════════════════════════════════════════════════════
-SCORING FORMULA — five components, summed for final score (0–10 total)
-═══════════════════════════════════════════════════════
+Use this true 1-10 relevance scale:
+1-3 = irrelevant or mostly noise for RGI
+4-5 = potentially relevant but limited strategic consequence
+6-7 = important development leaders should monitor
+8-9 = highly important strategic intelligence with executive, geopolitical, institutional, or market implications
+10 = major strategic development with system-level consequences
 
-COMPONENT 1 — STRATEGIC IMPACT (0 to 3)
-How consequential is this development for global systems, markets, geopolitics, or major technological change?
-  3: Historic or market-moving. Affects global systems, geopolitical stability, or reshapes a major industry. Rare.
-  2: Significant. Meaningful shift in a major economy, sector, or policy environment affecting many organizations.
-  1: Moderate. Relevant development with limited scope — affects one sector, one country, or is incremental in nature.
-  0: Minimal. Routine announcement, local story, or development with no strategic implications.
+Important calibration:
+- A Bloomberg, Reuters, FT, WSJ, CFR, Foreign Policy, BBC, Economist, or similar article about sanctions, conflict, commodities, central banks, strategic competition, AI infrastructure, supply chains, market stress, institutional legitimacy, regulation, or governance should often score 7-9 when the development has executive implications.
+- Do not compress important strategic articles into 3-5 simply because only a few keywords appear.
+- A niche article can score high if it reveals a meaningful strategic signal.
+- Source authority supports confidence, but the final score must reflect strategic consequence, not brand name alone.
 
-COMPONENT 2 — RGI RELEVANCE (0 to 2)
-How directly does this topic align with RGI's core focus areas: business strategy, finance and markets, AI and technology, geopolitics and global governance, leadership, and systems thinking?
-  2: Primary alignment — the article's core subject IS one of RGI's domains.
-  1: Partial alignment — the article touches RGI domains but its primary focus is adjacent or tangential.
-  0: No alignment — lifestyle, entertainment, consumer, local, or purely technical content with no leadership angle.
+Evaluate the article through these RGI dimensions on a 1-10 scale:
+- sourceAuthority
+- geopoliticalImpact
+- macroeconomicSignificance
+- securityConflictRelevance
+- supplyChainImportance
+- technologyStrategicRelevance
+- energyCommoditiesImportance
+- financialMarketImpact
+- governanceConsequence
+- institutionalRisk
+- leadershipRelevance
+- secondOrderEffects
+- marketCapitalAllocationImpact
+- decisionMakerUrgency
+- rgiDoctrineAlignment
+- narrativeShiftPotential
+- longTermStrategicConsequences
+- rgiPriorityAlignment
 
-COMPONENT 3 — CROSS-DOMAIN INFLUENCE (0 to 2)
-Does this development create ripple effects across multiple industries, sectors, or domains? Does it sit at the intersection of several systems?
-  2: High cross-domain impact — affects at least three distinct sectors or creates cascading effects (e.g., a geopolitical event that simultaneously affects energy, markets, and supply chains).
-  1: Some cross-domain influence — affects two sectors or has clear second-order effects in an adjacent domain.
-  0: Single-domain — contained within one industry or sector with no meaningful spillover.
-
-COMPONENT 4 — SOURCE AUTHORITY (0 to 2)
-How credible and authoritative is the source of this information?
-  2: Primary source — official government statement, direct executive communication, central bank announcement, peer-reviewed research, or Tier-1 outlet (NYT, WSJ, FT, Bloomberg, Reuters, The Economist) with named expert sources.
-  1: Credible secondary — reputable Tier-2 publication, named expert author, corroborated reporting, trade publication with strong editorial standards.
-  0: Weak sourcing — unnamed sources, speculative analysis, single-source claim, known low-credibility outlet, or unverifiable content.
-
-COMPONENT 5 — RECENCY SIGNAL (0 to 1)
-Does the timing of this article matter? Is it reporting on something that is actively unfolding or just concluded?
-  1: Active and time-sensitive — the development is currently unfolding, a decision is imminent, or this is breaking news that leaders must act on now.
-  0: Not time-sensitive — analysis of past events, background reporting, evergreen content, or developments that concluded more than a week ago.
-
-═══════════════════════════════════════════════════════
-SCORING DISCIPLINE
-═══════════════════════════════════════════════════════
-- A perfect 10 requires: Strategic Impact 3 + RGI Relevance 2 + Cross-Domain 2 + Source Authority 2 + Recency 1. Reserve for historic, system-level events only.
-- A score of 7 (e.g., 2+2+1+2+0) is correct for a solid, relevant article from a major outlet.
-- Most articles should score between 4 and 7. Scores of 8+ should represent the top ~10% of content.
-- Do NOT inflate scores. An article that is merely interesting but not strategically consequential must not exceed 5.
-
-AUTHENTICITY SCORING (1-10) — evaluate separately from relevancy:
-Score how credible and trustworthy this source/article is:
-- 9-10: Primary source document, official government or institutional statement, direct CEO/executive post, peer-reviewed research, well-established Tier-1 outlet (NYT, WSJ, FT, Reuters, Bloomberg, The Economist) with named expert sources
-- 7-8: Reputable Tier-2 publication, named expert author, based on primary source material, corroborated by multiple sources
-- 5-6: Standard reporting, single-source claims, opinion piece from credible outlet, trade publication
-- 3-4: Unnamed sources, speculative analysis, secondary aggregation without original reporting, partisan outlet
-- 1-2: Anonymous blog, unverifiable claim, highly speculative, known low-credibility source, sensationalist content
-
-RGI TAKE — write an evaluative 2-sentence RGI position on this article:
-Sentence 1: State whether RGI agrees, partially agrees, or disagrees with the article's central claim — and name the specific reason. Be direct.
-Sentence 2: State one concrete forward-looking implication for senior leaders. Use declarative language, not hedging. Max 220 chars total.
-Format: "RGI [agrees/partially agrees/disagrees]: [reason]. [Forward implication for leaders]."
-If the article is low-relevance (score 1-4), write: "RGI notes this item falls outside the core strategic lens — limited implications for senior leadership."
+Then provide:
+- finalRelevanceScore: the final RGI analyst score, 1-10, calibrated to the scale above.
+- isRelevantToRgi: whether this contains genuine RGI strategic signal.
+- recommendedUse: one of "reject", "feed", "dashboard", "daily_brief", "needs_review".
+- urgencyLevel: one of "low", "medium", "high", "critical".
+- confidence: 0-1.
+- scoreExplanation: one concise sentence explaining the strategic reason for the score.
+- authenticityScore: 1-10.
+- viewpoint: 2 concise sentences in RGI voice explaining the institutional/executive implication.
 
 TOPIC TAGS — choose only from this exact canonical list (31 topics):
 
@@ -242,14 +335,32 @@ TAGGING RULES — be precise, never tag tangentially:
 10. Use the EXACT tag string — no abbreviations, no partial matches, no invented tags
 
 Return ONLY valid JSON with exactly these keys:
-- strategicImpact: integer 0-3
-- rgiRelevance: integer 0-2
-- crossDomainInfluence: integer 0-2
-- sourceAuthority: integer 0-2
-- recency: integer 0-1
-- scoreExplanation: string — one sentence naming the two factors that most drove the score up or down (e.g. "High strategic impact from global market disruption, but single-domain with no cross-sector ripple effects.")
+- finalRelevanceScore: number 1-10
+- isRelevantToRgi: boolean
+- recommendedUse: "reject" | "feed" | "dashboard" | "daily_brief" | "needs_review"
+- urgencyLevel: "low" | "medium" | "high" | "critical"
+- confidence: number 0-1
+- sourceAuthority: number 1-10
+- geopoliticalImpact: number 1-10
+- macroeconomicSignificance: number 1-10
+- securityConflictRelevance: number 1-10
+- supplyChainImportance: number 1-10
+- technologyStrategicRelevance: number 1-10
+- energyCommoditiesImportance: number 1-10
+- financialMarketImpact: number 1-10
+- governanceConsequence: number 1-10
+- institutionalRisk: number 1-10
+- leadershipRelevance: number 1-10
+- secondOrderEffects: number 1-10
+- marketCapitalAllocationImpact: number 1-10
+- decisionMakerUrgency: number 1-10
+- rgiDoctrineAlignment: number 1-10
+- narrativeShiftPotential: number 1-10
+- longTermStrategicConsequences: number 1-10
+- rgiPriorityAlignment: number 1-10
+- scoreExplanation: string
 - authenticityScore: number 1-10
-- viewpoint: string — RGI 2-sentence position ("RGI [agrees/partially agrees/disagrees]: [reason]. [Forward implication]." — or for scores 0-3 total: "RGI notes this item falls outside the core strategic lens — limited implications for senior leadership.")
+- viewpoint: string
 - topicTags: string array (1-3 tags from the list below)
 - teaserSummary: string — 1-2 sentence factual summary of the article's core claim
 - disciplineAlignment: string — one of: "Strategic Foresight", "System Vitality", "Civic Stewardship", "Multiple"
@@ -262,6 +373,234 @@ Title: {TITLE}
 Source: {SOURCE}
 Content: {CONTENT}`;
 
+type StrategicScoreBreakdown = {
+  sourceAuthority: number;
+  geopoliticalImpact: number;
+  macroeconomicSignificance: number;
+  securityConflictRelevance: number;
+  supplyChainImportance: number;
+  technologyStrategicRelevance: number;
+  energyCommoditiesImportance: number;
+  financialMarketImpact: number;
+  governanceConsequence: number;
+  institutionalRisk: number;
+  leadershipRelevance: number;
+  secondOrderEffects: number;
+  marketCapitalAllocationImpact: number;
+  decisionMakerUrgency: number;
+  rgiDoctrineAlignment: number;
+  narrativeShiftPotential: number;
+  longTermStrategicConsequences: number;
+  rgiPriorityAlignment: number;
+  sourceWeight: number;
+  aiAnalystScore?: number;
+  aiConfidence?: number;
+};
+
+export const ARTICLE_INSERTION_SCORE_THRESHOLD = 4.0;
+export const DASHBOARD_SIGNAL_SCORE_THRESHOLD = 5.5;
+export const BRIEF_CANDIDATE_SCORE_THRESHOLD = 7.0;
+
+const RGI_FACTOR_WEIGHTS = {
+  sourceAuthority: 0.08,
+  geopoliticalImpact: 0.12,
+  macroeconomicSignificance: 0.1,
+  securityConflictRelevance: 0.08,
+  supplyChainImportance: 0.08,
+  technologyStrategicRelevance: 0.08,
+  energyCommoditiesImportance: 0.07,
+  financialMarketImpact: 0.08,
+  governanceConsequence: 0.09,
+  institutionalRisk: 0.09,
+  leadershipRelevance: 0.07,
+  secondOrderEffects: 0.09,
+  marketCapitalAllocationImpact: 0.07,
+  decisionMakerUrgency: 0.07,
+  rgiDoctrineAlignment: 0.1,
+  narrativeShiftPotential: 0.07,
+  longTermStrategicConsequences: 0.09,
+  rgiPriorityAlignment: 0.07,
+} satisfies Partial<Record<keyof StrategicScoreBreakdown, number>>;
+
+const RGI_STRATEGIC_PATTERNS: Array<{ key: keyof Omit<StrategicScoreBreakdown, "sourceAuthority" | "sourceWeight" | "aiAnalystScore" | "aiConfidence">; patterns: RegExp[] }> = [
+  { key: "geopoliticalImpact", patterns: [/china|russia|iran|israel|ukraine|taiwan|nato|gaza|sanction|diplomacy|geopolitic|tariff|trade war|great power|european union|opec|hormuz|strait|quad|xi|trump|south korea|north korea|japan|europe/] },
+  { key: "macroeconomicSignificance", patterns: [/inflation|recession|gdp|growth|central bank|ecb|fed|rate|yield|labor market|employment|currency|currencies|dollar|won|yen|euro|deficit|debt|productivity|inventory|demand|supply|export|exports/] },
+  { key: "securityConflictRelevance", patterns: [/war|military|missile|defense|security|ceasefire|terror|attack|cyberattack|army|navy|air force|weapons|conflict|border/] },
+  { key: "supplyChainImportance", patterns: [/supply chain|inventory|shipping|logistics|port|freight|container|semiconductor|manufacturing|export|exports|import|imports|critical minerals|rare earth|hormuz|strait|chokepoint|tanker/] },
+  { key: "technologyStrategicRelevance", patterns: [/\bai\b|ai-fueled|artificial intelligence|chip|semiconductor|quantum|automation|robotics|data center|compute|cyber|software|model|openai|anthropic|deepseek|agi/] },
+  { key: "energyCommoditiesImportance", patterns: [/energy|oil|gas|lng|nuclear|grid|electricity|power|renewable|solar|wind|commodity|commodities|copper|lithium|uranium|hormuz|tanker|metals/] },
+  { key: "financialMarketImpact", patterns: [/market|markets|stock|stocks|bond|bonds|equity|credit|bank|investor|capital|earnings|valuation|ipo|shares|wall street|liquidity|default|loan|currency|currencies|won|yen|euro/] },
+  { key: "governanceConsequence", patterns: [/governance|regulat|policy|law|court|congress|parliament|ministry|central bank|election|oversight|compliance|accountability|legitimacy/] },
+  { key: "institutionalRisk", patterns: [/institution|trust|credibility|legitimacy|stability|resilience|fragility|crisis|corruption|protest|social unrest|public confidence|systemic/] },
+  { key: "leadershipRelevance", patterns: [/leadership|executive|ceo|board|management|strategy|decision|reputation|public position|stakeholder|organization|talent|culture/] },
+  { key: "secondOrderEffects", patterns: [/ripple|spillover|second.order|cascade|contagion|downstream|knock.on|chain reaction|repercussion|longer.term|unintended/] },
+  { key: "marketCapitalAllocationImpact", patterns: [/capital allocation|investment|investor|valuation|earnings|margin|cost of capital|private equity|venture capital|asset|portfolio|liquidity/] },
+  { key: "decisionMakerUrgency", patterns: [/urgent|deadline|imminent|now|today|this week|vote|summit|decision|approval|ban|strike|deadline|emergency|warning|warns|war impact|shock|strain/] },
+  { key: "rgiDoctrineAlignment", patterns: [/foresight|system vitality|civic stewardship|strategic|leadership|governance|institution|disruption|ai acceleration|geopolitical volatility|continuous disruption/] },
+  { key: "narrativeShiftPotential", patterns: [/shift|pivot|warning|signals?|trend|breakthrough|collapse|surge|historic|unprecedented|reshap|rethink|turning point|accelerat|slowdown/] },
+  { key: "longTermStrategicConsequences", patterns: [/long.term|structural|strategy|strategic|governance|regulation|policy|institution|industrial policy|demographic|resilience|legitimacy|transition/] },
+  { key: "rgiPriorityAlignment", patterns: [/leadership|governance|strategy|institution|system|civic|stewardship|foresight|vitality|board|executive|ceo|organization|trust/] },
+];
+
+function clamp(value: number, min = 0, max = 10): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function sourceAuthorityScore(sourceTier: number, authorityLevel: number, sourceWeight: number): number {
+  const tierBase = sourceTier <= 1 ? 8.8 : sourceTier === 2 ? 7 : sourceTier === 3 ? 5.2 : 3.5;
+  const authority = Number.isFinite(authorityLevel) ? authorityLevel : 5;
+  return round1(clamp(tierBase * 0.55 + authority * 0.45 + (clamp(sourceWeight, 0.5, 2) - 1) * 1.1));
+}
+
+function patternScore(text: string, patterns: RegExp[]): number {
+  const hits = patterns.reduce((sum, pattern) => sum + (pattern.test(text) ? 1 : 0), 0);
+  if (hits <= 0) return 1.5;
+  if (hits === 1) return 6.4;
+  if (hits === 2) return 7.6;
+  return clamp(8.4 + Math.min(1.4, (hits - 3) * 0.35));
+}
+
+function buildStrategicScoreBreakdown(input: {
+  headline: string;
+  content: string;
+  sourceName: string;
+  sourceTier: number;
+  authorityLevel: number;
+  sourceWeight: number;
+  ai?: Partial<Omit<StrategicScoreBreakdown, "sourceWeight">>;
+}): StrategicScoreBreakdown {
+  const haystack = `${input.headline} ${input.content} ${input.sourceName}`.toLowerCase();
+  const factors: StrategicScoreBreakdown = {
+    sourceAuthority: sourceAuthorityScore(input.sourceTier, input.authorityLevel, input.sourceWeight),
+    geopoliticalImpact: 1.5,
+    macroeconomicSignificance: 1.5,
+    securityConflictRelevance: 1.5,
+    supplyChainImportance: 1.5,
+    technologyStrategicRelevance: 1.5,
+    energyCommoditiesImportance: 1.5,
+    financialMarketImpact: 1.5,
+    governanceConsequence: 1.5,
+    institutionalRisk: 1.5,
+    leadershipRelevance: 1.5,
+    secondOrderEffects: 1.5,
+    marketCapitalAllocationImpact: 1.5,
+    decisionMakerUrgency: 1.5,
+    rgiDoctrineAlignment: 1.5,
+    narrativeShiftPotential: 1.5,
+    longTermStrategicConsequences: 1.5,
+    rgiPriorityAlignment: 1.5,
+    sourceWeight: clamp(input.sourceWeight, 0.5, 2),
+  };
+
+  for (const factor of RGI_STRATEGIC_PATTERNS) {
+    factors[factor.key] = round1(patternScore(haystack, factor.patterns));
+  }
+
+  if (input.ai) {
+    for (const key of Object.keys(factors) as Array<keyof StrategicScoreBreakdown>) {
+      if (key === "sourceWeight") continue;
+      const aiValue = input.ai[key];
+      if (typeof aiValue === "number" && Number.isFinite(aiValue)) {
+        factors[key] = round1(clamp(Number(factors[key] ?? 1.5) * 0.25 + clamp(aiValue) * 0.75));
+      }
+    }
+  }
+
+  return factors;
+}
+
+function finalStrategicRelevanceScore(breakdown: StrategicScoreBreakdown): number {
+  const weightedTotal = Object.entries(RGI_FACTOR_WEIGHTS).reduce((sum, [key, weight]) => {
+    return sum + Number(breakdown[key as keyof StrategicScoreBreakdown] ?? 0) * Number(weight);
+  }, 0);
+  const weightTotal = Object.values(RGI_FACTOR_WEIGHTS).reduce((sum, weight) => sum + Number(weight), 0);
+  const weighted = weightTotal > 0 ? weightedTotal / weightTotal : 1;
+  const strategicSignals = [
+    breakdown.geopoliticalImpact,
+    breakdown.macroeconomicSignificance,
+    breakdown.securityConflictRelevance,
+    breakdown.supplyChainImportance,
+    breakdown.technologyStrategicRelevance,
+    breakdown.energyCommoditiesImportance,
+    breakdown.financialMarketImpact,
+    breakdown.governanceConsequence,
+    breakdown.institutionalRisk,
+    breakdown.secondOrderEffects,
+    breakdown.marketCapitalAllocationImpact,
+  ];
+  const strongestSignal = Math.max(...strategicSignals);
+  const topStrategicAverage = [...strategicSignals].sort((a, b) => b - a).slice(0, 4).reduce((sum, score) => sum + score, 0) / 4;
+  const executiveLens = Math.max(
+    breakdown.leadershipRelevance,
+    breakdown.governanceConsequence,
+    breakdown.institutionalRisk,
+    breakdown.decisionMakerUrgency,
+    breakdown.rgiDoctrineAlignment,
+    breakdown.longTermStrategicConsequences,
+  );
+  const crossDomainCount = strategicSignals.filter((score) => score >= 6.5).length;
+  const convergenceBonus = Math.min(0.8, Math.max(0, crossDomainCount - 1) * 0.18);
+  const rgiDoctrineBonus = breakdown.rgiDoctrineAlignment >= 7 && executiveLens >= 6.5 ? 0.35 : 0;
+  const eliteSourceSignalBonus = breakdown.sourceAuthority >= 8.5 && strongestSignal >= 6.4 ? 0.55 : 0;
+  const aiAnalystScore = typeof breakdown.aiAnalystScore === "number" ? clamp(breakdown.aiAnalystScore) : null;
+  const majorStrategicDomains = [
+    breakdown.geopoliticalImpact,
+    breakdown.macroeconomicSignificance,
+    breakdown.securityConflictRelevance,
+    breakdown.supplyChainImportance,
+    breakdown.technologyStrategicRelevance,
+    breakdown.energyCommoditiesImportance,
+    breakdown.financialMarketImpact,
+    breakdown.governanceConsequence,
+    breakdown.institutionalRisk,
+  ];
+  const majorDomainCount = majorStrategicDomains.filter((score) => score >= 6.4).length;
+  const strategicFloor = breakdown.sourceAuthority >= 8.5 && majorDomainCount >= 3
+    ? 7.2
+    : breakdown.sourceAuthority >= 8.5 && majorDomainCount >= 2
+      ? 6.8
+      : breakdown.sourceAuthority >= 8.5 && strongestSignal >= 6.4
+        ? 6.2
+        : 1;
+  const modelBlend = aiAnalystScore === null
+    ? weighted * 0.25 + topStrategicAverage * 0.27 + strongestSignal * 0.2 + executiveLens * 0.13 + breakdown.sourceAuthority * 0.15
+    : aiAnalystScore * 0.82 + weighted * 0.08 + topStrategicAverage * 0.04 + executiveLens * 0.03 + breakdown.sourceAuthority * 0.03;
+  const lowAuthorityPenalty = breakdown.sourceAuthority < 4.5 && strongestSignal < 8 ? -0.7 : 0;
+  return round1(clamp(Math.max(modelBlend + convergenceBonus + rgiDoctrineBonus + eliteSourceSignalBonus + lowAuthorityPenalty, strategicFloor), 1, 10));
+}
+
+function topStrategicDrivers(breakdown: StrategicScoreBreakdown): string[] {
+  const labels: Partial<Record<keyof StrategicScoreBreakdown, string>> = {
+    sourceAuthority: "source authority",
+    geopoliticalImpact: "geopolitical impact",
+    macroeconomicSignificance: "macroeconomic significance",
+    securityConflictRelevance: "security/conflict relevance",
+    supplyChainImportance: "supply-chain importance",
+    technologyStrategicRelevance: "AI/technology strategic relevance",
+    energyCommoditiesImportance: "energy/commodities importance",
+    financialMarketImpact: "financial-market impact",
+    governanceConsequence: "governance consequence",
+    institutionalRisk: "institutional risk",
+    leadershipRelevance: "leadership relevance",
+    secondOrderEffects: "second-order effects",
+    marketCapitalAllocationImpact: "market/capital-allocation impact",
+    decisionMakerUrgency: "decision-maker urgency",
+    rgiDoctrineAlignment: "RGI doctrine alignment",
+    narrativeShiftPotential: "narrative shift potential",
+    longTermStrategicConsequences: "long-term strategic consequence",
+    rgiPriorityAlignment: "RGI priority alignment",
+  };
+  return Object.entries(labels)
+    .map(([key, label]) => ({ label: label!, score: Number(breakdown[key as keyof StrategicScoreBreakdown] ?? 0) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map((item) => `${item.label} ${item.score.toFixed(1)}/10`);
+}
+
 async function scoreArticle(
   headline: string,
   content: string,
@@ -273,11 +612,36 @@ async function scoreArticle(
   relevancyScore: number;
   authenticityScore: number;
   viewpoint: string;
+  scoreExplanation: string;
+  scoreBreakdown: StrategicScoreBreakdown;
   topicTags: string[];
   teaserSummary: string;
   disciplineAlignment: string;
   isPrimarySignal: boolean;
 }> {
+  const deterministicScore = () => {
+    const fallback = fallbackTopicAnalysis(headline, content, sourceName);
+    const strategicBreakdown = buildStrategicScoreBreakdown({ headline, content, sourceName, sourceTier, authorityLevel, sourceWeight });
+    const fallbackScore = finalStrategicRelevanceScore(strategicBreakdown);
+    return {
+      relevancyScore: fallbackScore,
+      authenticityScore: Math.min(10, Math.max(1, authorityLevel || 5)),
+      viewpoint: `RGI notes this item carries ${fallback.topicTags[0].toLowerCase()} significance based on deterministic source and content scoring. Editors should verify the causal mechanism before publication.`,
+      scoreExplanation: `Deterministic RGI Strategic Relevance score driven by ${topStrategicDrivers(strategicBreakdown).join(", ")}.`,
+      scoreBreakdown: strategicBreakdown,
+      topicTags: fallback.topicTags,
+      teaserSummary: fallback.teaserSummary,
+      disciplineAlignment: fallback.disciplineAlignment,
+      isPrimarySignal: fallbackScore >= 8,
+    };
+  };
+
+  // OpenAI is the primary RGI analyst when configured. Deterministic scoring is
+  // only the resilience path when no provider is available or the provider fails.
+  if (!process.env.OPENAI_API_KEY && !process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+    return deterministicScore();
+  }
+
   const prompt = RGI_RELEVANCY_PROMPT
     .replace("{TITLE}", headline)
     .replace("{SOURCE}", sourceName)
@@ -287,7 +651,7 @@ async function scoreArticle(
   try {
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5",
-      max_tokens: 700,
+      max_tokens: 1500,
       messages: [{ role: "user", content: prompt }],
     });
 
@@ -295,26 +659,35 @@ async function scoreArticle(
     text = block.type === "text" ? block.text : "{}";
   } catch (e) {
     logger.warn({ error: summarizeHttpError(e) }, "AI scoring unavailable; using fallback article scoring");
-    const tierBoost = sourceTier === 1 ? 1.5 : sourceTier === 2 ? 0.75 : 0;
-    const authorityBoost = Math.max(0, Math.min(2, authorityLevel / 5));
-    const keywordBoost = SIGNAL_KEYWORDS.some((kw) => headline.toLowerCase().includes(kw)) ? 1 : 0;
-    const fallback = fallbackTopicAnalysis(headline, content, sourceName);
-    const fallbackScore = Math.min(8.8, Math.max(4.5, 4.5 + tierBoost + authorityBoost + keywordBoost + fallback.scoreBoost));
-    return {
-      relevancyScore: Math.round(fallbackScore * 10) / 10,
-      authenticityScore: Math.min(10, Math.max(1, authorityLevel || 5)),
-      viewpoint: `RGI notes this item carries ${fallback.topicTags[0].toLowerCase()} significance based on deterministic source and content scoring. Editors should verify the causal mechanism before publication.`,
-      topicTags: fallback.topicTags,
-      teaserSummary: fallback.teaserSummary,
-      disciplineAlignment: fallback.disciplineAlignment,
-      isPrimarySignal: fallbackScore >= 7.5,
-    };
+    return deterministicScore();
   }
 
   let result = {
     relevancyScore: 5,
     authenticityScore: 5,
     viewpoint: "",
+    scoreExplanation: "",
+    scoreBreakdown: {
+      sourceAuthority: sourceAuthorityScore(sourceTier, authorityLevel, sourceWeight),
+      geopoliticalImpact: 1.5,
+      macroeconomicSignificance: 1.5,
+      securityConflictRelevance: 1.5,
+      supplyChainImportance: 1.5,
+      technologyStrategicRelevance: 1.5,
+      energyCommoditiesImportance: 1.5,
+      financialMarketImpact: 1.5,
+      governanceConsequence: 1.5,
+      institutionalRisk: 1.5,
+      leadershipRelevance: 1.5,
+      secondOrderEffects: 1.5,
+      marketCapitalAllocationImpact: 1.5,
+      decisionMakerUrgency: 1.5,
+      rgiDoctrineAlignment: 1.5,
+      narrativeShiftPotential: 1.5,
+      longTermStrategicConsequences: 1.5,
+      rgiPriorityAlignment: 1.5,
+      sourceWeight: clamp(sourceWeight, 0.5, 2),
+    },
     topicTags: [] as string[],
     teaserSummary: headline.slice(0, 200),
     disciplineAlignment: "Multiple",
@@ -325,23 +698,44 @@ async function scoreArticle(
     const cleanText = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
     const parsed = JSON.parse(cleanText);
 
-    // Clamp each component to its allowed range
-    const si  = Math.min(3, Math.max(0, Math.round(parsed.strategicImpact        ?? 1)));
-    const rr  = Math.min(2, Math.max(0, Math.round(parsed.rgiRelevance           ?? 1)));
-    const cd  = Math.min(2, Math.max(0, Math.round(parsed.crossDomainInfluence   ?? 0)));
-    const sa  = Math.min(2, Math.max(0, Math.round(parsed.sourceAuthority        ?? 1)));
-    const rec = Math.min(1, Math.max(0, Math.round(parsed.recency                ?? 0)));
-
-    // Apply source weight to the Source Authority component.
-    // Weight 1.0 = unchanged; weight 2.0 can boost SA contribution up to 3 (one extra point);
-    // weight 0.5 halves the SA contribution. Total is capped at 10.
     const clampedWeight = Math.max(0.5, Math.min(2.0, sourceWeight));
-    const weightedSA = Math.min(3, Math.max(0, Math.round(sa * clampedWeight * 10) / 10));
-    const computedScore = Math.min(10, Math.max(0, si + rr + cd + weightedSA + rec));
+    const aiFactor = (key: string, fallback = 1.5) => clamp(Number(parsed[key] ?? fallback));
+    const aiFinalScore = clamp(Number(parsed.finalRelevanceScore ?? parsed.relevancyScore ?? 5));
+    const strategicBreakdown = buildStrategicScoreBreakdown({
+      headline,
+      content,
+      sourceName,
+      sourceTier,
+      authorityLevel,
+      sourceWeight: clampedWeight,
+      ai: {
+        sourceAuthority: aiFactor("sourceAuthority", sourceAuthorityScore(sourceTier, authorityLevel, sourceWeight)),
+        geopoliticalImpact: aiFactor("geopoliticalImpact"),
+        macroeconomicSignificance: aiFactor("macroeconomicSignificance"),
+        securityConflictRelevance: aiFactor("securityConflictRelevance"),
+        supplyChainImportance: aiFactor("supplyChainImportance"),
+        technologyStrategicRelevance: aiFactor("technologyStrategicRelevance"),
+        energyCommoditiesImportance: aiFactor("energyCommoditiesImportance"),
+        financialMarketImpact: aiFactor("financialMarketImpact"),
+        governanceConsequence: aiFactor("governanceConsequence"),
+        institutionalRisk: aiFactor("institutionalRisk"),
+        leadershipRelevance: aiFactor("leadershipRelevance"),
+        secondOrderEffects: aiFactor("secondOrderEffects"),
+        marketCapitalAllocationImpact: aiFactor("marketCapitalAllocationImpact"),
+        decisionMakerUrgency: aiFactor("decisionMakerUrgency"),
+        rgiDoctrineAlignment: aiFactor("rgiDoctrineAlignment"),
+        narrativeShiftPotential: aiFactor("narrativeShiftPotential"),
+        longTermStrategicConsequences: aiFactor("longTermStrategicConsequences"),
+        rgiPriorityAlignment: aiFactor("rgiPriorityAlignment"),
+        aiAnalystScore: aiFinalScore,
+        aiConfidence: Math.max(0, Math.min(1, Number(parsed.confidence ?? 0.7))),
+      },
+    });
+    const computedScore = finalStrategicRelevanceScore(strategicBreakdown);
 
     // Build a concise score breakdown appended to the viewpoint for transparency
     const weightLabel = clampedWeight !== 1.0 ? ` ×${clampedWeight.toFixed(1)} wt` : "";
-    const breakdown = `Impact ${si}/3 · Relevance ${rr}/2 · Cross-domain ${cd}/2 · Authority ${sa}/2${weightLabel} · Recency ${rec}/1`;
+    const breakdown = `Analyst ${aiFinalScore}/10 · Authority ${strategicBreakdown.sourceAuthority}/10${weightLabel} · Geopolitics ${strategicBreakdown.geopoliticalImpact}/10 · Macro ${strategicBreakdown.macroeconomicSignificance}/10 · Governance ${strategicBreakdown.governanceConsequence}/10 · Institutional risk ${strategicBreakdown.institutionalRisk}/10 · Decision urgency ${strategicBreakdown.decisionMakerUrgency}/10 · RGI doctrine ${strategicBreakdown.rgiDoctrineAlignment}/10`;
     const explanation = parsed.scoreExplanation ? `${parsed.scoreExplanation}` : "";
     const rgiViewpoint = parsed.viewpoint ?? "";
     const fullViewpoint = rgiViewpoint
@@ -352,6 +746,8 @@ async function scoreArticle(
       relevancyScore: computedScore,
       authenticityScore: parsed.authenticityScore ?? 5,
       viewpoint: fullViewpoint,
+      scoreExplanation: `RGI Strategic Relevance score driven by ${topStrategicDrivers(strategicBreakdown).join(", ")}.${explanation ? ` AI note: ${explanation}` : ""}`,
+      scoreBreakdown: strategicBreakdown,
       topicTags: Array.isArray(parsed.topicTags) ? parsed.topicTags : [],
       teaserSummary: parsed.teaserSummary ?? headline.slice(0, 200),
       disciplineAlignment: parsed.disciplineAlignment ?? "Multiple",
@@ -423,8 +819,6 @@ async function fetchRssItems(source: {
 
     const $ = cheerio(String(responseData), { xmlMode: true });
     const items: ScrapedItem[] = [];
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-
     $("item, entry").each((_, el) => {
       const $el = $(el);
 
@@ -461,8 +855,6 @@ async function fetchRssItems(source: {
       if (!headline || !link) return;
 
       const pubDate = pubDateStr ? new Date(pubDateStr) : undefined;
-      // Include articles from last 24 hours, or those without a date (assume recent)
-      if (pubDate && !isNaN(pubDate.getTime()) && pubDate.getTime() < cutoff) return;
 
       const cleanDesc = cleanText(description, 3000);
 
@@ -544,9 +936,26 @@ let lastScrapeSummary: ScrapeSummary = {
   articlesCollected: 0,
   articlesAccepted: 0,
   articlesSaved: 0,
+  articlesAlreadyExisting: 0,
+  totalFetched: 0,
+  rejectedTooOld: 0,
+  rejectedLowRelevance: 0,
+  acceptedForFeed: 0,
+  acceptedForDashboard: 0,
+  acceptedForDailyBrief: 0,
+  needsReview: 0,
   duplicatesSkipped: 0,
   malformedSkipped: 0,
   lowScoreSkipped: 0,
+  lowScoreRejectedArticles: [],
+  topAcceptedArticles: [],
+  topRejectedArticles: [],
+  acceptedArticleOutcomes: emptyAcceptedArticleOutcomes(),
+  firestoreWriteAttempts: 0,
+  firestoreWriteSuccesses: 0,
+  firestoreWriteFailures: 0,
+  topAcceptedButNotSaved: [],
+  articleDispositions: [],
   feedResults: [],
 };
 const sourceFailureCounts = new Map<string, number>();
@@ -558,6 +967,10 @@ const SOURCE_CACHE_TTL_MS = 12 * 60 * 1000; // 12 minutes
 export function getScrapeStatus() {
   return {
     isRunning: scrapeInProgress,
+    scheduler: process.env.FUNCTION_TARGET || process.env.K_SERVICE ? "firebase-scheduled-functions" : "local-node-cron",
+    hourlySchedule: "0 * * * * America/New_York",
+    morningBriefSchedule: "0 6 * * * America/New_York",
+    eveningBriefSchedule: "0 18 * * * America/New_York",
     lastScrapeAt: lastScrapeAt?.toISOString() ?? null,
     lastScrapeArticlesFound,
     lastScrapeFailures,
@@ -579,6 +992,10 @@ function feedCandidateUrls(rawUrl: string): string[] {
   const candidates = new Set<string>([rawUrl]);
   try {
     const parsed = new URL(rawUrl);
+    const path = parsed.pathname.toLowerCase();
+    const configuredAsFeed = /(?:feed|rss|atom|xml)(?:\/|\.|$)/i.test(path);
+    if (configuredAsFeed) return [rawUrl];
+
     const origin = parsed.origin;
     if (/openai\.com$/i.test(parsed.hostname)) candidates.add(`${origin}/news/rss.xml`);
     candidates.add(`${origin}/feed/`);
@@ -588,7 +1005,7 @@ function feedCandidateUrls(rawUrl: string): string[] {
   } catch {
     // Keep original only.
   }
-  return [...candidates].slice(0, 5);
+  return [...candidates].slice(0, 3);
 }
 
 async function mapWithConcurrency<T, R>(
@@ -732,26 +1149,14 @@ function isTitleDuplicate(fingerprint: string, existingFingerprints: Set<string>
 // if any data has ever been scraped.
 export async function initializeScrapeStatus(): Promise<void> {
   try {
-    if (useSupabaseData()) {
-      const latest = await latestSupabaseScrapedAt();
-      if (latest) lastScrapeAt = latest;
-      return;
-    }
-
-    const [latest] = await db
-      .select({ scrapedAt: articlesTable.scrapedAt })
-      .from(articlesTable)
-      .orderBy(desc(articlesTable.scrapedAt))
-      .limit(1);
-    if (latest?.scrapedAt) {
-      lastScrapeAt = new Date(latest.scrapedAt);
-    }
+    const latest = await latestFirestoreScrapedAt();
+    if (latest) lastScrapeAt = latest;
   } catch (err) {
     logger.error({ err }, "Failed to initialize scrape status from DB");
   }
 }
 
-export async function runScrape(): Promise<{
+export async function runScrape(options: { ignoreSourceCache?: boolean } = {}): Promise<{
   articlesFound: number;
   articlesAdded: number;
   summary?: ScrapeSummary;
@@ -767,8 +1172,11 @@ export async function runScrape(): Promise<{
   let articlesAdded = 0;
   let malformedSkipped = 0;
   let duplicatesSkipped = 0;
+  let alreadyExistingSkipped = 0;
   let lowScoreSkipped = 0;
+  const articleDispositions: ArticleDispositionRecord[] = [];
   const startedAt = new Date();
+  const scrapeRunId = `scrape-${startedAt.getTime()}-${Math.random().toString(36).slice(2, 8)}`;
   lastScrapeFailures = [];
   lastScrapeSummary = {
     startedAt: startedAt.toISOString(),
@@ -780,30 +1188,43 @@ export async function runScrape(): Promise<{
     articlesCollected: 0,
     articlesAccepted: 0,
     articlesSaved: 0,
+    articlesAlreadyExisting: 0,
+    totalFetched: 0,
+    rejectedTooOld: 0,
+    rejectedLowRelevance: 0,
+    acceptedForFeed: 0,
+    acceptedForDashboard: 0,
+    acceptedForDailyBrief: 0,
+    needsReview: 0,
     duplicatesSkipped: 0,
     malformedSkipped: 0,
     lowScoreSkipped: 0,
+    lowScoreRejectedArticles: [],
+    topAcceptedArticles: [],
+    topRejectedArticles: [],
+    acceptedArticleOutcomes: emptyAcceptedArticleOutcomes(),
+    firestoreWriteAttempts: 0,
+    firestoreWriteSuccesses: 0,
+    firestoreWriteFailures: 0,
+    topAcceptedButNotSaved: [],
+    articleDispositions: [],
     feedResults: [],
   };
 
   try {
-    const sources = useSupabaseData()
-      ? await listActiveSupabaseSources()
-      : await db
-          .select()
-          .from(sourcesTable)
-          .where(eq(sourcesTable.isActive, true));
+    const sources = await listActiveFirestoreSources();
+    logger.info({ scrapeRunId, activeSources: sources.length }, "Scrape run loaded active Firestore sources");
 
     lastScrapeSummary.totalFeeds = sources.length;
 
-    const existingArticles = useSupabaseData() ? await listSupabaseArticles({ limit: 1000 }) : [];
+    const existingArticles = await listFirestoreArticles({ limit: 1000 });
     const existingUrls = new Set(existingArticles.map((article) => normalizeUrl(article.url)).filter(Boolean));
     const existingTitles = new Set(existingArticles.map((article) => titleFingerprint(article.headline)).filter(Boolean));
     const batchUrls = new Set<string>();
     const batchTitles = new Set<string>();
 
     // Bounded concurrency keeps scraping from starving UI/API requests during slow feed runs.
-    logger.info({ count: sources.length, concurrency: 6 }, "Fetching sources with bounded concurrency");
+    logger.info({ scrapeRunId, count: sources.length, concurrency: 6 }, "Fetching sources with bounded concurrency");
     const fetchResults = await mapWithConcurrency(
       sources,
       6,
@@ -811,8 +1232,8 @@ export async function runScrape(): Promise<{
         try {
           // Skip recently-cached sources
           const lastFetched = sourceLastFetched.get(source.url);
-          if (lastFetched && Date.now() - lastFetched < SOURCE_CACHE_TTL_MS) {
-            logger.debug({ source: source.name }, "Source recently fetched — using cache, skipping");
+          if (!options.ignoreSourceCache && lastFetched && Date.now() - lastFetched < SOURCE_CACHE_TTL_MS) {
+            logger.debug({ scrapeRunId, source: source.name }, "Source recently fetched — using cache, skipping");
             return { source, items: [] as ScrapedItem[] };
           }
 
@@ -834,7 +1255,7 @@ export async function runScrape(): Promise<{
               authorType: source.authorType,
             });
           } else if (source.type === "linkedin") {
-            logger.info({ source: source.name }, "LinkedIn source requires API configuration — skipping");
+            logger.info({ scrapeRunId, source: source.name }, "LinkedIn source requires API configuration — skipping");
             return { source, items: [] as ScrapedItem[] };
           }
 
@@ -843,7 +1264,7 @@ export async function runScrape(): Promise<{
         } catch (e) {
           const summary = summarizeHttpError(e);
           lastScrapeFailures.push({ source: source.name, url: source.url, attempts: 1, ...summary });
-          logger.warn({ source: source.name, url: source.url, ...summary }, "Source scrape failed unexpectedly");
+          logger.warn({ scrapeRunId, source: source.name, url: source.url, ...summary }, "Source scrape failed unexpectedly");
           return { source, items: [] as ScrapedItem[] };
         }
       }
@@ -863,7 +1284,7 @@ export async function runScrape(): Promise<{
           if (!validated.ok) {
             malformedSkipped++;
             skipped++;
-            logger.warn({ source: source.name, url: item.url, reason: validated.reason }, "Skipping malformed scraped item");
+            logger.warn({ scrapeRunId, source: source.name, url: item.url, reason: validated.reason }, "Skipping malformed scraped item");
             continue;
           }
 
@@ -877,7 +1298,7 @@ export async function runScrape(): Promise<{
           ) {
             duplicatesSkipped++;
             skipped++;
-            logger.debug({ source: source.name, headline: validated.item.headline, url: normalized }, "Skipping duplicate scraped item");
+            logger.debug({ scrapeRunId, source: source.name, headline: validated.item.headline, url: normalized }, "Skipping duplicate scraped item");
             continue;
           }
 
@@ -908,15 +1329,13 @@ export async function runScrape(): Promise<{
           lastScrapeAt: new Date().toISOString(),
         });
 
-        if (useSupabaseData()) {
-          await updateSupabaseSourceHealth(source.id, {
-            status: status === "success" ? "healthy" : nextFailures >= 3 ? "failed" : "warning",
-            lastScrapeAt: new Date(),
-            lastSuccessAt: status === "success" ? new Date() : null,
-            lastError,
-            consecutiveFailures: nextFailures,
-          }).catch((err) => logger.debug({ err, source: source.name }, "Source health update skipped"));
-        }
+        await updateFirestoreSourceHealth(source.id, {
+          status: status === "success" ? "healthy" : nextFailures >= 3 ? "failed" : "warning",
+          lastScrapeAt: new Date(),
+          lastSuccessAt: status === "success" ? new Date() : null,
+          lastError,
+          consecutiveFailures: nextFailures,
+        }).catch((err) => logger.debug({ err, source: source.name }, "Source health update skipped"));
       } else {
         const summary = summarizeHttpError(result.reason);
         lastScrapeFailures.push({ source: "unknown", url: "unknown", attempts: 1, ...summary });
@@ -927,13 +1346,14 @@ export async function runScrape(): Promise<{
     lastScrapeSummary.articlesCollected = fetchResults
       .filter((result): result is PromiseFulfilledResult<{ source: typeof sources[0]; items: ScrapedItem[] }> => result.status === "fulfilled")
       .reduce((sum, result) => sum + result.value.items.length, 0);
+    lastScrapeSummary.totalFetched = lastScrapeSummary.articlesCollected;
     lastScrapeSummary.articlesAccepted = articlesFound;
     lastScrapeSummary.malformedSkipped = malformedSkipped;
     lastScrapeSummary.duplicatesSkipped = duplicatesSkipped;
     lastScrapeSummary.successfulFeeds = lastScrapeSummary.feedResults.filter((feed) => feed.status === "success").length;
     lastScrapeSummary.emptyFeeds = lastScrapeSummary.feedResults.filter((feed) => feed.status === "empty").length;
     lastScrapeSummary.failedFeeds = lastScrapeSummary.feedResults.filter((feed) => feed.status === "failed").length;
-    logger.info({ articlesFound, summary: lastScrapeSummary }, "All sources fetched — scoring articles");
+    logger.info({ scrapeRunId, articlesFound, summary: lastScrapeSummary }, "All sources fetched — scoring articles");
 
     // Scoring is also bounded so provider/network stalls cannot monopolize the server.
     const scoringResults = await mapWithConcurrency(
@@ -941,17 +1361,78 @@ export async function runScrape(): Promise<{
       8,
       async ({ source, item }) => {
         // Check if article already exists
-        if (useSupabaseData()) {
-          const existing = await getSupabaseArticleByUrl(item.url);
-          if (existing) return null;
-        } else {
-          const existing = await db
-            .select({ id: articlesTable.id })
-            .from(articlesTable)
-            .where(eq(articlesTable.url, item.url))
-            .limit(1);
-
-          if (existing.length > 0) return null;
+        const existing = await getFirestoreArticleByUrl(item.url);
+        if (existing) {
+          const content = item.content || item.headline;
+          const scored = await scoreArticle(
+            item.headline,
+            content,
+            source.name,
+            source.tier,
+            source.authorityLevel ?? 3,
+            source.weight ?? 1.0
+          );
+          const finalScore = scored.relevancyScore;
+          const strategicImpactScore = Math.max(
+            Number(scored.scoreBreakdown.longTermStrategicConsequences ?? 0),
+            Number(scored.scoreBreakdown.geopoliticalImpact ?? 0),
+            Number(scored.scoreBreakdown.macroeconomicSignificance ?? 0),
+            Number(scored.scoreBreakdown.securityConflictRelevance ?? 0),
+            Number(scored.scoreBreakdown.technologyStrategicRelevance ?? 0),
+            Number(scored.scoreBreakdown.energyCommoditiesImportance ?? 0),
+            finalScore,
+          );
+          const executiveRelevanceScore = Math.max(
+            Number(scored.scoreBreakdown.leadershipRelevance ?? 0),
+            Number(scored.scoreBreakdown.decisionMakerUrgency ?? 0),
+            Number(scored.scoreBreakdown.institutionalRisk ?? 0),
+            Number(scored.scoreBreakdown.rgiDoctrineAlignment ?? 0),
+          );
+          const judgment = recommendedUseForScores({
+            publishedAt: item.publishedAt ?? existing.publishedAt,
+            relevancyScore: finalScore,
+            sourceAuthorityScore: scored.scoreBreakdown.sourceAuthority,
+            strategicImpactScore,
+            executiveRelevanceScore,
+          });
+          await updateFirestoreArticle(Number(existing.id), {
+            relevancyScore: finalScore,
+            authenticityScore: scored.authenticityScore,
+            recencyScore: judgment.recencyScore,
+            sourceAuthorityScore: scored.scoreBreakdown.sourceAuthority,
+            strategicImpactScore,
+            executiveRelevanceScore,
+            recommendedUse: judgment.recommendedUse,
+            reasonForAcceptance: judgment.reasonForAcceptance,
+            reasonForRejection: judgment.reasonForRejection,
+            rgiProfileVersion: RGI_PROFILE.name,
+            viewpoint: scored.viewpoint || null,
+            scoreExplanation: scored.scoreExplanation,
+            scoreBreakdown: scored.scoreBreakdown as unknown as Record<string, unknown>,
+            topicTags: scored.topicTags,
+            teaserSummary: scored.teaserSummary,
+            publishedAt: item.publishedAt ?? existing.publishedAt,
+            content: item.content ?? existing.content,
+            disciplineAlignment: scored.disciplineAlignment,
+            isEmergingSignal: detectEmergingSignal(item.headline, finalScore),
+            isPrimarySignal: scored.isPrimarySignal ?? false,
+          });
+          alreadyExistingSkipped++;
+          const feed = lastScrapeSummary.feedResults.find((result) => result.url === source.url);
+          if (feed) feed.articlesSkipped++;
+          articleDispositions.push({
+            headline: item.headline,
+            source: source.name,
+            url: item.url,
+            score: finalScore,
+            recommendation: judgment.recommendedUse,
+            rejectionReason: "Article URL already exists in Firestore.",
+            insertionDecision: "Existing Firestore article was rescored and updated instead of inserted as a duplicate.",
+            outcome: "already_exists",
+            writeAttempted: true,
+            writeSucceeded: true,
+          });
+          return null;
         }
 
         const content = item.content || item.headline;
@@ -966,6 +1447,28 @@ export async function runScrape(): Promise<{
 
         const finalScore = scored.relevancyScore;
         const isSignal = detectEmergingSignal(item.headline, finalScore);
+        const strategicImpactScore = Math.max(
+          Number(scored.scoreBreakdown.longTermStrategicConsequences ?? 0),
+          Number(scored.scoreBreakdown.geopoliticalImpact ?? 0),
+          Number(scored.scoreBreakdown.macroeconomicSignificance ?? 0),
+          Number(scored.scoreBreakdown.securityConflictRelevance ?? 0),
+          Number(scored.scoreBreakdown.technologyStrategicRelevance ?? 0),
+          Number(scored.scoreBreakdown.energyCommoditiesImportance ?? 0),
+          finalScore,
+        );
+        const executiveRelevanceScore = Math.max(
+          Number(scored.scoreBreakdown.leadershipRelevance ?? 0),
+          Number(scored.scoreBreakdown.decisionMakerUrgency ?? 0),
+          Number(scored.scoreBreakdown.institutionalRisk ?? 0),
+          Number(scored.scoreBreakdown.rgiDoctrineAlignment ?? 0),
+        );
+        const judgment = recommendedUseForScores({
+          publishedAt: item.publishedAt,
+          relevancyScore: finalScore,
+          sourceAuthorityScore: scored.scoreBreakdown.sourceAuthority,
+          strategicImpactScore,
+          executiveRelevanceScore,
+        });
 
         return {
           headline: item.headline,
@@ -979,7 +1482,17 @@ export async function runScrape(): Promise<{
           isPrimarySignal: scored.isPrimarySignal ?? false,
           relevancyScore: finalScore,
           authenticityScore: scored.authenticityScore,
+          recencyScore: judgment.recencyScore,
+          sourceAuthorityScore: scored.scoreBreakdown.sourceAuthority,
+          strategicImpactScore,
+          executiveRelevanceScore,
+          recommendedUse: judgment.recommendedUse,
+          reasonForAcceptance: judgment.reasonForAcceptance,
+          reasonForRejection: judgment.reasonForRejection,
+          rgiProfileVersion: RGI_PROFILE.name,
           viewpoint: scored.viewpoint || null,
+          scoreExplanation: scored.scoreExplanation,
+          scoreBreakdown: scored.scoreBreakdown,
           topicTags: scored.topicTags,
           teaserSummary: scored.teaserSummary,
           publishedAt: item.publishedAt,
@@ -999,20 +1512,95 @@ export async function runScrape(): Promise<{
       author: string | null; authorType: string | null;
       platform: "news" | "twitter" | "linkedin";
       isEmergingSignal: boolean; isPrimarySignal: boolean;
-      relevancyScore: number; authenticityScore: number;
-      viewpoint: string | null; topicTags: string[];
-      teaserSummary: string; publishedAt: Date | null | undefined;
-      content: string | null | undefined;
-      status: "pending"; disciplineAlignment: string;
+	  relevancyScore: number; authenticityScore: number;
+	  viewpoint: string | null; scoreExplanation: string; scoreBreakdown: StrategicScoreBreakdown; topicTags: string[];
+	  recencyScore: number; sourceAuthorityScore: number; strategicImpactScore: number; executiveRelevanceScore: number;
+	  recommendedUse: RgiRecommendedUse; reasonForAcceptance: string | null; reasonForRejection: string | null;
+	  rgiProfileVersion: string;
+	  teaserSummary: string; publishedAt: Date | null | undefined;
+	  content: string | null | undefined;
+	  status: "pending"; disciplineAlignment: string;
     };
     const validArticles: ArticleToInsert[] = [];
-    for (const r of scoringResults) {
-      if (r.status === "fulfilled" && r.value !== null && r.value.relevancyScore >= 4.5) {
+    const lowScoreRejectedArticles: LowScoreRejectedArticle[] = [];
+    const acceptedExamples: ScrapeExampleArticle[] = [];
+    const rejectedExamples: ScrapeExampleArticle[] = [];
+    for (const [index, r] of scoringResults.entries()) {
+      if (r.status === "fulfilled" && r.value !== null && r.value.recommendedUse !== "reject" && r.value.relevancyScore >= ARTICLE_INSERTION_SCORE_THRESHOLD) {
         validArticles.push(r.value as ArticleToInsert);
+        acceptedExamples.push({
+          headline: r.value.headline,
+          source: r.value.sourceName,
+          url: r.value.url,
+          relevancyScore: r.value.relevancyScore,
+          recommendedUse: r.value.recommendedUse,
+          reason: r.value.reasonForAcceptance ?? "Accepted by RGI relevance engine.",
+        });
       } else if (r.status === "fulfilled" && r.value !== null) {
-        lowScoreSkipped++;
+        const rejectedByThreshold = r.value.relevancyScore < ARTICLE_INSERTION_SCORE_THRESHOLD;
+        const rejectionReason = r.value.reasonForRejection ?? `relevancyScore ${r.value.relevancyScore} is below insertion threshold ${ARTICLE_INSERTION_SCORE_THRESHOLD}`;
+        const rejectedForLowRelevance = rejectedByThreshold || rejectionReason.includes("below ingestion threshold");
+        if (r.value.reasonForRejection?.includes("outside the 24-hour")) {
+          lastScrapeSummary.rejectedTooOld++;
+        } else {
+          lowScoreSkipped++;
+        }
+        lastScrapeSummary.rejectedLowRelevance = lowScoreSkipped;
+        articleDispositions.push({
+          headline: r.value.headline,
+          source: r.value.sourceName,
+          url: r.value.url,
+          score: r.value.relevancyScore,
+          recommendation: r.value.recommendedUse,
+          rejectionReason,
+          insertionDecision: rejectedByThreshold
+            ? `Rejected before write because relevancyScore ${r.value.relevancyScore} is below insertion threshold ${ARTICLE_INSERTION_SCORE_THRESHOLD}.`
+            : `Rejected before write because recommendation was ${r.value.recommendedUse}.`,
+          outcome: rejectedForLowRelevance ? "low_relevance" : "rejected_by_recommendation_logic",
+          writeAttempted: false,
+          writeSucceeded: false,
+        });
+        rejectedExamples.push({
+          headline: r.value.headline,
+          source: r.value.sourceName,
+          url: r.value.url,
+          relevancyScore: r.value.relevancyScore,
+          recommendedUse: r.value.recommendedUse,
+          reason: rejectionReason,
+        });
+        lowScoreRejectedArticles.push({
+          headline: r.value.headline,
+          source: r.value.sourceName,
+          url: r.value.url,
+          relevancyScore: r.value.relevancyScore,
+          scoreBreakdown: r.value.scoreBreakdown,
+          reason: rejectionReason,
+          scoreExplanation: r.value.scoreExplanation,
+        });
+      } else if (r.status === "rejected") {
+        const original = allItems[index];
+        articleDispositions.push({
+          headline: original?.item.headline ?? "Unknown headline",
+          source: original?.source.name ?? "Unknown source",
+          url: original?.item.url ?? "unknown",
+          score: 0,
+          recommendation: null,
+          rejectionReason: `Scoring failed: ${summarizeHttpError(r.reason).message}`,
+          insertionDecision: "Rejected before write because article scoring failed.",
+          outcome: "other",
+          writeAttempted: false,
+          writeSucceeded: false,
+        });
       }
     }
+    lowScoreRejectedArticles.sort((a, b) => b.relevancyScore - a.relevancyScore);
+    lastScrapeSummary.lowScoreRejectedArticles = lowScoreRejectedArticles.slice(0, 10);
+    lastScrapeSummary.topAcceptedArticles = acceptedExamples.sort((a, b) => b.relevancyScore - a.relevancyScore).slice(0, 10);
+    lastScrapeSummary.topRejectedArticles = rejectedExamples.sort((a, b) => b.relevancyScore - a.relevancyScore).slice(0, 10);
+    lastScrapeSummary.needsReview = validArticles.filter((article) => article.recommendedUse === "needs_review").length;
+    lastScrapeSummary.acceptedForFeed = validArticles.filter((article) => article.recommendedUse === "feed").length;
+    lastScrapeSummary.acceptedForDashboard = validArticles.filter((article) => article.recommendedUse === "dashboard").length;
+    lastScrapeSummary.acceptedForDailyBrief = validArticles.filter((article) => article.recommendedUse === "daily_brief").length;
 
     // Group by leading tag to detect coverage clusters
     const clusterMap = new Map<string, ArticleToInsert[]>();
@@ -1040,53 +1628,69 @@ export async function runScrape(): Promise<{
       );
     }
 
-    // Insert new articles — skip low-relevance content (score < 4.5 is noise, not signal)
+    // Insert new articles — skip low-relevance content below the ingestion threshold.
     for (const article of validArticles) {
       const multiSourceBoost = boostMap.get(article.url) ?? 0;
       const boostedScore = Math.min(10, Math.round((article.relevancyScore + multiSourceBoost) * 10) / 10);
 
       try {
-        if (useSupabaseData()) {
-          await createSupabaseArticle({
-            ...article,
-            relevancyScore: boostedScore,
-            isEmergingSignal: multiSourceBoost > 0 ? true : article.isEmergingSignal,
-          });
-        } else {
-          await db.insert(articlesTable).values({
-            ...article,
-            relevancyScore: boostedScore,
-            isEmergingSignal: multiSourceBoost > 0 ? true : article.isEmergingSignal,
-          });
-        }
+        await createFirestoreArticle({
+          ...article,
+          relevancyScore: boostedScore,
+          isEmergingSignal: multiSourceBoost > 0 ? true : article.isEmergingSignal,
+        });
         articlesAdded++;
+        articleDispositions.push({
+          headline: article.headline,
+          source: article.sourceName,
+          url: article.url,
+          score: boostedScore,
+          recommendation: article.recommendedUse,
+          rejectionReason: null,
+          insertionDecision: multiSourceBoost > 0
+            ? `Firestore write succeeded after multi-source boost from ${article.relevancyScore} to ${boostedScore}.`
+            : "Firestore write succeeded.",
+          outcome: "saved",
+          writeAttempted: true,
+          writeSucceeded: true,
+        });
         const feed = lastScrapeSummary.feedResults.find((result) => result.url === article.sourceUrl);
         if (feed) feed.articlesSaved++;
       } catch (e) {
         duplicatesSkipped++;
-        logger.warn({ error: summarizeHttpError(e), url: article.url, headline: article.headline }, "Failed to insert article");
+        articleDispositions.push({
+          headline: article.headline,
+          source: article.sourceName,
+          url: article.url,
+          score: boostedScore,
+          recommendation: article.recommendedUse,
+          rejectionReason: summarizeHttpError(e).message,
+          insertionDecision: "Firestore write was attempted but failed.",
+          outcome: "write_failure",
+          writeAttempted: true,
+          writeSucceeded: false,
+        });
+        logger.warn({ scrapeRunId, error: summarizeHttpError(e), url: article.url, headline: article.headline }, "Failed to insert article");
       }
     }
 
-    if (useSupabaseData()) {
-      await Promise.allSettled(lastScrapeSummary.feedResults.map((feed) => {
-        const previousFailures = sourceFailureCounts.get(String(feed.sourceId)) ?? 0;
-        return updateSupabaseSourceHealth(feed.sourceId, {
-          status: feed.status === "success" ? "healthy" : previousFailures >= 3 ? "failed" : "warning",
-          lastScrapeAt: new Date(feed.lastScrapeAt),
-          lastSuccessAt: feed.status === "success" ? new Date(feed.lastScrapeAt) : null,
-          lastError: feed.error ?? null,
-          consecutiveFailures: previousFailures,
-          articlesCollected: feed.articlesCollected,
-          articlesSaved: feed.articlesSaved,
-        });
-      }));
-    }
+    await Promise.allSettled(lastScrapeSummary.feedResults.map((feed) => {
+      const previousFailures = sourceFailureCounts.get(String(feed.sourceId)) ?? 0;
+      return updateFirestoreSourceHealth(feed.sourceId, {
+        status: feed.status === "success" ? "healthy" : previousFailures >= 3 ? "failed" : "warning",
+        lastScrapeAt: new Date(feed.lastScrapeAt),
+        lastSuccessAt: feed.status === "success" ? new Date(feed.lastScrapeAt) : null,
+        lastError: feed.error ?? null,
+        consecutiveFailures: previousFailures,
+        articlesCollected: feed.articlesCollected,
+        articlesSaved: feed.articlesSaved,
+      });
+    }));
 
     // Also skip any scored articles that were below threshold (the validArticles filter above handles this)
     for (const result of scoringResults) {
-      if (result.status === "fulfilled" && result.value !== null && result.value.relevancyScore < 4.5) {
-        logger.debug({ headline: result.value.headline, score: result.value.relevancyScore }, "Skipping low-relevance article");
+      if (result.status === "fulfilled" && result.value !== null && result.value.relevancyScore < ARTICLE_INSERTION_SCORE_THRESHOLD) {
+        logger.debug({ scrapeRunId, headline: result.value.headline, score: result.value.relevancyScore }, "Skipping low-relevance article");
       }
     }
 
@@ -1094,12 +1698,40 @@ export async function runScrape(): Promise<{
     lastScrapeArticlesFound = articlesFound;
     lastScrapeSummary.finishedAt = lastScrapeAt.toISOString();
     lastScrapeSummary.articlesSaved = articlesAdded;
+    lastScrapeSummary.articlesAlreadyExisting = alreadyExistingSkipped;
     lastScrapeSummary.duplicatesSkipped = duplicatesSkipped;
     lastScrapeSummary.malformedSkipped = malformedSkipped;
     lastScrapeSummary.lowScoreSkipped = lowScoreSkipped;
-    logger.info({ articlesFound, articlesAdded, feedFailures: lastScrapeFailures.length, summary: lastScrapeSummary }, "Parallel scrape run complete");
+    lastScrapeSummary.rejectedLowRelevance = lowScoreSkipped;
+    lastScrapeSummary.lowScoreRejectedArticles = lowScoreRejectedArticles.slice(0, 10);
+    lastScrapeSummary.articleDispositions = articleDispositions;
+    lastScrapeSummary.acceptedArticleOutcomes = countAcceptedArticleOutcomes(articleDispositions);
+    lastScrapeSummary.firestoreWriteAttempts = articleDispositions.filter((record) => record.writeAttempted).length;
+    lastScrapeSummary.firestoreWriteSuccesses = articleDispositions.filter((record) => record.writeSucceeded).length;
+    lastScrapeSummary.firestoreWriteFailures = articleDispositions.filter((record) => record.writeAttempted && !record.writeSucceeded).length;
+    lastScrapeSummary.topAcceptedButNotSaved = articleDispositions
+      .filter((record) => !record.writeSucceeded)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20);
+    if (lowScoreRejectedArticles.length > 0) {
+      logger.info(
+        { scrapeRunId, threshold: ARTICLE_INSERTION_SCORE_THRESHOLD, rejected: lastScrapeSummary.lowScoreRejectedArticles },
+        "Top low-score rejected articles"
+      );
+    }
+    if (lastScrapeSummary.acceptedArticleOutcomes.total !== articlesFound) {
+      logger.warn(
+        {
+          scrapeRunId,
+          articlesAccepted: articlesFound,
+          dispositionTotal: lastScrapeSummary.acceptedArticleOutcomes.total,
+        },
+        "Scrape disposition total does not match accepted article count"
+      );
+    }
+    logger.info({ scrapeRunId, articlesFound, articlesAdded, feedFailures: lastScrapeFailures.length, summary: lastScrapeSummary }, "Parallel scrape run complete");
   } catch (e) {
-    logger.error({ error: summarizeHttpError(e) }, "Scrape run failed");
+    logger.error({ scrapeRunId, error: summarizeHttpError(e), summary: lastScrapeSummary }, "Scrape run failed");
   } finally {
     scrapeInProgress = false;
     if (!lastScrapeSummary.finishedAt) lastScrapeSummary.finishedAt = new Date().toISOString();

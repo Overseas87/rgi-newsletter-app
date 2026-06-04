@@ -3,10 +3,10 @@ import { generateDailyBrief, generateDigestArticle } from "./ai-writer";
 import { logger } from "./logger";
 import { runScrape } from "./scraper";
 import {
-  createSupabaseDigest,
-  enrichSupabaseDigest,
-  updateSupabaseArticles,
-} from "./supabase-data";
+  createFirestoreDigest,
+  enrichFirestoreDigest,
+  updateFirestoreArticles,
+} from "./firestore-data";
 import type { JobRecord } from "./job-queue";
 
 type JobPayload = Record<string, unknown>;
@@ -33,7 +33,7 @@ async function persistStrategicBrief(job: JobRecord): Promise<DigestArticle & { 
   const editorNotes = maybeString(data.editorNotes);
   const generated = await generateDigestArticle(articleIds, editorNotes);
 
-  const digest = await createSupabaseDigest({
+  const digest = await createFirestoreDigest({
     articleType: "topic_article",
     headline: generated.headline,
     body: generated.body,
@@ -55,8 +55,8 @@ async function persistStrategicBrief(job: JobRecord): Promise<DigestArticle & { 
     fallbackReason: generated.fallbackReason ?? null,
   } as Partial<DigestArticle>);
 
-  if (articleIds.length) await updateSupabaseArticles(articleIds, { status: "selected" });
-  return enrichSupabaseDigest(digest);
+  if (articleIds.length) await updateFirestoreArticles(articleIds, { status: "selected" });
+  return enrichFirestoreDigest(digest);
 }
 
 async function persistDailyBrief(job: JobRecord): Promise<DigestArticle & { sourceArticles?: Article[] }> {
@@ -70,7 +70,7 @@ async function persistDailyBrief(job: JobRecord): Promise<DigestArticle & { sour
   console.log(`[daily-brief-trace:${requestId}] cached DB content reused: false`);
   const generated = await generateDailyBrief(articleIds.length ? articleIds : undefined, editorNotes, excludedTopics.length ? excludedTopics : undefined, null, { requestId });
 
-  const digest = await createSupabaseDigest({
+  const digest = await createFirestoreDigest({
     articleType: "daily_brief",
     headline: generated.headline,
     body: generated.body,
@@ -94,8 +94,8 @@ async function persistDailyBrief(job: JobRecord): Promise<DigestArticle & { sour
     fallbackReason: generated.fallbackReason ?? null,
   } as Partial<DigestArticle>);
 
-  if (generated.sourceArticleIds.length) await updateSupabaseArticles(generated.sourceArticleIds, { status: "selected" });
-  return enrichSupabaseDigest(digest);
+  if (generated.sourceArticleIds.length) await updateFirestoreArticles(generated.sourceArticleIds, { status: "selected" });
+  return enrichFirestoreDigest(digest);
 }
 
 export async function executeDurableJob(job: JobRecord): Promise<unknown> {

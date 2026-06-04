@@ -8,7 +8,9 @@
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "dev:local": "bash ./scripts/dev-local.sh",
-    "migrate:supabase-to-firestore": "node ./scripts/migrate-supabase-to-firestore.mjs"
+    "start:local": "bash ./scripts/start-local-detached.sh",
+    "stop:local": "bash ./scripts/stop-local.sh",
+    "smoke:local": "bash ./scripts/smoke-local.sh"
   },
   "private": true,
   "devDependencies": {

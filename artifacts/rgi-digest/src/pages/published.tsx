@@ -34,7 +34,7 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
   const slugified = article
     ? asString(article.headline, "brief").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)
     : "";
-  const { download: downloadPdf, isDownloading } = usePdfDownload({
+  const { download: downloadPdf, open: openPdf, isDownloading } = usePdfDownload({
     url: article ? `${base}/api/digest/${article.id}/pdf` : "",
     filename: article ? `rgi-brief-${slugified}.pdf` : "rgi-brief.pdf",
   });
@@ -63,6 +63,15 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
                   : <Download className="h-3 w-3" />}
                 {isDownloading ? "Generating…" : "Download PDF"}
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs h-7"
+                onClick={openPdf}
+              >
+                <ExternalLink className="h-3 w-3" />
+                Open PDF
+              </Button>
               <div className="flex flex-col items-end gap-0.5">
                 <span className="text-[11px] text-muted-foreground">
                   <span className="font-medium">RGI generated:</span> {format(safeDate(article.createdAt, new Date()), "MMMM d, yyyy")} — {format(safeDate(article.createdAt, new Date()), "HH:mm")}
@@ -87,80 +96,19 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
           const sourceArticles = asArray<{ id: number; url: string; headline: string; sourceName?: string | null }>(article.sourceArticles);
           const isStructured = asStringArray(article.whatToWatch).length > 0;
           const keyDevelopments = isStructured ? safeLines(article.body) : null;
+          const essayParagraphs = [
+            ...keyTakeaways,
+            ...implications,
+            ...(asString(article.rgiTake).length > 0 ? [asString(article.rgiTake)] : []),
+            ...(keyTakeaways.length === 0 ? safeTextBlocks(article.body).map(stripMarkdown) : []),
+          ].filter(Boolean);
           return (
-            <div className="space-y-5 mt-2">
-              {/* Executive Summary */}
-              {executiveSummary.length > 0 && (
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Executive Summary</p>
-                  <div className="space-y-1.5">
-                    {executiveSummary.map((s, i) => (
-                      <p key={i} className="text-sm text-foreground/90 leading-relaxed">{s}</p>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Key Developments or prose body */}
-              {isStructured && keyDevelopments && keyDevelopments.length > 0 ? (
-                <div className="rounded-xl border border-border bg-card p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Key Developments</p>
-                  <ul className="space-y-2">
-                    {keyDevelopments.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-foreground/30" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                <div>
-                  {safeTextBlocks(article.body).map((para, i) => (
-                    <p key={i} className="text-sm leading-relaxed text-foreground/90 mb-4">{stripMarkdown(para)}</p>
-                  ))}
-                </div>
-              )}
-
-              {/* Why It Matters */}
-              {keyTakeaways.length > 0 && (
-                <div className="rounded-xl border border-amber-200/60 bg-amber-50/40 p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-amber-700 mb-3">
-                    Why It Matters
-                  </p>
-                  <ul className="space-y-2">
-                    {keyTakeaways.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Implications for Decision-Makers */}
-              {isStructured && implications.length > 0 && (
-                <div className="rounded-xl border border-violet-200/60 bg-violet-50/40 p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-violet-700 mb-3">Implications for Decision Makers</p>
-                  <ul className="space-y-2">
-                    {implications.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* RGI Editorial */}
-              {asString(article.rgiTake).length > 0 && (
-                <div className="border-l-4 border-primary/60 pl-5 py-2 bg-primary/5 rounded-r-md">
-                  <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">RGI Editorial</p>
-                  <p className="text-sm italic text-foreground/80 leading-relaxed">{asString(article.rgiTake)}</p>
-                </div>
-              )}
+            <div className="space-y-4 mt-2">
+              {[...executiveSummary, ...(essayParagraphs.length > 0 ? essayParagraphs : keyDevelopments ?? [])].map((paragraph, i) => (
+                <p key={i} className="text-sm text-foreground/90 leading-relaxed">
+                  {paragraph}
+                </p>
+              ))}
 
               {/* Topic tags */}
               {topicTags.length > 0 && (
@@ -225,7 +173,7 @@ export default function Published() {
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   const today = new Date().toISOString().slice(0, 10);
   const combinedIds = safeArticles.map((a) => a.id).join(",");
-  const { download: downloadAll, isDownloading: isDownloadingAll } = usePdfDownload({
+  const { download: downloadAll, open: openAll, isDownloading: isDownloadingAll } = usePdfDownload({
     url: combinedIds ? `${base}/api/digest/pdf/combined?ids=${combinedIds}` : "",
     filename: `rgi-intelligence-${today}.pdf`,
   });
@@ -238,17 +186,27 @@ export default function Published() {
           <p className="text-muted-foreground mt-1 text-sm">All approved strategic intelligence briefs and topic articles.</p>
         </div>
         {combinedIds && (
-          <Button
-            variant="outline"
-            className="gap-2 shrink-0"
-            onClick={downloadAll}
-            disabled={isDownloadingAll}
-          >
-            {isDownloadingAll
-              ? <Loader2 className="h-4 w-4 animate-spin" />
-              : <FileDown className="h-4 w-4" />}
-            {isDownloadingAll ? "Generating…" : "Download All as PDF"}
-          </Button>
+          <div className="flex gap-2 shrink-0">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={downloadAll}
+              disabled={isDownloadingAll}
+            >
+              {isDownloadingAll
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : <FileDown className="h-4 w-4" />}
+              {isDownloadingAll ? "Generating…" : "Download All as PDF"}
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={openAll}
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open PDF
+            </Button>
+          </div>
         )}
       </div>
 

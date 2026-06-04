@@ -62,6 +62,7 @@ interface GeneratedArticle {
   id: number;
   headline: string;
   body: string;
+  status?: "pending_review" | "approved" | "rejected" | "draft" | "regenerating";
   executiveSummary: string[];
   rgiTake: string;
   keyTakeaways: string[];
@@ -170,6 +171,7 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
     id: asNumber(data.id),
     headline: asString(data.headline, "Untitled brief"),
     body: asString(data.body),
+    status: "pending_review",
     executiveSummary: asStringArray(data.executiveSummary),
     rgiTake: asString(data.rgiTake),
     keyTakeaways: asStringArray(data.keyTakeaways),
@@ -183,6 +185,21 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
     generationMode: data.generationMode === "fallback" ? "fallback" : "ai",
     fallbackReason: typeof data.fallbackReason === "string" ? data.fallbackReason : null,
   });
+
+  const addPendingReviewToCache = (data: Record<string, unknown>) => {
+    const generated = {
+      ...data,
+      ...articleFromPayload(data),
+      status: "pending_review",
+    };
+    if (!generated.id) return;
+
+    queryClient.setQueryData(["/api/digest", { status: "pending_review" }], (current: unknown) => {
+      const existing = Array.isArray(current) ? current : [];
+      const withoutDuplicate = existing.filter((item: any) => Number(item?.id) !== Number(generated.id));
+      return [generated, ...withoutDuplicate];
+    });
+  };
 
   const toggleTopic = (topic: string) => {
     const next = new Set(selectedTopics);
@@ -306,8 +323,10 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
       }
       const queued = (await res.json().catch(() => ({}))) as JobResponse;
       const data = queued.jobId ? await pollJob(queued.jobId) : queued as Record<string, unknown>;
+      addPendingReviewToCache(data);
       refreshWorkflowData();
       await queryClient.refetchQueries({ predicate: (query) => query.queryKey[0] === "/api/digest" });
+      addPendingReviewToCache(data);
       if (modalOpenRef.current) {
         setFromCache(Boolean(data.fromCache));
         setGeneratedArticle(articleFromPayload(data));
@@ -359,8 +378,10 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
       }
       const queued = (await res.json().catch(() => ({}))) as JobResponse;
       const data = queued.jobId ? await pollJob(queued.jobId) : queued as Record<string, unknown>;
+      addPendingReviewToCache(data);
       refreshWorkflowData();
       await queryClient.refetchQueries({ predicate: (query) => query.queryKey[0] === "/api/digest" });
+      addPendingReviewToCache(data);
       if (modalOpenRef.current) {
         setFromCache(Boolean(data.fromCache));
         setGeneratedArticle(articleFromPayload(data));
@@ -637,75 +658,25 @@ export function GenerateModal({ open, onOpenChange, initialMode = "topic_article
               </div>
               <h2 className="text-xl font-serif font-bold leading-snug">{asString(generatedArticle.headline, "Untitled brief")}</h2>
 
-              {/* Executive Summary */}
-              {asStringArray(generatedArticle.executiveSummary).length > 0 && (
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Executive Summary</p>
-                  <div className="space-y-1">
-                    {asStringArray(generatedArticle.executiveSummary).map((s, i) => (
-                      <p key={i} className="text-xs text-foreground/80 leading-relaxed">{s}</p>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Key Developments */}
               {(() => {
-                const keyDevelopments = safeLines(generatedArticle.body);
-                return keyDevelopments.length > 0 ? (
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Key Developments</p>
-                    <ul className="space-y-1.5">
-                      {keyDevelopments.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
-                          <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-foreground/30" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                const summaryParagraphs = asStringArray(generatedArticle.executiveSummary);
+                const essayParagraphs = [
+                  ...asStringArray(generatedArticle.keyTakeaways),
+                  ...asStringArray(generatedArticle.implificationsForLeaders),
+                  ...(generatedArticle.rgiTake ? [generatedArticle.rgiTake] : []),
+                  ...(asStringArray(generatedArticle.keyTakeaways).length === 0 ? safeLines(generatedArticle.body) : []),
+                ].filter(Boolean);
+                const articleParagraphs = [...summaryParagraphs, ...essayParagraphs];
+                return articleParagraphs.length > 0 ? (
+                <div className="space-y-3">
+                  {articleParagraphs.map((item, i) => (
+                    <p key={i} className="text-xs text-foreground/80 leading-relaxed">
+                      {item}
+                    </p>
+                  ))}
+                </div>
                 ) : null;
               })()}
-
-              {/* Why It Matters */}
-              {asStringArray(generatedArticle.keyTakeaways).length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">
-                    Why It Matters
-                  </p>
-                  <ul className="space-y-1">
-                    {asStringArray(generatedArticle.keyTakeaways).slice(0, 3).map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
-                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-400" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Implications for Decision-Makers */}
-              {asStringArray(generatedArticle.implificationsForLeaders).length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-violet-700">Implications for Decision-Makers</p>
-                  <ul className="space-y-1">
-                    {asStringArray(generatedArticle.implificationsForLeaders).map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
-                        <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-violet-400" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* RGI Editorial */}
-              {generatedArticle.rgiTake && (
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">RGI Editorial</p>
-                  <p className="text-xs leading-relaxed text-foreground/80">{generatedArticle.rgiTake}</p>
-                </div>
-              )}
             </div>
 
             {/* Refine Panel */}

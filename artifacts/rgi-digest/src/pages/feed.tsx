@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useListArticles, useGenerateDigestArticle, Article } from "@workspace/api-client-react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useGenerateDigestArticle, Article } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +22,8 @@ import {
   Zap,
   RefreshCw,
   AlertCircle,
+  Archive,
+  RotateCcw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -34,6 +36,7 @@ import { asArray, asStringArray } from "@/lib/arrays";
 
 type SourceFilter = "all" | "news" | "twitter" | "linkedin" | "institutional" | "corporate" | "market";
 type SortMode = "relevance" | "time" | "source";
+type ModerationFilter = "active" | "dismissed" | "all";
 
 const SOURCE_TABS: { value: SourceFilter; label: string; icon: React.ElementType }[] = [
   { value: "all", label: "All Sources", icon: Globe },
@@ -56,23 +59,72 @@ export default function Feed() {
   const [sort, setSort] = useState<SortMode>("relevance");
   const [search, setSearch] = useState("");
   const [minScore, setMinScore] = useState("0");
+  const [topicFilter, setTopicFilter] = useState("all");
+  const [moderationFilter, setModerationFilter] = useState<ModerationFilter>("active");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [generating, setGenerating] = useState(false);
   const [editorNotes, setEditorNotes] = useState("");
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isError, setIsError] = useState(false);
 
-  // Fetch all articles (no status filter) with a high limit — show today's intelligence board
-  const {
-    data: articles = [],
-    isLoading,
-    isError,
-    refetch,
-    isFetching,
-  } = useListArticles({ limit: 400 });
+  const loadArticles = useCallback(async (mode: "reset" | "append" = "reset") => {
+    const nextCursor = mode === "append" ? cursor : null;
+    if (mode === "reset") setIsLoading(true);
+    setIsFetching(true);
+    setIsError(false);
+    try {
+      const params = new URLSearchParams({
+        limit: "60",
+        sortBy: sort,
+      });
+      const minS = parseFloat(minScore) || 0;
+      if (minS > 0) params.set("minScore", String(minS));
+      if (sourceFilter !== "all") {
+        params.set("platform", sourceFilter);
+      }
+      if (topicFilter !== "all") params.set("topicTag", topicFilter);
+      if (moderationFilter === "dismissed") params.set("status", "dismissed");
+      if (search.trim()) params.set("search", search.trim());
+      if (nextCursor) params.set("cursor", nextCursor);
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const res = await fetch(`${base}/api/articles/page?${params.toString()}`, { headers: { accept: "application/json" } });
+      if (!res.ok) throw new Error(`Article request failed (${res.status})`);
+      const data = await res.json();
+      const items = Array.isArray(data?.items) ? data.items : [];
+      setArticles((prev) => mode === "append" ? [...prev, ...items] : items);
+      setCursor(typeof data?.nextCursor === "string" ? data.nextCursor : null);
+      setHasMore(Boolean(data?.hasMore && data?.nextCursor));
+    } catch (error) {
+      console.error("[feed] Failed to load articles", error);
+      setIsError(true);
+      if (mode === "reset") setArticles([]);
+    } finally {
+      setIsLoading(false);
+      setIsFetching(false);
+    }
+  }, [cursor, minScore, moderationFilter, search, sort, sourceFilter, topicFilter]);
+
+  useEffect(() => {
+    void loadArticles("reset");
+    // Cursor is intentionally excluded so appending a page does not trigger a reset.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minScore, moderationFilter, search, sort, sourceFilter, topicFilter]);
+
+  const refetch = () => loadArticles("reset");
 
   const generateDigest = useGenerateDigestArticle();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const safeArticles = useMemo(() => asArray<Article>(articles), [articles]);
+  const topicOptions = useMemo(() => {
+    const topics = new Set<string>();
+    safeArticles.forEach((article) => asStringArray(article.topicTags).forEach((topic) => topics.add(topic)));
+    return [...topics].sort((a, b) => a.localeCompare(b));
+  }, [safeArticles]);
 
   // Per-tab counts
   const counts = useMemo(() => {
@@ -100,6 +152,16 @@ export default function Feed() {
       } else {
         result = result.filter((a) => a.platform === sourceFilter);
       }
+    }
+
+    if (moderationFilter === "active") {
+      result = result.filter((a) => a.status !== "dismissed");
+    } else if (moderationFilter === "dismissed") {
+      result = result.filter((a) => a.status === "dismissed");
+    }
+
+    if (topicFilter !== "all") {
+      result = result.filter((a) => asStringArray(a.topicTags).includes(topicFilter));
     }
 
     if (minS > 0) {
@@ -132,7 +194,7 @@ export default function Feed() {
     }
 
     return result;
-  }, [safeArticles, sourceFilter, sort, search, minScore]);
+  }, [safeArticles, sourceFilter, moderationFilter, topicFilter, sort, search, minScore]);
 
   const emergingSignals = safeArticles.filter((a) => a.isEmergingSignal);
 
@@ -148,6 +210,31 @@ export default function Feed() {
       setSelected(new Set());
     } else {
       setSelected(new Set(filtered.map((a) => a.id)));
+    }
+  };
+
+  const moderateArticle = async (id: number, status: "pending" | "selected" | "dismissed") => {
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const res = await fetch(`${base}/api/articles/${id}/moderation`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error(`Moderation failed (${res.status})`);
+      const updated = await res.json();
+      setArticles((prev) => prev.map((article) => article.id === id ? updated : article));
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (status === "dismissed") next.delete(id);
+        return next;
+      });
+      toast({
+        title: status === "dismissed" ? "Article dismissed" : "Article restored",
+        description: status === "dismissed" ? "The item has been removed from the active feed." : "The item is back in the active feed.",
+      });
+    } catch (error) {
+      toast({ title: "Moderation failed", description: String(error), variant: "destructive" });
     }
   };
 
@@ -168,6 +255,7 @@ export default function Feed() {
               setSelected(new Set());
               setEditorNotes("");
               queryClient.invalidateQueries();
+              void loadArticles("reset");
               resolve();
             },
             onError: (e) => {
@@ -275,6 +363,29 @@ export default function Feed() {
             <SelectItem value="6">Score 6+</SelectItem>
             <SelectItem value="7">Score 7+</SelectItem>
             <SelectItem value="8">Score 8+</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={topicFilter} onValueChange={setTopicFilter}>
+          <SelectTrigger className="w-[210px] h-9 text-xs" data-testid="select-topic-filter">
+            <SelectValue placeholder="Topic" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All topics</SelectItem>
+            {topicOptions.map((topic) => (
+              <SelectItem key={topic} value={topic}>{topic}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={moderationFilter} onValueChange={(value) => setModerationFilter(value as ModerationFilter)}>
+          <SelectTrigger className="w-[150px] h-9 text-xs" data-testid="select-moderation-filter">
+            <SelectValue placeholder="Moderation" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Active only</SelectItem>
+            <SelectItem value="dismissed">Dismissed</SelectItem>
+            <SelectItem value="all">All items</SelectItem>
           </SelectContent>
         </Select>
 
@@ -393,8 +504,21 @@ export default function Feed() {
               selectable
               selected={selected.has(article.id)}
               onSelect={(checked) => toggleSelect(article.id, checked)}
+              moderationActions={
+                article.status === "dismissed"
+                  ? [{ label: "Restore", icon: RotateCcw, onClick: () => moderateArticle(article.id, "pending") }]
+                  : [{ label: "Dismiss", icon: Archive, onClick: () => moderateArticle(article.id, "dismissed") }]
+              }
             />
           ))}
+          {hasMore && (
+            <div className="pt-2 flex justify-center">
+              <Button variant="outline" size="sm" onClick={() => loadArticles("append")} disabled={isFetching} className="gap-2">
+                <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+                {isFetching ? "Loading..." : "Load more articles"}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

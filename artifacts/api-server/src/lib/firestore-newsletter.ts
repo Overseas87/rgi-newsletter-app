@@ -24,13 +24,6 @@ function arr(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
-const localSubscribers: NewsletterSubscriber[] = [];
-const localDigests: NewsletterDigestRecord[] = [];
-
-function useFirestoreNewsletter(): boolean {
-  return process.env.DATABASE_PROVIDER === "firestore";
-}
-
 function dateFrom(value: unknown): Date {
   if (!value) return new Date(0);
   if (value instanceof Date) return value;
@@ -78,9 +71,6 @@ function digestFromDoc(doc: any): NewsletterDigestRecord {
 }
 
 export async function listFirestoreNewsletterSubscribers(activeOnly = true): Promise<NewsletterSubscriber[]> {
-  if (!useFirestoreNewsletter()) {
-    return activeOnly ? localSubscribers.filter((subscriber) => subscriber.isActive) : [...localSubscribers];
-  }
   const { db } = await getFirebaseBundle();
   let ref: any = db.collection("newsletter_subscribers");
   if (activeOnly) ref = ref.where("isActive", "==", true);
@@ -95,28 +85,6 @@ export async function upsertFirestoreNewsletterSubscriber(input: {
   name?: string | null;
   topics?: string[];
 }): Promise<{ subscriber: NewsletterSubscriber; updated: boolean }> {
-  if (!useFirestoreNewsletter()) {
-    const email = input.email.toLowerCase().trim();
-    const existing = localSubscribers.find((subscriber) => subscriber.email === email);
-    if (existing) {
-      existing.name = input.name?.trim() || existing.name;
-      existing.topics = Array.isArray(input.topics) ? input.topics : existing.topics;
-      existing.isActive = true;
-      existing.updatedAt = new Date();
-      return { subscriber: existing, updated: true };
-    }
-    const subscriber: NewsletterSubscriber = {
-      id: localSubscribers.length + 1,
-      email,
-      name: input.name?.trim() || null,
-      topics: Array.isArray(input.topics) ? input.topics : [],
-      isActive: true,
-      subscribedAt: new Date(),
-      updatedAt: new Date(),
-    };
-    localSubscribers.push(subscriber);
-    return { subscriber, updated: false };
-  }
   const { db, FieldValue } = await getFirebaseBundle();
   const email = input.email.toLowerCase().trim();
   const existing = await db.collection("newsletter_subscribers").where("email", "==", email).limit(1).get();
@@ -146,13 +114,6 @@ export async function upsertFirestoreNewsletterSubscriber(input: {
 }
 
 export async function unsubscribeFirestoreNewsletterSubscriber(id: number): Promise<boolean> {
-  if (!useFirestoreNewsletter()) {
-    const subscriber = localSubscribers.find((item) => item.id === id);
-    if (!subscriber) return false;
-    subscriber.isActive = false;
-    subscriber.updatedAt = new Date();
-    return true;
-  }
   const { db, FieldValue } = await getFirebaseBundle();
   const ref = db.collection("newsletter_subscribers").doc(String(id));
   const snapshot = await ref.get();
@@ -162,11 +123,6 @@ export async function unsubscribeFirestoreNewsletterSubscriber(id: number): Prom
 }
 
 export async function listFirestoreNewsletterDigests(limit = 20): Promise<NewsletterDigestRecord[]> {
-  if (!useFirestoreNewsletter()) {
-    return [...localDigests]
-      .sort((a, b) => Number(b.generatedAt) - Number(a.generatedAt))
-      .slice(0, Math.min(limit, 100));
-  }
   const { db } = await getFirebaseBundle();
   const snapshot = await db.collection("newsletter_digests").limit(Math.min(limit, 100)).get();
   return snapshot.docs
@@ -181,19 +137,6 @@ export async function createFirestoreNewsletterDigest(input: {
   topicTags: string[];
   subscriberCount: number;
 }): Promise<NewsletterDigestRecord> {
-  if (!useFirestoreNewsletter()) {
-    const digest: NewsletterDigestRecord = {
-      id: localDigests.length + 1,
-      weekOf: input.weekOf,
-      headline: input.headline,
-      body: input.body,
-      topicTags: input.topicTags,
-      subscriberCount: input.subscriberCount,
-      generatedAt: new Date(),
-    };
-    localDigests.unshift(digest);
-    return digest;
-  }
   const { db, FieldValue } = await getFirebaseBundle();
   const id = await nextNumericId("newsletter_digests");
   const ref = db.collection("newsletter_digests").doc(String(id));

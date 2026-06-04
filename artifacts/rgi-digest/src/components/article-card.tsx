@@ -14,6 +14,11 @@ interface ArticleCardProps {
   selected?: boolean;
   onSelect?: (checked: boolean) => void;
   onTopicClick?: (topic: string) => void;
+  moderationActions?: Array<{
+    label: string;
+    icon: React.ElementType;
+    onClick: () => void;
+  }>;
 }
 
 export function getScoreColor(score: number) {
@@ -179,7 +184,7 @@ function RgiExplanationPanel({ articleId, discipline }: { articleId: number; dis
   );
 }
 
-export function ArticleCard({ article, selectable, selected, onSelect, onTopicClick }: ArticleCardProps) {
+export function ArticleCard({ article, selectable, selected, onSelect, onTopicClick, moderationActions = [] }: ArticleCardProps) {
   const score = asNumber(article.relevancyScore);
   const publishedAt = article.publishedAt ? safeDate(article.publishedAt) : null;
   const scrapedAt = safeDate(article.scrapedAt, new Date());
@@ -267,10 +272,35 @@ export function ArticleCard({ article, selectable, selected, onSelect, onTopicCl
                     <Zap className="h-2.5 w-2.5" />Signal
                   </span>
                 )}
+                <a
+                  href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/articles/${asNumber(article.id)}`}
+                  className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
+                >
+                  <BookOpen className="h-2.5 w-2.5" />Analysis
+                </a>
                 <AuthenticityBadge score={article.authenticityScore} />
                 <Badge variant="outline" className={`text-xs font-bold tabular-nums ${getScoreColor(score)}`}>
                   {score.toFixed(1)}<span className="font-normal opacity-60"> Rel</span>
                 </Badge>
+                {moderationActions.map((action) => {
+                  const Icon = action.icon;
+                  return (
+                    <Button
+                      key={action.label}
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-[10px] gap-1 text-muted-foreground hover:text-foreground"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        action.onClick();
+                      }}
+                    >
+                      <Icon className="h-3 w-3" />
+                      {action.label}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
 

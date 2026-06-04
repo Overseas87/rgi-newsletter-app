@@ -11,32 +11,41 @@ let bundlePromise: Promise<FirebaseBundle> | null = null;
 
 export const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "rgi-insight-blog-generator";
 
+function isManagedGoogleRuntime(): boolean {
+  return Boolean(
+    process.env.K_SERVICE ||
+    process.env.FUNCTION_TARGET ||
+    process.env.GOOGLE_CLOUD_PROJECT ||
+    process.env.GCLOUD_PROJECT
+  );
+}
+
 export function isFirebaseConfigured(): boolean {
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   const hasUsableServiceAccount = Boolean(serviceAccount && !serviceAccount.includes("PLACEHOLDER"));
-  return Boolean(hasUsableServiceAccount || process.env.GOOGLE_APPLICATION_CREDENTIALS);
+  return Boolean(hasUsableServiceAccount || process.env.GOOGLE_APPLICATION_CREDENTIALS || isManagedGoogleRuntime());
 }
 
 export function getFirebaseDiagnostics(): Record<string, unknown> {
   const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS ?? null;
   return {
-    databaseProvider: process.env.DATABASE_PROVIDER ?? null,
+    databaseProvider: "firestore",
     firebaseProjectId: process.env.FIREBASE_PROJECT_ID ?? null,
     hasServiceAccountJson: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON),
     hasUsableServiceAccountJson: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON.includes("PLACEHOLDER")),
     googleApplicationCredentials: credentialsPath,
     googleApplicationCredentialsExists: credentialsPath ? existsSync(credentialsPath) : false,
+    managedGoogleRuntime: isManagedGoogleRuntime(),
     nodeEnv: process.env.NODE_ENV ?? null,
   };
 }
 
 export function missingFirebaseConfig(): string[] {
   const missing: string[] = [];
-  if (!process.env.FIREBASE_PROJECT_ID) missing.push("FIREBASE_PROJECT_ID");
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   const hasJson = Boolean(serviceAccount && !serviceAccount.includes("PLACEHOLDER"));
   const hasGoogleCredentials = Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS);
-  if (!hasJson && !hasGoogleCredentials) {
+  if (!hasJson && !hasGoogleCredentials && !isManagedGoogleRuntime()) {
     missing.push("FIREBASE_SERVICE_ACCOUNT_JSON or GOOGLE_APPLICATION_CREDENTIALS");
   }
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
@@ -144,4 +153,60 @@ export async function verifyFirestoreConnection(): Promise<void> {
     );
     throw err;
   }
+}
+
+export function markFirestoreDegraded(durationMs = 30 * 1000): void {
+  (globalThis as Record<string, unknown>).__RGI_FIRESTORE_DEGRADED_UNTIL = Date.now() + durationMs;
+}
+
+export function isFirestoreTemporarilyDegraded(): boolean {
+  return Number((globalThis as Record<string, unknown>).__RGI_FIRESTORE_DEGRADED_UNTIL ?? 0) > Date.now();
+}
+
+export async function withTimeout<T>(
+  label: string,
+  promise: Promise<T>,
+  timeoutMs = Number(process.env.FIRESTORE_OPERATION_TIMEOUT_MS ?? 8000),
+): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+export async function withFirestoreRetry<T>(
+  label: string,
+  operation: () => Promise<T>,
+  options: { attempts?: number; timeoutMs?: number; delayMs?: number } = {},
+): Promise<T> {
+  const attempts = Math.max(1, options.attempts ?? Number(process.env.FIRESTORE_RETRY_ATTEMPTS ?? 3));
+  const timeoutMs = options.timeoutMs ?? Number(process.env.FIRESTORE_OPERATION_TIMEOUT_MS ?? 8000);
+  const delayMs = options.delayMs ?? 250;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await withTimeout(`${label} attempt ${attempt}`, operation(), timeoutMs);
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) {
+        logger.warn(
+          { label, attempt, attempts, error: error instanceof Error ? error.message : String(error) },
+          "Firestore operation failed; retrying"
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }

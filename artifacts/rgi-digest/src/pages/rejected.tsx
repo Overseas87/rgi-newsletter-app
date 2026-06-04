@@ -74,6 +74,15 @@ interface FullArticleDialogProps {
 
 function FullArticleDialog({ article, open, onClose, onRestore, onDelete, restoring }: FullArticleDialogProps) {
   if (!article) return null;
+  const summary = asStringArray(article.executiveSummary);
+  const keyTakeaways = asStringArray(article.keyTakeaways);
+  const analysisParagraphs = [
+    ...keyTakeaways,
+    ...asStringArray(article.implificationsForLeaders),
+    ...(asString(article.rgiTake).length > 0 ? [asString(article.rgiTake)] : []),
+    ...(keyTakeaways.length === 0 ? safeTextBlocks(article.body).map(stripMarkdown) : []),
+  ].filter(Boolean);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -100,19 +109,10 @@ function FullArticleDialog({ article, open, onClose, onRestore, onDelete, restor
           <DialogTitle className="text-2xl font-serif leading-tight text-left">{asString(article.headline, "Untitled brief")}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 mt-2">
-          <div>
-            {safeTextBlocks(article.body).map((para, i) => (
-              <p key={i} className="text-sm leading-relaxed text-foreground/90 mb-4">{stripMarkdown(para)}</p>
-            ))}
-          </div>
-
-          {asString(article.rgiTake).length > 0 && (
-            <div className="border-l-4 border-primary/60 pl-5 py-2 bg-primary/5 rounded-r-md">
-              <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">RGI Editorial</p>
-              <p className="text-sm italic text-foreground/80 leading-relaxed">{asString(article.rgiTake)}</p>
-            </div>
-          )}
+        <div className="space-y-4 mt-2">
+          {[...summary, ...analysisParagraphs].map((para, i) => (
+            <p key={i} className="text-sm text-foreground/90 leading-relaxed">{para}</p>
+          ))}
 
           {asStringArray(article.topicTags).length > 0 && (
             <div className="flex flex-wrap gap-1.5">
@@ -319,7 +319,7 @@ function RejectedCard({ article }: { article: DigestArticle }) {
           {isEditing ? (
             <div className="space-y-3">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Body</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Article text</p>
                 <Textarea
                   value={editedBody}
                   onChange={(e) => setEditedBody(e.target.value)}
@@ -327,7 +327,7 @@ function RejectedCard({ article }: { article: DigestArticle }) {
                 />
               </div>
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">RGI Editorial</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Closing paragraph</p>
                 <Textarea
                   value={editedTake}
                   onChange={(e) => setEditedTake(e.target.value)}

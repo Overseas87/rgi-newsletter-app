@@ -1,6 +1,4 @@
 import { Router, type IRouter } from "express";
-import { db, digestArticlesTable, articlesTable } from "@workspace/db";
-import { eq, inArray, desc, and, gte, lt } from "drizzle-orm";
 import {
   ListDigestArticlesQueryParams,
   GenerateDigestArticleBody,
@@ -17,18 +15,35 @@ import {
 import { generateDigestArticle, generateDailyBrief, refineArticle, regenerateSelectionText } from "../lib/ai-writer";
 import { generateArticlePdf, type ArticleWithSources } from "../lib/pdf-generator";
 import { logger } from "../lib/logger";
+import { mkdir, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import path from "node:path";
 import {
-  createSupabaseDigest,
-  deleteSupabaseDigest,
-  enrichSupabaseDigest,
-  getSupabaseDigest,
-  listSupabaseArticles,
-  listSupabaseDigests,
-  updateSupabaseArticles,
-  updateSupabaseDigest,
-  useSupabaseData,
-} from "../lib/supabase-data";
+  createFirestoreDigest,
+  deleteFirestoreDigest,
+  enrichFirestoreDigest,
+  getFirestoreArticle,
+  getFirestoreDigest,
+  listFirestoreArticles,
+  listFirestoreDigests,
+  updateFirestoreArticles,
+  updateFirestoreDigest,
+  useFirestoreData,
+} from "../lib/firestore-data";
 import { listFirestoreNewsletterSubscribers } from "../lib/firestore-newsletter";
+
+// Firestore is now the only runtime datastore. These placeholders keep a few
+// unreachable legacy branches type-checkable until the route file is fully
+// flattened, without importing or initializing the old Drizzle/Postgres layer.
+const db = null as any;
+const digestArticlesTable = {} as any;
+const articlesTable = {} as any;
+const eq = (..._args: any[]) => undefined as any;
+const inArray = (..._args: any[]) => undefined as any;
+const desc = (..._args: any[]) => undefined as any;
+const and = (..._args: any[]) => undefined as any;
+const gte = (..._args: any[]) => undefined as any;
+const lt = (..._args: any[]) => undefined as any;
 
 async function getYesterdayBriefContext(): Promise<string | null> {
   const now = new Date();
@@ -37,20 +52,24 @@ async function getYesterdayBriefContext(): Promise<string | null> {
   const yesterdayStart = new Date(todayStart);
   yesterdayStart.setUTCDate(yesterdayStart.getUTCDate() - 1);
 
-  if (useSupabaseData()) {
-    const prev = (await listSupabaseDigests({ limit: 20 })).find((row) =>
+  if (useFirestoreData()) {
+    const prev = (await listFirestoreDigests({ limit: 20 })).find((row) =>
       row.articleType === "daily_brief" &&
       new Date(row.createdAt) >= yesterdayStart &&
       new Date(row.createdAt) < todayStart
     );
     if (!prev) return null;
-    const keyDevs = prev.body.split("\n").filter(Boolean);
+    const analysis = [
+      ...(prev.keyTakeaways ?? []),
+      ...(prev.implificationsForLeaders ?? []),
+      ...(prev.rgiTake ? [prev.rgiTake] : []),
+      ...(prev.keyTakeaways?.length ? [] : prev.body.split("\n\n").filter(Boolean)),
+    ].filter(Boolean);
     const lines: string[] = [
       `Headline: ${prev.headline}`,
-      `Key Developments:\n${keyDevs.map((d) => `- ${d}`).join("\n")}`,
+      `BRIEF SUMMARY:\n${(prev.executiveSummary ?? []).join("\n\n")}`,
     ];
-    if (prev.keyTakeaways?.length) lines.push(`Why It Matters:\n${prev.keyTakeaways.map((t) => `- ${t}`).join("\n")}`);
-    if (prev.rgiTake) lines.push(`RGI Take: ${prev.rgiTake}`);
+    if (analysis.length) lines.push(`RGI ANALYSIS:\n${analysis.join("\n\n")}`);
     return lines.join("\n\n");
   }
 
@@ -70,15 +89,17 @@ async function getYesterdayBriefContext(): Promise<string | null> {
   const prev = rows[0];
   if (!prev) return null;
 
-  const keyDevs = prev.body.split("\n").filter(Boolean);
+  const analysis = [
+    ...(prev.keyTakeaways ?? []),
+    ...(prev.implificationsForLeaders ?? []),
+    ...(prev.rgiTake ? [prev.rgiTake] : []),
+    ...(prev.keyTakeaways?.length ? [] : prev.body.split("\n\n").filter(Boolean)),
+  ].filter(Boolean);
   const lines: string[] = [
     `Headline: ${prev.headline}`,
-    `Key Developments:\n${keyDevs.map((d) => `- ${d}`).join("\n")}`,
+    `BRIEF SUMMARY:\n${(prev.executiveSummary ?? []).join("\n\n")}`,
   ];
-  if (prev.keyTakeaways?.length) {
-    lines.push(`Why It Matters:\n${prev.keyTakeaways.map((t) => `- ${t}`).join("\n")}`);
-  }
-  if (prev.rgiTake) lines.push(`RGI Take: ${prev.rgiTake}`);
+  if (analysis.length) lines.push(`RGI ANALYSIS:\n${analysis.join("\n\n")}`);
   return lines.join("\n\n");
 }
 
@@ -148,13 +169,13 @@ async function persistGeneratedTopicArticle(articleIds: number[], editorNotes: s
     fallbackReason: generated.fallbackReason ?? null,
   } as const;
 
-  const digestArticle = useSupabaseData()
-    ? await createSupabaseDigest(digestValues)
+  const digestArticle = useFirestoreData()
+    ? await createFirestoreDigest(digestValues)
     : (await db.insert(digestArticlesTable).values(digestValues).returning())[0];
 
   if (articleIds.length > 0) {
-    if (useSupabaseData()) {
-      await updateSupabaseArticles(articleIds, { status: "selected" });
+    if (useFirestoreData()) {
+      await updateFirestoreArticles(articleIds, { status: "selected" });
     } else {
       await db.update(articlesTable).set({ status: "selected" }).where(inArray(articlesTable.id, articleIds));
     }
@@ -202,13 +223,13 @@ async function persistGeneratedDailyBrief(articleIds: number[] | undefined, edit
     fallbackReason: generated.fallbackReason ?? null,
   } as const;
 
-  const digestArticle = useSupabaseData()
-    ? await createSupabaseDigest(dailyValues)
+  const digestArticle = useFirestoreData()
+    ? await createFirestoreDigest(dailyValues)
     : (await db.insert(digestArticlesTable).values(dailyValues).returning())[0];
 
   if (generated.sourceArticleIds.length > 0) {
-    if (useSupabaseData()) {
-      await updateSupabaseArticles(generated.sourceArticleIds, { status: "selected" });
+    if (useFirestoreData()) {
+      await updateFirestoreArticles(generated.sourceArticleIds, { status: "selected" });
     } else {
       await db.update(articlesTable).set({ status: "selected" }).where(inArray(articlesTable.id, generated.sourceArticleIds));
     }
@@ -223,8 +244,8 @@ async function persistGeneratedDailyBrief(articleIds: number[] | undefined, edit
 }
 
 async function enrichDigestArticle(article: typeof digestArticlesTable.$inferSelect) {
-  if (useSupabaseData()) {
-    return enrichSupabaseDigest(article as any);
+  if (useFirestoreData()) {
+    return enrichFirestoreDigest(article as any);
   }
 
   const sourceArticles =
@@ -247,15 +268,25 @@ router.get("/digest", async (req, res): Promise<void> => {
 
   const { status, limit } = query.data;
 
-  if (useSupabaseData()) {
+  if (useFirestoreData()) {
     try {
-      const articles = await listSupabaseDigests({ status, limit });
-      const enriched = await Promise.all(articles.map(enrichSupabaseDigest));
+      const articles = await listFirestoreDigests({ status, limit });
+      const enriched = await Promise.all(articles.map(async (article) => {
+        try {
+          return await enrichFirestoreDigest(article);
+        } catch (err) {
+          req.log.warn(
+            { err, digestId: article.id },
+            "Digest article source enrichment failed; returning digest without source articles"
+          );
+          return { ...article, sourceArticles: [] };
+        }
+      }));
       res.json(enriched);
       return;
     } catch (e) {
-      req.log.error({ err: e }, "Failed to list Supabase digest articles");
-      res.json([]);
+      req.log.error({ err: e }, "Failed to list Firestore digest articles");
+      res.status(503).json({ error: "Digest articles are temporarily unavailable" });
       return;
     }
   }
@@ -290,8 +321,8 @@ router.post("/digest/generate", async (req, res): Promise<void> => {
     // Never create a second article from the same source-ID set within 24 hours.
     // Exception: if the existing article was rejected, allow regeneration.
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const recentArticles = useSupabaseData()
-      ? (await listSupabaseDigests({ limit: 50 })).filter((row) =>
+    const recentArticles = useFirestoreData()
+      ? (await listFirestoreDigests({ limit: 50 })).filter((row) =>
           row.articleType === "topic_article" &&
           new Date(row.createdAt).getTime() >= twentyFourHoursAgo.getTime()
         )
@@ -308,7 +339,7 @@ router.post("/digest/generate", async (req, res): Promise<void> => {
       .limit(50);
 
     const dedupMatch = recentArticles.find(
-      (a) =>
+      (a: any) =>
         [...a.sourceArticleIds].sort((x, y) => x - y).join(",") === idKey &&
         (a.status === "pending_review" || a.status === "draft" || a.status === "regenerating")
     );
@@ -329,7 +360,7 @@ router.post("/digest/generate", async (req, res): Promise<void> => {
     // If served from in-memory cache, match to a DB row to avoid a duplicate insert.
     if (generated.fromCache) {
       const cacheMatch = recentArticles.find(
-        (a) => [...a.sourceArticleIds].sort((x, y) => x - y).join(",") === idKey
+        (a: any) => [...a.sourceArticleIds].sort((x, y) => x - y).join(",") === idKey
       );
       if (cacheMatch) {
         req.log.info({ id: cacheMatch.id }, "Returning in-memory cached article matched to DB");
@@ -360,13 +391,13 @@ router.post("/digest/generate", async (req, res): Promise<void> => {
         fallbackReason: generated.fallbackReason ?? null,
       } as const;
 
-    const digestArticle = useSupabaseData()
-      ? await createSupabaseDigest(digestValues)
+    const digestArticle = useFirestoreData()
+      ? await createFirestoreDigest(digestValues)
       : (await db.insert(digestArticlesTable).values(digestValues).returning())[0];
 
     // Mark source articles as selected
-    if (useSupabaseData()) {
-      await updateSupabaseArticles(body.data.articleIds, { status: "selected" });
+    if (useFirestoreData()) {
+      await updateFirestoreArticles(body.data.articleIds, { status: "selected" });
     } else {
       await db
         .update(articlesTable)
@@ -452,14 +483,14 @@ router.post("/digest/daily-brief", async (req, res): Promise<void> => {
         fallbackReason: generated.fallbackReason ?? null,
       } as const;
 
-    const digestArticle = useSupabaseData()
-      ? await createSupabaseDigest(dailyValues)
+    const digestArticle = useFirestoreData()
+      ? await createFirestoreDigest(dailyValues)
       : (await db.insert(digestArticlesTable).values(dailyValues).returning())[0];
 
     // Mark source articles as selected
     if (generated.sourceArticleIds.length > 0) {
-      if (useSupabaseData()) {
-        await updateSupabaseArticles(generated.sourceArticleIds, { status: "selected" });
+      if (useFirestoreData()) {
+        await updateFirestoreArticles(generated.sourceArticleIds, { status: "selected" });
       } else {
         await db
           .update(articlesTable)
@@ -527,8 +558,8 @@ router.post("/digest/generate-on-demand", async (req, res): Promise<void> => {
     today.setHours(0, 0, 0, 0);
 
     // Fetch all today's articles above the minimum score
-    const candidates = useSupabaseData()
-      ? (await listSupabaseArticles({ limit: 200 }))
+    const candidates = useFirestoreData()
+      ? (await listFirestoreArticles({ limit: 200 }))
           .filter((a) => new Date(a.scrapedAt).getTime() >= today.getTime() && a.relevancyScore >= minScore)
           .sort((a, b) => b.relevancyScore - a.relevancyScore)
           .slice(0, 80)
@@ -543,7 +574,7 @@ router.post("/digest/generate-on-demand", async (req, res): Promise<void> => {
       .limit(80);
 
     // Filter to articles matching at least one selected topic
-    const matching = candidates.filter((a) =>
+    const matching = candidates.filter((a: any) =>
       topics.some((t) => (Array.isArray(a.topicTags) ? a.topicTags : []).includes(t))
     );
 
@@ -557,7 +588,7 @@ router.post("/digest/generate-on-demand", async (req, res): Promise<void> => {
         return;
       }
       req.log.warn({ topics, found: fallback.length }, "Not enough topic-matched articles, using top articles as fallback");
-      const selectedIds = fallback.slice(0, 10).map((a) => a.id);
+      const selectedIds = fallback.slice(0, 10).map((a: any) => a.id);
       const generated = await generateDigestArticle(selectedIds, editorNotes);
       const digestValues = {
           articleType: "topic_article",
@@ -580,11 +611,11 @@ router.post("/digest/generate-on-demand", async (req, res): Promise<void> => {
           generationMode: generated.generationMode ?? "ai",
           fallbackReason: generated.fallbackReason ?? null,
         } as const;
-      const digestArticle = useSupabaseData()
-        ? await createSupabaseDigest(digestValues)
+      const digestArticle = useFirestoreData()
+        ? await createFirestoreDigest(digestValues)
         : (await db.insert(digestArticlesTable).values(digestValues).returning())[0];
-      if (useSupabaseData()) {
-        await updateSupabaseArticles(selectedIds, { status: "selected" });
+      if (useFirestoreData()) {
+        await updateFirestoreArticles(selectedIds, { status: "selected" });
       } else {
         await db.update(articlesTable).set({ status: "selected" }).where(inArray(articlesTable.id, selectedIds));
       }
@@ -597,7 +628,7 @@ router.post("/digest/generate-on-demand", async (req, res): Promise<void> => {
     }
 
     // Take top 12 topic-matched articles
-    const selectedIds = matching.slice(0, 12).map((a) => a.id);
+    const selectedIds = matching.slice(0, 12).map((a: any) => a.id);
 
     const topicsNote = `Focus: ${topics.join(", ")}${editorNotes ? `. Editor direction: ${editorNotes}` : ""}`;
     const generated = await generateDigestArticle(selectedIds, topicsNote);
@@ -624,12 +655,12 @@ router.post("/digest/generate-on-demand", async (req, res): Promise<void> => {
         fallbackReason: generated.fallbackReason ?? null,
       } as const;
 
-    const digestArticle = useSupabaseData()
-      ? await createSupabaseDigest(digestValues)
+    const digestArticle = useFirestoreData()
+      ? await createFirestoreDigest(digestValues)
       : (await db.insert(digestArticlesTable).values(digestValues).returning())[0];
 
-    if (useSupabaseData()) {
-      await updateSupabaseArticles(selectedIds, { status: "selected" });
+    if (useFirestoreData()) {
+      await updateFirestoreArticles(selectedIds, { status: "selected" });
     } else {
       await db.update(articlesTable).set({ status: "selected" }).where(inArray(articlesTable.id, selectedIds));
     }
@@ -653,8 +684,8 @@ router.get("/digest/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [article] = useSupabaseData()
-    ? [await getSupabaseDigest(params.data.id)]
+  const [article] = useFirestoreData()
+    ? [await getFirestoreDigest(params.data.id)]
     : await db
         .select()
         .from(digestArticlesTable)
@@ -671,15 +702,15 @@ router.get("/digest/:id", async (req, res): Promise<void> => {
 
 // ── PDF export helpers ─────────────────────────────────────────────────────────
 async function fetchArticleWithSources(id: number): Promise<ArticleWithSources | null> {
-  const [article] = useSupabaseData()
-    ? [await getSupabaseDigest(id)]
+  const [article] = useFirestoreData()
+    ? [await getFirestoreDigest(id)]
     : await db.select().from(digestArticlesTable).where(eq(digestArticlesTable.id, id));
   if (!article) return null;
 
   const srcIds = Array.isArray(article.sourceArticleIds) ? (article.sourceArticleIds as number[]) : [];
   const sourceArticles = srcIds.length > 0
-    ? useSupabaseData()
-      ? (await listSupabaseArticles({ limit: 500 })).filter((a) => srcIds.includes(a.id))
+    ? useFirestoreData()
+      ? (await Promise.all(srcIds.map(getFirestoreArticle))).filter(Boolean)
       : await db.select().from(articlesTable).where(inArray(articlesTable.id, srcIds))
     : [];
 
@@ -688,6 +719,36 @@ async function fetchArticleWithSources(id: number): Promise<ArticleWithSources |
 
 function slugify(headline: string): string {
   return headline.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+}
+
+async function writePdfToDocuments(filename: string, buffer: Buffer): Promise<string> {
+  const documentsDir = path.join(homedir(), "Documents");
+  await mkdir(documentsDir, { recursive: true });
+  const filePath = path.join(documentsDir, filename);
+  await writeFile(filePath, buffer);
+  return filePath;
+}
+
+async function generateSingleArticlePdfPayload(id: number): Promise<{ buffer: Buffer; filename: string } | null> {
+  const article = await fetchArticleWithSources(id);
+  if (!article) return null;
+
+  const filename = `rgi-brief-${slugify(article.headline)}.pdf`;
+  const doc = generateArticlePdf([article]);
+  const buffer = await pdfToBuffer(doc);
+  return { buffer, filename };
+}
+
+async function generateCombinedArticlePdfPayload(ids: number[]): Promise<{ buffer: Buffer; filename: string } | null> {
+  const articles = await Promise.all(ids.map(fetchArticleWithSources));
+  const valid = articles.filter(Boolean) as ArticleWithSources[];
+  if (valid.length === 0) return null;
+
+  const date = new Date().toISOString().slice(0, 10);
+  const filename = `rgi-intelligence-${date}.pdf`;
+  const doc = generateArticlePdf(valid, { combined: true });
+  const buffer = await pdfToBuffer(doc);
+  return { buffer, filename };
 }
 
 // GET /api/digest/:id/pdf — download single article as PDF
@@ -699,25 +760,48 @@ router.get("/digest/:id/pdf", async (req, res): Promise<void> => {
   }
 
   try {
-    const article = await fetchArticleWithSources(id);
-    if (!article) {
+    const payload = await generateSingleArticlePdfPayload(id);
+    if (!payload) {
       res.status(404).json({ error: "Article not found" });
       return;
     }
 
-    const filename = `rgi-brief-${slugify(article.headline)}.pdf`;
-
-    const doc = generateArticlePdf([article]);
-    const buffer = await pdfToBuffer(doc);
-
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.setHeader("Content-Length", buffer.length);
+    res.setHeader("Content-Disposition", `attachment; filename="${payload.filename}"`);
+    res.setHeader("Content-Length", payload.buffer.length);
     res.setHeader("Cache-Control", "no-store");
-    res.end(buffer);
+    res.end(payload.buffer);
   } catch (err) {
     logger.error({ err }, "PDF generation failed");
     if (!res.headersSent) res.status(500).json({ error: "Failed to generate PDF" });
+  }
+});
+
+// POST /api/digest/:id/pdf/save-local — local development helper that writes PDF to ~/Documents
+router.post("/digest/:id/pdf/save-local", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid article ID" });
+    return;
+  }
+
+  try {
+    const payload = await generateSingleArticlePdfPayload(id);
+    if (!payload) {
+      res.status(404).json({ error: "Article not found" });
+      return;
+    }
+
+    const filePath = await writePdfToDocuments(payload.filename, payload.buffer);
+    res.json({
+      saved: true,
+      filename: payload.filename,
+      path: filePath,
+      size: payload.buffer.length,
+    });
+  } catch (err) {
+    logger.error({ err }, "Local PDF save failed");
+    res.status(500).json({ error: "Failed to save PDF to Documents" });
   }
 });
 
@@ -736,28 +820,54 @@ router.get("/digest/pdf/combined", async (req, res): Promise<void> => {
   }
 
   try {
-    const articles = await Promise.all(ids.map(fetchArticleWithSources));
-    const valid = articles.filter(Boolean) as ArticleWithSources[];
-
-    if (valid.length === 0) {
+    const payload = await generateCombinedArticlePdfPayload(ids);
+    if (!payload) {
       res.status(404).json({ error: "No articles found for the provided IDs" });
       return;
     }
 
-    const date = new Date().toISOString().slice(0, 10);
-    const filename = `rgi-intelligence-${date}.pdf`;
-
-    const doc = generateArticlePdf(valid, { combined: true });
-    const buffer = await pdfToBuffer(doc);
-
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.setHeader("Content-Length", buffer.length);
+    res.setHeader("Content-Disposition", `attachment; filename="${payload.filename}"`);
+    res.setHeader("Content-Length", payload.buffer.length);
     res.setHeader("Cache-Control", "no-store");
-    res.end(buffer);
+    res.end(payload.buffer);
   } catch (err) {
     logger.error({ err }, "Combined PDF generation failed");
     if (!res.headersSent) res.status(500).json({ error: "Failed to generate combined PDF" });
+  }
+});
+
+// POST /api/digest/pdf/combined/save-local?ids=1,2,3 — local helper that writes combined PDF to ~/Documents
+router.post("/digest/pdf/combined/save-local", async (req, res): Promise<void> => {
+  const rawIds = typeof req.query.ids === "string" ? req.query.ids : "";
+  const ids = rawIds.split(",").map(Number).filter((n) => !isNaN(n) && n > 0);
+
+  if (ids.length === 0) {
+    res.status(400).json({ error: "Provide at least one article ID via ?ids=1,2,3" });
+    return;
+  }
+  if (ids.length > 20) {
+    res.status(400).json({ error: "Maximum 20 articles per combined PDF" });
+    return;
+  }
+
+  try {
+    const payload = await generateCombinedArticlePdfPayload(ids);
+    if (!payload) {
+      res.status(404).json({ error: "No articles found for the provided IDs" });
+      return;
+    }
+
+    const filePath = await writePdfToDocuments(payload.filename, payload.buffer);
+    res.json({
+      saved: true,
+      filename: payload.filename,
+      path: filePath,
+      size: payload.buffer.length,
+    });
+  } catch (err) {
+    logger.error({ err }, "Local combined PDF save failed");
+    res.status(500).json({ error: "Failed to save combined PDF to Documents" });
   }
 });
 
@@ -785,8 +895,8 @@ router.patch("/digest/:id", async (req, res): Promise<void> => {
   if (body.data.editorNotes !== undefined) updateData.editorNotes = body.data.editorNotes;
   if (body.data.status !== undefined) Object.assign(updateData, workflowPatch(body.data.status));
 
-  const updated = useSupabaseData()
-    ? await updateSupabaseDigest(params.data.id, updateData as any)
+  const updated = useFirestoreData()
+    ? await updateFirestoreDigest(params.data.id, updateData as any)
     : (await db
         .update(digestArticlesTable)
         .set(updateData)
@@ -809,8 +919,8 @@ router.delete("/digest/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const deleted = useSupabaseData()
-    ? await deleteSupabaseDigest(params.data.id)
+  const deleted = useFirestoreData()
+    ? await deleteFirestoreDigest(params.data.id)
     : (await db
         .delete(digestArticlesTable)
         .where(eq(digestArticlesTable.id, params.data.id))
@@ -832,8 +942,8 @@ router.post("/digest/:id/approve", async (req, res): Promise<void> => {
   }
 
   const approvePatch = workflowPatch("approved");
-  const updated = useSupabaseData()
-    ? await updateSupabaseDigest(params.data.id, approvePatch as any)
+  const updated = useFirestoreData()
+    ? await updateFirestoreDigest(params.data.id, approvePatch as any)
     : (await db
         .update(digestArticlesTable)
         .set(approvePatch as any)
@@ -863,8 +973,8 @@ router.post("/digest/:id/reject", async (req, res): Promise<void> => {
   }
 
   const rejectPatch = workflowPatch("rejected", { editorNotes: body.data.reason ?? null });
-  const updated = useSupabaseData()
-    ? await updateSupabaseDigest(params.data.id, rejectPatch as any)
+  const updated = useFirestoreData()
+    ? await updateFirestoreDigest(params.data.id, rejectPatch as any)
     : (await db
         .update(digestArticlesTable)
         .set(rejectPatch as any)
@@ -913,8 +1023,8 @@ router.post("/digest/:id/regenerate", async (req, res): Promise<void> => {
     return;
   }
 
-  const [existing] = useSupabaseData()
-    ? [await getSupabaseDigest(params.data.id)]
+  const [existing] = useFirestoreData()
+    ? [await getFirestoreDigest(params.data.id)]
     : await db
         .select()
         .from(digestArticlesTable)
@@ -951,8 +1061,8 @@ router.post("/digest/:id/regenerate", async (req, res): Promise<void> => {
         fallbackReason: generated.fallbackReason ?? null,
       } as const;
 
-    const updated = useSupabaseData()
-      ? await updateSupabaseDigest(params.data.id, updateValues)
+    const updated = useFirestoreData()
+      ? await updateFirestoreDigest(params.data.id, updateValues)
       : (await db
           .update(digestArticlesTable)
           .set(updateValues)
@@ -983,7 +1093,7 @@ router.post("/digest/:id/send-newsletter", async (req, res): Promise<void> => {
     return;
   }
 
-  const article = await getSupabaseDigest(id);
+  const article = await getFirestoreDigest(id);
 
   if (!article) {
     res.status(404).json({ error: "Digest article not found" });
@@ -1003,8 +1113,15 @@ router.post("/digest/:id/send-newsletter", async (req, res): Promise<void> => {
   }
 
   // Format HTML email
-  const bulletList = (items: string[]) =>
-    items.map((b) => `<li style="margin-bottom:8px;">${b}</li>`).join("");
+  const summaryParagraphs = article.executiveSummary && article.executiveSummary.length > 0
+    ? article.executiveSummary
+    : article.body.split("\n\n").filter(Boolean).slice(0, 1);
+  const analysisParagraphs = [
+    ...(article.keyTakeaways ?? []),
+    ...(article.implificationsForLeaders ?? []),
+    ...(article.rgiTake ? [article.rgiTake] : []),
+    ...((article.keyTakeaways ?? []).length === 0 ? article.body.split("\n\n").filter(Boolean).slice(1) : []),
+  ].filter(Boolean);
 
   const emailHtml = `
 <!DOCTYPE html>
@@ -1012,69 +1129,39 @@ router.post("/digest/:id/send-newsletter", async (req, res): Promise<void> => {
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${article.headline}</title>
 </head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:Georgia,'Times New Roman',serif;">
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:Aptos,Arial,Helvetica,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0;">
     <tr><td align="center">
       <table width="620" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:4px;overflow:hidden;border:1px solid #e4e4e7;">
         <!-- Header -->
         <tr><td style="background:#1a365d;padding:28px 40px;">
-          <p style="margin:0;color:#93c5fd;font-family:Arial,sans-serif;font-size:10px;letter-spacing:3px;text-transform:uppercase;font-weight:700;">The Rick Goings Institute · Strategic Intelligence</p>
+          <p style="margin:0;color:#93c5fd;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:3px;text-transform:uppercase;font-weight:700;">The Rick Goings Institute · Strategic Intelligence</p>
           <h1 style="margin:12px 0 0;color:#ffffff;font-size:22px;font-weight:700;line-height:1.3;">${article.headline}</h1>
         </td></tr>
         <!-- Meta -->
         <tr><td style="background:#f8fafc;padding:14px 40px;border-bottom:1px solid #e4e4e7;">
-          <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;">
+          <p style="margin:0;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;">
             ${article.articleType === "daily_brief" ? "Daily Intelligence Brief" : "Topic Analysis"} &nbsp;·&nbsp; ${article.discipline ?? "Strategic Intelligence"} &nbsp;·&nbsp; ${new Date(article.publishedAt ?? article.updatedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
           </p>
         </td></tr>
-        <!-- Executive Summary -->
-        ${article.executiveSummary && article.executiveSummary.length > 0 ? `
+        <!-- BRIEF SUMMARY -->
+        ${summaryParagraphs.length > 0 ? `
         <tr><td style="padding:32px 40px 0;">
-          <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a365d;">Executive Summary</p>
-          <ul style="margin:0;padding-left:20px;color:#374151;font-size:15px;line-height:1.7;">${bulletList(article.executiveSummary)}</ul>
+          <p style="margin:0 0 14px;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a365d;">BRIEF SUMMARY</p>
+          ${summaryParagraphs.map((p: string) => `<p style="margin:0 0 14px;color:#374151;font-size:15px;line-height:1.7;">${p.replace(/\*\*/g, "").replace(/\*/g, "").trim()}</p>`).join("")}
         </td></tr>` : ""}
-        <!-- Key Developments or Body -->
-        ${(() => {
-          const isStructured = article.whatToWatch && article.whatToWatch.length > 0;
-          const keyDevelopments = isStructured ? article.body.split("\n").filter(Boolean) : null;
-          if (isStructured && keyDevelopments && keyDevelopments.length > 0) {
-            return `<tr><td style="padding:28px 40px 0;">
-              <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#374151;">Key Developments</p>
-              <ul style="margin:0;padding-left:20px;color:#374151;font-size:15px;line-height:1.7;">${bulletList(keyDevelopments)}</ul>
-            </td></tr>`;
-          }
-          return `<tr><td style="padding:28px 40px 0;">
-            ${article.body.split("\n\n").filter(Boolean).map((p) => `<p style="margin:0 0 18px;color:#1f2937;font-size:16px;line-height:1.75;">${p.replace(/\*\*/g, "").replace(/\*/g, "").trim()}</p>`).join("")}
-          </td></tr>`;
-        })()}
-        <!-- Why It Matters / Key Takeaways -->
-        ${article.keyTakeaways && article.keyTakeaways.length > 0 ? `
+        <!-- RGI ANALYSIS -->
+        ${analysisParagraphs.length > 0 ? `
         <tr><td style="padding:24px 40px 0;">
           <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:20px;">
-            <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#92400e;">${article.whatToWatch && article.whatToWatch.length > 0 ? "Why It Matters" : "Key Takeaways"}</p>
-            <ul style="margin:0;padding-left:20px;color:#374151;font-size:14px;line-height:1.7;">${bulletList(article.keyTakeaways)}</ul>
-          </div>
-        </td></tr>` : ""}
-        <!-- RGI Take -->
-        ${article.rgiTake ? `
-        <tr><td style="padding:24px 40px 0;">
-          <div style="border-left:4px solid #1a365d;padding:16px 20px;background:#eff6ff;margin-top:8px;">
-            <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1a365d;">RGI Take</p>
-            <p style="margin:0;color:#1e40af;font-size:15px;font-style:italic;line-height:1.7;">${article.rgiTake}</p>
-          </div>
-        </td></tr>` : ""}
-        <!-- What to Watch -->
-        ${article.whatToWatch && article.whatToWatch.length > 0 ? `
-        <tr><td style="padding:24px 40px 32px;">
-          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:20px;">
-            <p style="margin:0 0 14px;font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1e40af;">What to Watch</p>
-            <ul style="margin:0;padding-left:20px;color:#374151;font-size:14px;line-height:1.7;">${bulletList(article.whatToWatch)}</ul>
+            <p style="margin:0 0 14px;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#92400e;">RGI ANALYSIS</p>
+            ${analysisParagraphs.map((p: string) => `<p style="margin:0 0 14px;color:#374151;font-size:14px;line-height:1.7;">${p.replace(/\*\*/g, "").replace(/\*/g, "").trim()}</p>`).join("")}
           </div>
         </td></tr>` : ""}
         <!-- Footer -->
         <tr><td style="background:#f8fafc;border-top:1px solid #e4e4e7;padding:20px 40px;">
-          <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#94a3b8;text-align:center;">Rick Goings Institute for Leadership &amp; Global Affairs · Rollins College</p>
-          <p style="margin:6px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#94a3b8;text-align:center;">You are receiving this because you subscribed to RGI Strategic Intelligence.</p>
+          <p style="margin:0;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:11px;color:#94a3b8;text-align:center;">Rick Goings Institute for Leadership &amp; Global Affairs · Rollins College</p>
+          <p style="margin:6px 0 0;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:11px;color:#94a3b8;text-align:center;">You are receiving this because you subscribed to RGI Strategic Intelligence.</p>
         </td></tr>
       </table>
     </td></tr>
@@ -1121,7 +1208,7 @@ router.post("/digest/:id/send-newsletter", async (req, res): Promise<void> => {
   }
 
   // Record the distribution regardless (preview mode if no SMTP)
-  const updated = await updateSupabaseDigest(id, {
+  const updated = await updateFirestoreDigest(id, {
     newsletterSentAt: new Date(),
     newsletterSentCount: subscribers.length,
   });
@@ -1161,7 +1248,7 @@ router.post("/digest/:id/regenerate-selection", async (req, res): Promise<void> 
   }
 
   try {
-    const article = await getSupabaseDigest(id);
+    const article = await getFirestoreDigest(id);
 
     if (!article) {
       res.status(404).json({ error: "Article not found" });

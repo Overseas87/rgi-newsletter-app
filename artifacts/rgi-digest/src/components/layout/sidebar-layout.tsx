@@ -27,6 +27,7 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { GenerateModal } from "@/components/generate-modal";
 import { asArray, safeDate } from "@/lib/arrays";
+import { useToast } from "@/hooks/use-toast";
 
 const NAV_GROUPS = [
   {
@@ -62,18 +63,70 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
-  const { data: scrapeStatus } = useGetScrapeStatus();
+  const { data: scrapeStatus } = useGetScrapeStatus({
+    query: {
+      refetchInterval: 4000,
+      refetchIntervalInBackground: true,
+    },
+  });
   const { data: pendingArticles = [] } = useListDigestArticles({ status: "pending_review" });
   const triggerScrape = useTriggerScrape();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const pendingCount = asArray<{ id: number }>(pendingArticles).length;
 
   const handleScrape = () => {
     triggerScrape.mutate(undefined, {
-      onSuccess: () => {
+      onSuccess: (result: unknown) => {
+        const payload = result && typeof result === "object" ? result as {
+          status?: string;
+          message?: string;
+          articlesFound?: number;
+          articlesAdded?: number;
+          summary?: {
+            articlesSaved?: number;
+            articlesAlreadyExisting?: number;
+            lowScoreSkipped?: number;
+            duplicatesSkipped?: number;
+            failedFeeds?: number;
+          };
+        } : {};
+
+        if (payload.status === "running" || payload.message?.toLowerCase().includes("started")) {
+          toast({
+            title: "Scrape started",
+            description: "The scraper is running in the background. This panel will update automatically.",
+          });
+          queryClient.invalidateQueries({ queryKey: getGetScrapeStatusQueryKey() });
+          return;
+        }
+
+        const summary = payload.summary ?? {};
+        const saved = Number(summary.articlesSaved ?? payload.articlesAdded ?? 0);
+        const existing = Number(summary.articlesAlreadyExisting ?? 0);
+        const lowScore = Number(summary.lowScoreSkipped ?? 0);
+        const failedFeeds = Number(summary.failedFeeds ?? 0);
+        toast({
+          title: saved > 0 ? `Scrape saved ${saved} new article${saved === 1 ? "" : "s"}` : "Scrape completed: no new articles saved",
+          description: [
+            existing > 0 ? `${existing} already existed` : null,
+            lowScore > 0 ? `${lowScore} below RGI threshold` : null,
+            failedFeeds > 0 ? `${failedFeeds} feed${failedFeeds === 1 ? "" : "s"} failed` : null,
+          ].filter(Boolean).join(" · ") || "No new qualifying articles were found.",
+        });
         queryClient.invalidateQueries({ queryKey: getGetScrapeStatusQueryKey() });
-        setTimeout(() => queryClient.invalidateQueries(), 6000);
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/articles"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/articles/page"] });
+        setTimeout(() => queryClient.invalidateQueries(), 1500);
+      },
+      onError: (error) => {
+        toast({
+          title: "Scrape failed",
+          description: error instanceof Error ? error.message : "The scraper could not complete. Check backend logs.",
+          variant: "destructive",
+        });
       },
     });
   };

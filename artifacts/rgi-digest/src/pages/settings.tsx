@@ -316,7 +316,7 @@ export default function Settings() {
                   </p>
                 </div>
                 <div className="rounded-lg border border-border p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Supabase</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Firestore</p>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant={diagnostics?.status === "ok" ? "secondary" : "destructive"}>{asString(diagnostics?.database, "unknown")}</Badge>
                     {diagnostics?.sourceSchema?.supportsWeight ? (
@@ -415,7 +415,7 @@ export default function Settings() {
               {(!diagnostics?.sourceSchema?.supportsHealth || !diagnostics?.sourceSchema?.supportsWeight) && (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                  <p>Run the Supabase source migration to persist source weights and per-source health history.</p>
+                  <p>Firestore now persists source weights and per-source health history.</p>
                 </div>
               )}
             </>

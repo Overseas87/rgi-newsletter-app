@@ -6,49 +6,50 @@ import { logger } from "./lib/logger";
 import { startScheduler } from "./lib/scheduler";
 import { initializeScrapeStatus } from "./lib/scraper";
 import sourcesRouter from "./routes/sources";
-import { listSupabaseArticles, listSupabaseDigests, listSupabaseSources, useSupabaseData } from "./lib/supabase-data";
+import { listFirestoreArticles, listFirestoreDigests } from "./lib/firestore-data";
+import { listFirestoreSources } from "./lib/firestore-sources";
 import { markStaleRunningJobsFailed } from "./lib/job-queue";
 import { getFirebaseDiagnostics, verifyFirestoreConnection } from "./lib/firebase";
-import { useFirestoreData } from "./lib/firestore-data";
 
 const app: Express = express();
 app.set("etag", false);
+
+async function withStartupTimeout<T>(label: string, promise: Promise<T>, timeoutMs = 8000): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
 
 // Startup must never block the local editorial workflow. Firebase is optional
 // tonight; if it fails, the app falls back to the legacy operational datasource.
 export async function initializeApp() {
   logger.info(getFirebaseDiagnostics(), "Startup environment diagnostics");
 
-  if (useFirestoreData()) {
-    try {
-      await verifyFirestoreConnection();
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      logger.warn({ message: error.message, stack: error.stack }, "Firestore unavailable; continuing with fallback datasource");
-      process.env.DATABASE_PROVIDER = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY ? "supabase" : "legacy";
-    }
-  }
-
   try {
-    if (useSupabaseData()) {
-      const [sources, articles, digests] = await Promise.all([
-        listSupabaseSources(),
-        listSupabaseArticles({ limit: 1 }),
-        listSupabaseDigests({ limit: 1 }),
-      ]);
-      logger.info(
-        { database: useFirestoreData() ? "firestore" : "supabase", sourcesCount: sources.length, articlesCount: articles.length, digestsCount: digests.length },
-        "Operational datasource audit complete"
-      );
-      if (sources.length === 0) {
-        logger.warn("No sources found in the active datasource. Add sources in the Sources page before scraping.");
-      }
-    } else {
-      logger.warn("No Firebase or Supabase datasource is available; legacy route fallbacks may have limited data.");
+    await withStartupTimeout("Firestore verification", verifyFirestoreConnection(), 8000);
+    const [sources, articles, digests] = await withStartupTimeout("Firestore startup audit", Promise.all([
+      listFirestoreSources(),
+      listFirestoreArticles({ limit: 1 }),
+      listFirestoreDigests({ limit: 1 }),
+    ]), 10000);
+    logger.info(
+      { database: "firestore", sourcesCount: sources.length, articlesCount: articles.length, digestsCount: digests.length },
+      "Operational datasource audit complete"
+    );
+    if (sources.length === 0) {
+      logger.warn("No sources found in Firestore. Add sources in the Sources page before scraping.");
     }
 
-    await markStaleRunningJobsFailed(60);
-    await initializeScrapeStatus();
+    await withStartupTimeout("job recovery", markStaleRunningJobsFailed(60), 5000);
+    await withStartupTimeout("scrape status initialization", initializeScrapeStatus(), 5000);
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
     logger.warn(
@@ -57,11 +58,18 @@ export async function initializeApp() {
         stack: error.stack,
         diagnostics: getFirebaseDiagnostics(),
       },
-      "Datasource initialization failed; backend will still start for local UI and editorial workflows"
+      "Firestore initialization failed; backend will still start so the error is visible in diagnostics"
     );
   }
 
-  startScheduler();
+  const managedRuntime = Boolean(process.env.FUNCTION_TARGET || process.env.K_SERVICE);
+  if (process.env.RGI_START_SCHEDULER === "false") {
+    logger.info("Local scheduler disabled by RGI_START_SCHEDULER=false");
+  } else if (managedRuntime) {
+    logger.info("Managed cloud runtime detected; Firebase scheduled functions own scrape and brief schedules");
+  } else {
+    startScheduler();
+  }
 }
 
 app.use(

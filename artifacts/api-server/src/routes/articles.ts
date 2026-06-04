@@ -1,13 +1,12 @@
 import { Router, type IRouter } from "express";
-import { db, articlesTable } from "@workspace/db";
-import { eq, and, gte, desc, asc } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import {
-  deleteSupabaseArticle,
-  getSupabaseArticle,
-  listSupabaseArticles,
-  useSupabaseData,
-} from "../lib/supabase-data";
+  getFirestoreArticle,
+  deleteFirestoreArticle,
+  listFirestoreArticles,
+  listFirestoreArticlesPage,
+  updateFirestoreArticle,
+} from "../lib/firestore-data";
 import {
   ListArticlesQueryParams,
   GetArticleParams,
@@ -15,6 +14,39 @@ import {
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+router.get("/articles/page", async (req, res): Promise<void> => {
+  const limit = Math.min(Math.max(Number(req.query.limit ?? 50) || 50, 1), 100);
+  const minScore = req.query.minScore == null ? undefined : Number(req.query.minScore);
+  const topicTag = typeof req.query.topicTag === "string" ? req.query.topicTag : undefined;
+  const source = typeof req.query.source === "string" ? req.query.source : undefined;
+  const platform = typeof req.query.platform === "string" ? req.query.platform : undefined;
+  const search = typeof req.query.search === "string" ? req.query.search : undefined;
+  const status = typeof req.query.status === "string" ? req.query.status : undefined;
+  const cursor = typeof req.query.cursor === "string" ? req.query.cursor : undefined;
+  const sortBy = typeof req.query.sortBy === "string" ? req.query.sortBy : "relevance";
+  const includeArchive = req.query.includeArchive === "true";
+
+  try {
+    const page = await listFirestoreArticlesPage({
+      status,
+      minScore: Number.isFinite(minScore) ? minScore : undefined,
+      topicTag,
+      source,
+      platform,
+      search,
+      sortBy,
+      limit,
+      cursor,
+      includeArchive,
+    });
+    req.log.info({ route: "/api/articles/page", count: page.items.length, hasMore: page.hasMore, filters: { status, minScore, topicTag, source, platform, search, sortBy } }, "Listed article page");
+    res.json(page);
+  } catch (e) {
+    req.log.error({ err: e }, "Failed to list paginated Firestore articles");
+    res.status(500).json({ items: [], nextCursor: null, hasMore: false, error: "Failed to load articles" });
+  }
+});
 
 router.get("/articles", async (req, res): Promise<void> => {
   const query = ListArticlesQueryParams.safeParse(req.query);
@@ -24,59 +56,51 @@ router.get("/articles", async (req, res): Promise<void> => {
   }
 
   const { status, minScore, topicTag, source, platform, sortBy, limit } = query.data;
+  const search = typeof req.query.search === "string" ? req.query.search : undefined;
 
-  if (useSupabaseData()) {
-    try {
-      const articles = await listSupabaseArticles({ status, minScore, topicTag, source, platform, sortBy, limit });
-      res.json(Array.isArray(articles) ? articles : []);
-      return;
-    } catch (e) {
-      req.log.error({ err: e }, "Failed to list Supabase articles");
-      res.json([]);
+  try {
+    const articles = await listFirestoreArticles({ status, minScore, topicTag, source, platform, search, sortBy, limit });
+    res.json(Array.isArray(articles) ? articles : []);
+  } catch (e) {
+    req.log.error({ err: e }, "Failed to list Firestore articles");
+    res.json([]);
+  }
+});
+
+router.patch("/articles/:id/moderation", async (req, res): Promise<void> => {
+  const params = GetArticleParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const status = String(req.body?.status ?? "").trim();
+  if (!["pending", "selected", "dismissed"].includes(status)) {
+    res.status(400).json({ error: "status must be pending, selected, or dismissed" });
+    return;
+  }
+
+  const moderationNote = typeof req.body?.moderationNote === "string"
+    ? req.body.moderationNote.slice(0, 500)
+    : null;
+
+  try {
+    const article = await updateFirestoreArticle(params.data.id, {
+      status: status as any,
+      moderationNote,
+      moderatedAt: new Date(),
+      moderatedBy: "local-admin",
+    } as any);
+    if (!article) {
+      res.status(404).json({ error: "Article not found" });
       return;
     }
+    req.log.info({ articleId: params.data.id, status, moderationNote: Boolean(moderationNote) }, "Article moderation status updated");
+    res.json(article);
+  } catch (e) {
+    req.log.error({ err: e, articleId: params.data.id, status }, "Failed to update article moderation status");
+    res.status(500).json({ error: "Failed to update article moderation status" });
   }
-
-  let dbQuery = db.select().from(articlesTable).$dynamic();
-
-  const conditions = [];
-
-  if (status) {
-    conditions.push(eq(articlesTable.status, status as "pending" | "selected" | "dismissed"));
-  }
-  if (minScore) {
-    conditions.push(gte(articlesTable.relevancyScore, minScore));
-  }
-  if (source) {
-    conditions.push(eq(articlesTable.sourceName, source));
-  }
-  if (platform) {
-    conditions.push(eq(articlesTable.platform, platform as "news" | "twitter" | "linkedin"));
-  }
-
-  if (conditions.length > 0) {
-    dbQuery = dbQuery.where(and(...conditions));
-  }
-
-  // Apply sort order
-  if (sortBy === "time") {
-    dbQuery = dbQuery.orderBy(desc(articlesTable.publishedAt), desc(articlesTable.scrapedAt));
-  } else if (sortBy === "source") {
-    dbQuery = dbQuery.orderBy(asc(articlesTable.sourceName), desc(articlesTable.relevancyScore));
-  } else {
-    // Default: by relevance
-    dbQuery = dbQuery.orderBy(desc(articlesTable.relevancyScore), desc(articlesTable.scrapedAt));
-  }
-
-  dbQuery = dbQuery.limit(limit ?? 200);
-
-  let articles = await dbQuery;
-
-  if (topicTag) {
-    articles = articles.filter((a) => (Array.isArray(a.topicTags) ? a.topicTags : []).includes(topicTag));
-  }
-
-  res.json(articles);
 });
 
 router.get("/articles/:id", async (req, res): Promise<void> => {
@@ -86,33 +110,17 @@ router.get("/articles/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (useSupabaseData()) {
-    try {
-      const article = await getSupabaseArticle(params.data.id);
-      if (!article) {
-        res.status(404).json({ error: "Article not found" });
-        return;
-      }
-      res.json(article);
-      return;
-    } catch (e) {
-      req.log.error({ err: e }, "Failed to get Supabase article");
-      res.status(500).json({ error: "Failed to get article" });
+  try {
+    const article = await getFirestoreArticle(params.data.id);
+    if (!article) {
+      res.status(404).json({ error: "Article not found" });
       return;
     }
+    res.json(article);
+  } catch (e) {
+    req.log.error({ err: e }, "Failed to get Firestore article");
+    res.status(500).json({ error: "Failed to get article" });
   }
-
-  const [article] = await db
-    .select()
-    .from(articlesTable)
-    .where(eq(articlesTable.id, params.data.id));
-
-  if (!article) {
-    res.status(404).json({ error: "Article not found" });
-    return;
-  }
-
-  res.json(article);
 });
 
 // RGI relevance explanation — explains WHY this article scored highly through the RGI lens
@@ -123,9 +131,7 @@ router.get("/articles/:id/explain", async (req, res): Promise<void> => {
     return;
   }
 
-  const [article] = useSupabaseData()
-    ? [await getSupabaseArticle(id)]
-    : await db.select().from(articlesTable).where(eq(articlesTable.id, id));
+  const article = await getFirestoreArticle(id);
   if (!article) {
     res.status(404).json({ error: "Article not found" });
     return;
@@ -175,33 +181,17 @@ router.delete("/articles/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (useSupabaseData()) {
-    try {
-      const deleted = await deleteSupabaseArticle(params.data.id);
-      if (!deleted) {
-        res.status(404).json({ error: "Article not found" });
-        return;
-      }
-      res.sendStatus(204);
-      return;
-    } catch (e) {
-      req.log.error({ err: e }, "Failed to delete Supabase article");
-      res.status(500).json({ error: "Failed to delete article" });
+  try {
+    const deleted = await deleteFirestoreArticle(params.data.id);
+    if (!deleted) {
+      res.status(404).json({ error: "Article not found" });
       return;
     }
+    res.sendStatus(204);
+  } catch (e) {
+    req.log.error({ err: e }, "Failed to delete Firestore article");
+    res.status(500).json({ error: "Failed to delete article" });
   }
-
-  const [deleted] = await db
-    .delete(articlesTable)
-    .where(eq(articlesTable.id, params.data.id))
-    .returning();
-
-  if (!deleted) {
-    res.status(404).json({ error: "Article not found" });
-    return;
-  }
-
-  res.sendStatus(204);
 });
 
 export default router;
