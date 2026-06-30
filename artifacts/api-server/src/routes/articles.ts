@@ -12,6 +12,7 @@ import {
   GetArticleParams,
   DeleteArticleParams,
 } from "@workspace/api-zod";
+import { sendApiError, withApiTimeout } from "../lib/api-errors";
 
 const router: IRouter = Router();
 
@@ -28,7 +29,8 @@ router.get("/articles/page", async (req, res): Promise<void> => {
   const includeArchive = req.query.includeArchive === "true";
 
   try {
-    const page = await listFirestoreArticlesPage({
+    req.log.info({ route: "/api/articles/page", filters: { status, minScore, topicTag, source, platform, search, sortBy } }, "Article page fetch started");
+    const page = await withApiTimeout("Article page Firestore read", listFirestoreArticlesPage({
       status,
       minScore: Number.isFinite(minScore) ? minScore : undefined,
       topicTag,
@@ -39,12 +41,12 @@ router.get("/articles/page", async (req, res): Promise<void> => {
       limit,
       cursor,
       includeArchive,
-    });
+    }));
     req.log.info({ route: "/api/articles/page", count: page.items.length, hasMore: page.hasMore, filters: { status, minScore, topicTag, source, platform, search, sortBy } }, "Listed article page");
     res.json(page);
   } catch (e) {
     req.log.error({ err: e }, "Failed to list paginated Firestore articles");
-    res.status(500).json({ items: [], nextCursor: null, hasMore: false, error: "Failed to load articles" });
+    sendApiError(res, e, "News articles failed to load. Retry after the database is available.");
   }
 });
 
@@ -59,11 +61,13 @@ router.get("/articles", async (req, res): Promise<void> => {
   const search = typeof req.query.search === "string" ? req.query.search : undefined;
 
   try {
-    const articles = await listFirestoreArticles({ status, minScore, topicTag, source, platform, search, sortBy, limit });
+    req.log.info({ route: "/api/articles", filters: { status, minScore, topicTag, source, platform, search, sortBy, limit } }, "Article list fetch started");
+    const articles = await withApiTimeout("Article list Firestore read", listFirestoreArticles({ status, minScore, topicTag, source, platform, search, sortBy, limit }));
+    req.log.info({ route: "/api/articles", count: Array.isArray(articles) ? articles.length : 0 }, "Article list fetch succeeded");
     res.json(Array.isArray(articles) ? articles : []);
   } catch (e) {
     req.log.error({ err: e }, "Failed to list Firestore articles");
-    res.json([]);
+    sendApiError(res, e, "News articles failed to load. Retry after the database is available.");
   }
 });
 

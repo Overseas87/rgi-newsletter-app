@@ -10,6 +10,7 @@ import {
 import { listFirestoreSources } from "../lib/firestore-sources";
 import { buildSignalClusters } from "../lib/signal-intelligence";
 import { articleRecommendedFor } from "../lib/rgi-relevance";
+import { sendApiError, withApiTimeout } from "../lib/api-errors";
 
 const DISCIPLINE_KEYWORDS: Record<string, string[]> = {
   "Strategic Foresight": [
@@ -69,6 +70,7 @@ function describeSignificance(topic: string, count: number, avgScore: number): s
 const router: IRouter = Router();
 
 router.get("/dashboard/summary", async (req, res): Promise<void> => {
+  req.log.info("Dashboard summary fetch started");
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -77,11 +79,11 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   try {
-      const [articles, digestArticles, sources] = await Promise.all([
-        listFirestoreArticles({ limit: 500, sortBy: "time" }),
+      const [articles, digestArticles, sources] = await withApiTimeout("Dashboard Firestore reads", Promise.all([
+        listFirestoreArticles({ limit: 200, sortBy: "time" }),
         listFirestoreDigests({ limit: 200 }),
         listFirestoreSources(),
-      ]);
+      ]));
 
       const todayArticles = articles.filter((a) => articleRecommendedFor(a as typeof a & Record<string, unknown>, "feed"));
       const contentWindow = todayArticles.length >= 15 ? today : sevenDaysAgo;
@@ -146,6 +148,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
         .sort((a, b) => b.importanceScore - a.importanceScore);
 
       const scrapeStatus = getScrapeStatus();
+      req.log.info({ articleCount: articles.length, digestCount: digestArticles.length, sourceCount: sources.length }, "Dashboard summary fetch succeeded");
       res.json({
         totalArticlesToday: todayArticles.length,
         pendingReview: digestArticles.filter((a) => a.status === "pending_review").length,
@@ -166,23 +169,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
       return;
   } catch (e) {
       req.log.error({ err: e }, "Failed to build Firestore dashboard summary");
-      res.json({
-        totalArticlesToday: 0,
-        pendingReview: 0,
-        approvedToday: 0,
-        rejectedToday: 0,
-        topArticles: [],
-        lastScrapeAt: getScrapeStatus().lastScrapeAt,
-        articlesByTag: [],
-        topicIntelligence: [],
-        signalClusters: [],
-        totalSources: 0,
-        activeSources: 0,
-        socialSignalsCount: 0,
-        emergingSignalsCount: 0,
-        contentWindowStart: sevenDaysAgo.toISOString(),
-        minTopicScore: DASHBOARD_SIGNAL_SCORE_THRESHOLD,
-      });
+      sendApiError(res, e, "Dashboard load failed. Retry after the database is available.");
       return;
   }
 });
@@ -212,7 +199,7 @@ router.get("/topics", async (req, res): Promise<void> => {
       .sort((a, b) => b.articleCount - a.articleCount));
   } catch (e) {
     req.log.error({ err: e }, "Failed to list topics");
-    res.json([]);
+    sendApiError(res, e, "Topics failed to load. Retry after the database is available.");
   }
 });
 

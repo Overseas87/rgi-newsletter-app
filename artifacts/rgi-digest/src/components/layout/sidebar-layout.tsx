@@ -21,13 +21,16 @@ import {
   getGetScrapeStatusQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { GenerateModal } from "@/components/generate-modal";
 import { asArray, safeDate } from "@/lib/arrays";
 import { useToast } from "@/hooks/use-toast";
+import { userSafeErrorMessage } from "@/lib/api-error";
 
 const NAV_GROUPS = [
   {
@@ -59,15 +62,43 @@ const NAV_GROUPS = [
 const NAVY = "#0B1F3B";
 const GOLD = "#C9A227";
 
+type RuntimeHealth = {
+  status?: string;
+  database?: string;
+  errorCategory?: string;
+  safeError?: { message?: string };
+  runtime?: {
+    firestoreProjectId?: string | null;
+    firestoreEmulatorActive?: boolean;
+    localStoreMode?: boolean;
+    localFallbackEnabled?: boolean;
+    mockDataMode?: boolean;
+  };
+};
+
+async function fetchRuntimeHealth(): Promise<RuntimeHealth> {
+  const base = import.meta.env.VITE_API_BASE_URL || "";
+  const response = await fetch(`${base}/api/health`, { headers: { accept: "application/json" } });
+  if (!response.ok) throw new Error(`Health check failed (${response.status})`);
+  return response.json();
+}
+
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
-  const { data: scrapeStatus } = useGetScrapeStatus({
+  const { data: scrapeStatus, isError: scrapeStatusError, refetch: refetchScrapeStatus } = useGetScrapeStatus({
     query: {
+      queryKey: getGetScrapeStatusQueryKey(),
       refetchInterval: 4000,
       refetchIntervalInBackground: true,
     },
+  });
+  const { data: runtimeHealth, isError: runtimeHealthError } = useQuery({
+    queryKey: ["/api/health"],
+    queryFn: fetchRuntimeHealth,
+    refetchInterval: 15000,
+    retry: 1,
   });
   const { data: pendingArticles = [] } = useListDigestArticles({ status: "pending_review" });
   const triggerScrape = useTriggerScrape();
@@ -75,6 +106,54 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   const pendingCount = asArray<{ id: number }>(pendingArticles).length;
+  const scrapeStatusRecord = scrapeStatus as (typeof scrapeStatus & {
+    startedAt?: unknown;
+    staleAfterMs?: unknown;
+    lastScrapeFailures?: unknown;
+  }) | undefined;
+  const scrapeStartedAt = typeof scrapeStatusRecord?.startedAt === "string"
+    ? scrapeStatusRecord.startedAt
+    : null;
+  const scrapeStartedMs = scrapeStartedAt ? safeDate(scrapeStartedAt).getTime() : 0;
+  const scrapeStaleAfterMs = Number(scrapeStatusRecord?.staleAfterMs ?? 15 * 60 * 1000);
+  const isScrapeStale = Boolean(scrapeStatus?.isRunning && scrapeStartedMs && Date.now() - scrapeStartedMs > scrapeStaleAfterMs);
+  const scrapeRunning = Boolean(scrapeStatus?.isRunning && !isScrapeStale);
+  const latestScrapeFailure = asArray<{ message?: string }>(scrapeStatusRecord?.lastScrapeFailures)[0]?.message;
+  const runtime = runtimeHealth?.runtime;
+  const databaseUnavailable = runtimeHealth?.status === "degraded" || runtimeHealth?.database === "unverified" || runtimeHealth?.database === "unreachable";
+  const runtimeModeLabel = runtime?.mockDataMode
+    ? "Mock data"
+    : runtime?.localStoreMode
+      ? "Local JSON"
+      : runtime?.firestoreEmulatorActive
+        ? "Firestore emulator"
+        : runtimeHealth?.database === "firestore"
+          ? "Firestore"
+          : runtimeHealth?.database ?? "Database";
+  const runtimeModeVariant = databaseUnavailable ? "destructive" : runtime?.localStoreMode || runtime?.mockDataMode || runtime?.localFallbackEnabled ? "outline" : "secondary";
+  const runtimeModeMessage = runtimeHealthError
+    ? "Runtime status unavailable."
+    : runtimeHealth?.errorCategory === "firestore_quota_exceeded"
+      ? "Firestore quota exceeded. Live data is unavailable."
+      : databaseUnavailable
+        ? runtimeHealth?.safeError?.message ?? "Database is temporarily unavailable."
+        : runtime?.localStoreMode || runtime?.mockDataMode
+          ? "Development data is active. This is not the live Firestore dataset."
+          : runtime?.localFallbackEnabled
+            ? "Local fallback is enabled. Confirm whether data is live before reviewing counts."
+            : null;
+  const lastScrapeLabel = scrapeStatusError
+    ? "Scrape status unavailable"
+    : scrapeRunning && scrapeStartedAt
+      ? <>Running since {format(safeDate(scrapeStartedAt), "h:mm a")}</>
+      : isScrapeStale
+        ? "Previous scrape timed out"
+        : scrapeStatus?.lastScrapeAt
+          ? <>
+              {format(safeDate(scrapeStatus.lastScrapeAt), "MMM d 'at' h:mm a")}
+              <span className="text-gray-400"> · {formatDistanceToNow(safeDate(scrapeStatus.lastScrapeAt), { addSuffix: true })}</span>
+            </>
+          : "Never scraped";
 
   const handleScrape = () => {
     triggerScrape.mutate(undefined, {
@@ -124,9 +203,12 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       onError: (error) => {
         toast({
           title: "Scrape failed",
-          description: error instanceof Error ? error.message : "The scraper could not complete. Check backend logs.",
+          description: userSafeErrorMessage(error, "The scraper could not complete. Check backend logs."),
           variant: "destructive",
         });
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: getGetScrapeStatusQueryKey() });
       },
     });
   };
@@ -193,25 +275,51 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
       {/* Scrape status footer */}
       <div className="p-3 border-t border-gray-100">
+        <div className="mb-3 rounded-md border border-gray-100 bg-gray-50 px-2 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Runtime</span>
+            <Badge variant={runtimeModeVariant} className="h-5 px-1.5 text-[10px]">
+              {runtimeModeLabel}
+            </Badge>
+          </div>
+          {runtime?.firestoreProjectId ? (
+            <p className="mt-1 truncate text-[10px] text-gray-500">{runtime.firestoreProjectId}</p>
+          ) : null}
+          {runtimeModeMessage ? (
+            <p className={`mt-1 text-[10px] leading-snug ${databaseUnavailable || runtimeHealthError ? "text-red-700" : "text-amber-700"}`}>
+              {runtimeModeMessage}
+            </p>
+          ) : null}
+        </div>
         <div className="text-[10px] text-gray-400 mb-1.5 uppercase tracking-wider font-semibold">
           Last Scraped
         </div>
         <div className="text-xs text-gray-500 mb-2">
-          {scrapeStatus?.lastScrapeAt
-            ? <>
-                {format(safeDate(scrapeStatus.lastScrapeAt), "MMM d 'at' h:mm a")}
-                <span className="text-gray-400"> · {formatDistanceToNow(safeDate(scrapeStatus.lastScrapeAt), { addSuffix: true })}</span>
-              </>
-            : "Never scraped"}
+          {lastScrapeLabel}
         </div>
+        {(scrapeStatusError || isScrapeStale || latestScrapeFailure) ? (
+          <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] leading-snug text-amber-800">
+            {scrapeStatusError
+              ? "Scrape status failed to load."
+              : isScrapeStale
+                ? "Scrape lock looked stale and can be retried."
+                : latestScrapeFailure ?? "Last scrape had feed failures."}
+          </div>
+        ) : null}
         <button
-          onClick={handleScrape}
-          disabled={triggerScrape.isPending || scrapeStatus?.isRunning}
+          onClick={() => {
+            if (scrapeStatusError) {
+              void refetchScrapeStatus();
+              return;
+            }
+            handleScrape();
+          }}
+          disabled={triggerScrape.isPending || scrapeRunning || databaseUnavailable}
           className="w-full flex items-center justify-center gap-1.5 text-xs font-medium py-1.5 rounded-md border border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-800 transition-colors disabled:opacity-50"
           data-testid="btn-trigger-scrape"
         >
-          <RefreshCw className={`h-3 w-3 ${scrapeStatus?.isRunning || triggerScrape.isPending ? "animate-spin" : ""}`} />
-          {scrapeStatus?.isRunning ? "Scraping…" : triggerScrape.isPending ? "Starting…" : "Scrape Now"}
+          <RefreshCw className={`h-3 w-3 ${scrapeRunning || triggerScrape.isPending ? "animate-spin" : ""}`} />
+          {databaseUnavailable ? "Scrape Unavailable" : scrapeStatusError ? "Retry Status" : scrapeRunning ? "Scraping…" : triggerScrape.isPending ? "Starting…" : isScrapeStale ? "Retry Scrape" : "Scrape Now"}
         </button>
       </div>
     </div>

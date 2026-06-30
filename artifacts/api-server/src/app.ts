@@ -14,6 +14,62 @@ import { getFirebaseDiagnostics, verifyFirestoreConnection } from "./lib/firebas
 const app: Express = express();
 app.set("etag", false);
 
+const CANONICAL_RUNTIME =
+  "Canonical production runtime: Firebase Hosting serves the Vite app and rewrites /api/** to Firebase Functions. Docker/Cloud Run remains an optional API runtime for later migration.";
+
+function configuredCorsOrigins(): string[] {
+  const configured = [
+    process.env.FRONTEND_URL,
+    process.env.PUBLIC_APP_URL,
+    process.env.APP_ORIGIN,
+    process.env.CORS_ORIGINS,
+  ]
+    .filter(Boolean)
+    .flatMap((value) => String(value).split(","))
+    .map((value) => value.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+
+  if (configured.length > 0) return [...new Set(configured)];
+  if (process.env.NODE_ENV === "production") return [];
+  return ["http://localhost:21410", "http://127.0.0.1:21410", "http://localhost:5173", "http://127.0.0.1:5173"];
+}
+
+function isAdminProtectedRequest(req: express.Request): boolean {
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return false;
+  return req.path.startsWith("/api/") || req.path.startsWith("/sources");
+}
+
+function adminGuard(req: express.Request, res: express.Response, next: express.NextFunction): void {
+  if (!isAdminProtectedRequest(req)) {
+    next();
+    return;
+  }
+
+  const adminKey = process.env.ADMIN_API_KEY;
+  if (!adminKey) {
+    if (process.env.NODE_ENV === "production") {
+      res.status(503).json({
+        error: "Admin API is not configured",
+        message: "Set ADMIN_API_KEY before enabling production mutating routes.",
+      });
+      return;
+    }
+    res.setHeader("X-RGI-Admin-Guard", "development-unconfigured");
+    next();
+    return;
+  }
+
+  const authorization = req.get("authorization") ?? "";
+  const bearer = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
+  const provided = req.get("x-admin-api-key") ?? bearer;
+  if (provided !== adminKey) {
+    res.status(401).json({ error: "Unauthorized admin request" });
+    return;
+  }
+
+  next();
+}
+
 async function withStartupTimeout<T>(label: string, promise: Promise<T>, timeoutMs = 8000): Promise<T> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -31,7 +87,7 @@ async function withStartupTimeout<T>(label: string, promise: Promise<T>, timeout
 // Startup must never block the local editorial workflow. Firebase is optional
 // tonight; if it fails, the app falls back to the legacy operational datasource.
 export async function initializeApp() {
-  logger.info(getFirebaseDiagnostics(), "Startup environment diagnostics");
+  logger.info({ ...getFirebaseDiagnostics(), canonicalRuntime: CANONICAL_RUNTIME }, "Startup environment diagnostics");
 
   try {
     await withStartupTimeout("Firestore verification", verifyFirestoreConnection(), 8000);
@@ -91,9 +147,28 @@ app.use(
     },
   }),
 );
-app.use(cors());
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    const allowed = configuredCorsOrigins();
+    if (allowed.includes(origin.replace(/\/+$/, ""))) {
+      callback(null, true);
+      return;
+    }
+    if (process.env.NODE_ENV !== "production" && /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error(`CORS origin not allowed: ${origin}`));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(adminGuard);
 
 app.use(sourcesRouter);
 app.use("/api", router);

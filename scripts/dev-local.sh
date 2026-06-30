@@ -18,6 +18,13 @@ if [[ -f .env ]]; then
   set +a
 fi
 
+export FIRESTORE_RETRY_ATTEMPTS="${FIRESTORE_RETRY_ATTEMPTS:-2}"
+# Firestore can take several seconds locally when the collection has hundreds
+# of articles. A too-small timeout makes healthy data look empty or stale.
+export FIRESTORE_OPERATION_TIMEOUT_MS="${FIRESTORE_OPERATION_TIMEOUT_MS:-10000}"
+export API_ROUTE_TIMEOUT_MS="${API_ROUTE_TIMEOUT_MS:-12000}"
+export RGI_FORCE_LOCAL_STORE="${RGI_FORCE_LOCAL_STORE:-false}"
+
 mkdir -p .local-run
 
 check_can_bind() {
@@ -140,7 +147,11 @@ echo
 echo "RGI Newsletter app is starting:"
 echo "  Frontend: http://localhost:21410"
 echo "  Backend:  http://localhost:3000"
-echo "  Database: Firestore"
+if [[ "$RGI_FORCE_LOCAL_STORE" == "true" ]]; then
+  echo "  Database: local JSON store"
+else
+  echo "  Database: Firestore"
+fi
 echo "  Backend ready: ${READY_RESPONSE}"
 echo
 echo "Keep this terminal window open while using the local app."

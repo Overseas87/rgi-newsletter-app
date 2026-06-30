@@ -7,11 +7,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from "@/components/ui/button";
 import { format, formatDistanceToNow } from "date-fns";
 import { useState } from "react";
-import { ExternalLink, Globe, Tag, Download, FileDown, Loader2, Trash2 } from "lucide-react";
+import { ExternalLink, Globe, Tag, Download, FileDown, Loader2, Trash2, RefreshCw, AlertCircle } from "lucide-react";
 import { usePdfDownload } from "@/hooks/use-pdf-download";
 import { stripMarkdown } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { asArray, asNumber, asString, asStringArray, safeDate, safeLines, safeTextBlocks } from "@/lib/arrays";
+import { userSafeErrorMessage } from "@/lib/api-error";
 
 function ArticleTypeBadge({ articleType }: { articleType: string }) {
   if (articleType === "daily_brief") {
@@ -34,7 +35,7 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
   const slugified = article
     ? asString(article.headline, "brief").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)
     : "";
-  const { download: downloadPdf, open: openPdf, isDownloading } = usePdfDownload({
+  const { download: downloadPdf, openUrl: openPdfUrl, isDownloading } = usePdfDownload({
     url: article ? `${base}/api/digest/${article.id}/pdf` : "",
     filename: article ? `rgi-brief-${slugified}.pdf` : "rgi-brief.pdf",
   });
@@ -64,13 +65,15 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
                 {isDownloading ? "Generating…" : "Download PDF"}
               </Button>
               <Button
+                asChild
                 variant="outline"
                 size="sm"
                 className="gap-1.5 text-xs h-7"
-                onClick={openPdf}
               >
-                <ExternalLink className="h-3 w-3" />
-                Open PDF
+                <a href={openPdfUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-3 w-3" />
+                  Open PDF
+                </a>
               </Button>
               <div className="flex flex-col items-end gap-0.5">
                 <span className="text-[11px] text-muted-foreground">
@@ -149,7 +152,7 @@ function ArticleDialog({ article, open, onClose }: { article: DigestArticle | nu
 
 export default function Published() {
   const queryClient = useQueryClient();
-  const { data: articles = [], isLoading } = useListDigestArticles({ status: "approved" });
+  const { data: articles = [], isLoading, isError, error, refetch } = useListDigestArticles({ status: "approved" });
   const safeArticles = asArray<DigestArticle>(articles);
   const [selectedRead, setSelectedRead] = useState<DigestArticle | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DigestArticle | null>(null);
@@ -173,7 +176,7 @@ export default function Published() {
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   const today = new Date().toISOString().slice(0, 10);
   const combinedIds = safeArticles.map((a) => a.id).join(",");
-  const { download: downloadAll, open: openAll, isDownloading: isDownloadingAll } = usePdfDownload({
+  const { download: downloadAll, openUrl: openAllUrl, isDownloading: isDownloadingAll } = usePdfDownload({
     url: combinedIds ? `${base}/api/digest/pdf/combined?ids=${combinedIds}` : "",
     filename: `rgi-intelligence-${today}.pdf`,
   });
@@ -199,12 +202,14 @@ export default function Published() {
               {isDownloadingAll ? "Generating…" : "Download All as PDF"}
             </Button>
             <Button
+              asChild
               variant="outline"
               className="gap-2"
-              onClick={openAll}
             >
-              <ExternalLink className="h-4 w-4" />
-              Open PDF
+              <a href={openAllUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+                Open PDF
+              </a>
             </Button>
           </div>
         )}
@@ -213,6 +218,16 @@ export default function Published() {
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
+        </div>
+      ) : isError ? (
+        <div className="py-24 text-center text-muted-foreground space-y-3">
+          <AlertCircle className="h-8 w-8 mx-auto text-destructive/60" />
+          <p className="text-lg font-medium">Published archive failed to load</p>
+          <p className="text-sm mt-1">{userSafeErrorMessage(error, "The published archive could not be loaded.")}</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="h-3.5 w-3.5 mr-2" />
+            Retry
+          </Button>
         </div>
       ) : safeArticles.length === 0 ? (
         <div className="py-24 text-center text-muted-foreground">

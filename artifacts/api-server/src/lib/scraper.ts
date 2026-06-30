@@ -400,6 +400,7 @@ type StrategicScoreBreakdown = {
 export const ARTICLE_INSERTION_SCORE_THRESHOLD = 4.0;
 export const DASHBOARD_SIGNAL_SCORE_THRESHOLD = 5.5;
 export const BRIEF_CANDIDATE_SCORE_THRESHOLD = 7.0;
+const ARTICLE_SCORING_TIMEOUT_MS = Number(process.env.RGI_ARTICLE_SCORING_TIMEOUT_MS ?? 8000);
 
 const RGI_FACTOR_WEIGHTS = {
   sourceAuthority: 0.08,
@@ -649,14 +650,19 @@ async function scoreArticle(
 
   let text = "{}";
   try {
-    const message = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 1500,
-      messages: [{ role: "user", content: prompt }],
-    });
+    const message = await withOperationTimeout<unknown>(
+      "AI article scoring",
+      anthropic.messages.create({
+        model: "claude-haiku-4-5",
+        max_tokens: 1500,
+        messages: [{ role: "user", content: prompt }],
+      }) as PromiseLike<unknown>,
+      ARTICLE_SCORING_TIMEOUT_MS
+    );
 
-    const block = message.content[0];
-    text = block.type === "text" ? block.text : "{}";
+    const content = (message as { content?: Array<{ type?: string; text?: string }> }).content ?? [];
+    const block = content.find((item) => item.type === "text" && typeof item.text === "string");
+    text = block?.text ?? "{}";
   } catch (e) {
     logger.warn({ error: summarizeHttpError(e) }, "AI scoring unavailable; using fallback article scoring");
     return deterministicScore();
@@ -923,6 +929,7 @@ async function fetchNitterItems(source: {
 }
 
 let scrapeInProgress = false;
+let scrapeStartedAt: Date | null = null;
 let lastScrapeAt: Date | null = null;
 let lastScrapeArticlesFound = 0;
 let lastScrapeFailures: ScrapeFailure[] = [];
@@ -963,10 +970,36 @@ const sourceFailureCounts = new Map<string, number>();
 // Per-source cache: tracks last successful fetch time so recently-scraped sources are skipped
 const sourceLastFetched = new Map<string, number>(); // source URL → timestamp ms
 const SOURCE_CACHE_TTL_MS = 12 * 60 * 1000; // 12 minutes
+const SCRAPE_STALE_AFTER_MS = Number(process.env.RGI_SCRAPE_STALE_AFTER_MS ?? 15 * 60 * 1000);
+
+function resetStaleScrapeLockIfNeeded(): boolean {
+  if (!scrapeInProgress || !scrapeStartedAt) return false;
+  const ageMs = Date.now() - scrapeStartedAt.getTime();
+  if (ageMs <= SCRAPE_STALE_AFTER_MS) return false;
+
+  logger.warn(
+    { startedAt: scrapeStartedAt.toISOString(), ageMs, staleAfterMs: SCRAPE_STALE_AFTER_MS },
+    "Resetting stale scrape lock"
+  );
+  scrapeInProgress = false;
+  lastScrapeFailures.unshift({
+    source: "Scrape runner",
+    url: "internal",
+    attempts: 0,
+    message: `Scrape lock reset after ${Math.round(ageMs / 1000)} seconds without completion.`,
+    code: "STALE_SCRAPE_LOCK",
+  });
+  if (!lastScrapeSummary.finishedAt) lastScrapeSummary.finishedAt = new Date().toISOString();
+  scrapeStartedAt = null;
+  return true;
+}
 
 export function getScrapeStatus() {
+  resetStaleScrapeLockIfNeeded();
   return {
     isRunning: scrapeInProgress,
+    startedAt: scrapeStartedAt?.toISOString() ?? lastScrapeSummary.startedAt,
+    staleAfterMs: SCRAPE_STALE_AFTER_MS,
     scheduler: process.env.FUNCTION_TARGET || process.env.K_SERVICE ? "firebase-scheduled-functions" : "local-node-cron",
     hourlySchedule: "0 * * * * America/New_York",
     morningBriefSchedule: "0 6 * * * America/New_York",
@@ -980,6 +1013,22 @@ export function getScrapeStatus() {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withOperationTimeout<T>(label: string, promise: PromiseLike<T>, timeoutMs: number): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }
 
 function retryDelayMs(attempt: number): number {
@@ -1161,6 +1210,7 @@ export async function runScrape(options: { ignoreSourceCache?: boolean } = {}): 
   articlesAdded: number;
   summary?: ScrapeSummary;
 }> {
+  resetStaleScrapeLockIfNeeded();
   if (scrapeInProgress) {
     return { articlesFound: 0, articlesAdded: 0 };
   }
@@ -1176,6 +1226,7 @@ export async function runScrape(options: { ignoreSourceCache?: boolean } = {}): 
   let lowScoreSkipped = 0;
   const articleDispositions: ArticleDispositionRecord[] = [];
   const startedAt = new Date();
+  scrapeStartedAt = startedAt;
   const scrapeRunId = `scrape-${startedAt.getTime()}-${Math.random().toString(36).slice(2, 8)}`;
   lastScrapeFailures = [];
   lastScrapeSummary = {
@@ -1731,9 +1782,17 @@ export async function runScrape(options: { ignoreSourceCache?: boolean } = {}): 
     }
     logger.info({ scrapeRunId, articlesFound, articlesAdded, feedFailures: lastScrapeFailures.length, summary: lastScrapeSummary }, "Parallel scrape run complete");
   } catch (e) {
-    logger.error({ scrapeRunId, error: summarizeHttpError(e), summary: lastScrapeSummary }, "Scrape run failed");
+    const summary = summarizeHttpError(e);
+    lastScrapeFailures.unshift({
+      source: "Scrape runner",
+      url: "firestore://sources",
+      attempts: 0,
+      ...summary,
+    });
+    logger.error({ scrapeRunId, error: summary, summary: lastScrapeSummary }, "Scrape run failed");
   } finally {
     scrapeInProgress = false;
+    scrapeStartedAt = null;
     if (!lastScrapeSummary.finishedAt) lastScrapeSummary.finishedAt = new Date().toISOString();
   }
 

@@ -5,6 +5,7 @@ import {
   deleteLocalSource,
   listLocalSources,
   localFallback,
+  localStoreModeEnabled,
   updateLocalSource,
 } from "./local-store";
 import { logger } from "./logger";
@@ -125,6 +126,7 @@ export async function getFirestoreSourceSchemaStatus(): Promise<{
 }
 
 export async function listFirestoreSources(): Promise<Source[]> {
+  if (localStoreModeEnabled()) return listLocalSources();
   try {
     const { db } = await getFirebaseBundle();
     const snapshot: any = await withFirestoreRetry("List Firestore sources", () => db.collection(COLLECTION).get());
@@ -154,6 +156,7 @@ export async function listFirestoreSources(): Promise<Source[]> {
 }
 
 export async function createFirestoreSource(source: SourcePatch): Promise<Source> {
+  if (localStoreModeEnabled()) return createLocalSource(source as Partial<Source>);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db, FieldValue } = await getFirebaseBundle();
@@ -175,6 +178,7 @@ export async function createFirestoreSource(source: SourcePatch): Promise<Source
 }
 
 export async function updateFirestoreSource(id: number | string, patch: SourcePatch): Promise<Source | null> {
+  if (localStoreModeEnabled()) return updateLocalSource(id, patch as Partial<Source>);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db, FieldValue } = await getFirebaseBundle();
@@ -189,6 +193,7 @@ export async function updateFirestoreSource(id: number | string, patch: SourcePa
 }
 
 export async function deleteFirestoreSource(id: number | string): Promise<boolean> {
+  if (localStoreModeEnabled()) return deleteLocalSource(id);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db } = await getFirebaseBundle();
@@ -203,6 +208,7 @@ export async function deleteFirestoreSource(id: number | string): Promise<boolea
 }
 
 export async function updateFirestoreSourceHealth(id: number | string, health: SourceHealth): Promise<void> {
+  if (localStoreModeEnabled()) return;
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db, FieldValue } = await getFirebaseBundle();

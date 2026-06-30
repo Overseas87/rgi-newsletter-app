@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { asArray, asStringArray } from "@/lib/arrays";
+import { responseErrorMessage } from "@/lib/api-error";
 
 type SourceFilter = "all" | "news" | "twitter" | "linkedin" | "institutional" | "corporate" | "market";
 type SortMode = "relevance" | "time" | "source";
@@ -70,12 +71,14 @@ export default function Feed() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadArticles = useCallback(async (mode: "reset" | "append" = "reset") => {
     const nextCursor = mode === "append" ? cursor : null;
     if (mode === "reset") setIsLoading(true);
     setIsFetching(true);
     setIsError(false);
+    setErrorMessage(null);
     try {
       const params = new URLSearchParams({
         limit: "60",
@@ -92,7 +95,7 @@ export default function Feed() {
       if (nextCursor) params.set("cursor", nextCursor);
       const base = import.meta.env.BASE_URL.replace(/\/$/, "");
       const res = await fetch(`${base}/api/articles/page?${params.toString()}`, { headers: { accept: "application/json" } });
-      if (!res.ok) throw new Error(`Article request failed (${res.status})`);
+      if (!res.ok) throw new Error(await responseErrorMessage(res, "News articles failed to load"));
       const data = await res.json();
       const items = Array.isArray(data?.items) ? data.items : [];
       setArticles((prev) => mode === "append" ? [...prev, ...items] : items);
@@ -101,6 +104,7 @@ export default function Feed() {
     } catch (error) {
       console.error("[feed] Failed to load articles", error);
       setIsError(true);
+      setErrorMessage(error instanceof Error ? error.message : "News articles failed to load.");
       if (mode === "reset") setArticles([]);
     } finally {
       setIsLoading(false);
@@ -470,8 +474,8 @@ export default function Feed() {
       ) : isError ? (
         <div className="py-16 text-center text-muted-foreground space-y-3">
           <AlertCircle className="h-8 w-8 mx-auto text-destructive/60" />
-          <p className="font-medium">Unable to load the intelligence feed</p>
-          <p className="text-sm">Check that the API server is running, then try refreshing.</p>
+          <p className="font-medium">News articles failed to load</p>
+          <p className="text-sm">{errorMessage ?? "Check that the API server is running, then try refreshing."}</p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className="h-3.5 w-3.5 mr-2" />
             Retry

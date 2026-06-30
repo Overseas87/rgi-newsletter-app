@@ -16,6 +16,8 @@ import {
   listLocalArticles,
   listLocalDigests,
   localFallback,
+  localFallbackEnabled,
+  localStoreModeEnabled,
   updateLocalArticle,
   updateLocalArticles,
   updateLocalDigest,
@@ -262,7 +264,9 @@ export async function listFirestoreArticles(query: {
   limit?: number;
 } = {}): Promise<Article[]> {
   let articles: Article[];
-  try {
+  if (localStoreModeEnabled()) {
+    articles = await listLocalArticles({ status: query.status, limit: query.limit ?? 1000 });
+  } else try {
     const { db } = await getFirebaseBundle();
     let ref: any = db.collection("articles");
     if (query.status) ref = ref.where("status", "==", query.status);
@@ -275,7 +279,7 @@ export async function listFirestoreArticles(query: {
     articles = snapshot.docs.map(articleFromDoc);
     lastGoodArticles = { items: articles, loadedAt: new Date() };
   } catch (error) {
-    if (lastGoodArticles?.items.length) {
+    if (localFallbackEnabled() && lastGoodArticles?.items.length) {
       logger.warn(
         {
           error: error instanceof Error ? error.message : String(error),
@@ -326,52 +330,39 @@ export async function listFirestoreArticlesPage(query: {
   includeArchive?: boolean;
 } = {}): Promise<{ items: Article[]; nextCursor: string | null; hasMore: boolean }> {
   const limit = Math.min(Math.max(Number(query.limit ?? 50) || 50, 1), 100);
+  if (localStoreModeEnabled()) {
+    const articles = await listFirestoreArticles({ ...query, limit: 1000 });
+    return { items: articles.slice(0, limit), nextCursor: null, hasMore: articles.length > limit };
+  }
   try {
-    const { db } = await getFirebaseBundle();
-    const scanLimit = Math.min(limit * 4, 250);
-    let ref: any = db.collection("articles").orderBy("__name__");
-    if (query.status) ref = ref.where("status", "==", query.status);
-    if (query.source) ref = ref.where("sourceName", "==", query.source);
-    if (query.platform) ref = ref.where("platform", "==", query.platform);
-    if (query.cursor) ref = ref.startAfter(String(query.cursor));
-
-    const snapshot: any = await withFirestoreRetry("List Firestore articles page", () => ref.limit(scanLimit + 1).get());
-    const docs = snapshot.docs.slice(0, scanLimit);
-    let articles = docs.map(articleFromDoc);
-    if (query.minScore !== undefined) articles = articles.filter((a: Article) => a.relevancyScore >= query.minScore!);
-    if (query.topicTag) articles = articles.filter((a: Article) => (Array.isArray(a.topicTags) ? a.topicTags : []).includes(query.topicTag!));
-    if (query.search?.trim()) {
-      const q = query.search.toLowerCase().trim();
-      articles = articles.filter((a: Article) => {
-        const text = [
-          a.headline,
-          a.sourceName,
-          a.author,
-          a.teaserSummary,
-          a.content,
-          ...(Array.isArray(a.topicTags) ? a.topicTags : []),
-        ].join(" ").toLowerCase();
-        return text.includes(q);
-      });
-    }
+    const scanLimit = Math.min(Math.max(limit * 8, 120), 250);
+    let articles = await listFirestoreArticles({
+      status: query.status,
+      minScore: query.minScore,
+      topicTag: query.topicTag,
+      source: query.source,
+      platform: query.platform,
+      search: query.search,
+      sortBy: query.sortBy === "source" ? "source" : "time",
+      limit: scanLimit,
+    });
     if (!query.includeArchive && !query.status) {
       articles = articles.filter((article: Article) => articleRecommendedFor(article as Article & Record<string, unknown>, "feed"));
     }
-    articles.sort((a: Article, b: Article) => {
-      if (query.sortBy === "time") return Number(b.publishedAt ?? b.scrapedAt) - Number(a.publishedAt ?? a.scrapedAt);
-      if (query.sortBy === "source") return a.sourceName.localeCompare(b.sourceName) || b.relevancyScore - a.relevancyScore;
-      return b.relevancyScore - a.relevancyScore || Number(b.scrapedAt) - Number(a.scrapedAt);
-    });
 
-    const pageItems = articles.slice(0, limit);
-    const lastDoc = docs[docs.length - 1] ?? null;
+    const cursorIndex = query.cursor ? articles.findIndex((article) => String(article.id) === String(query.cursor)) : -1;
+    const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+    const pageItems = articles.slice(start, start + limit);
+    const nextCursor = pageItems.length > 0 && start + pageItems.length < articles.length
+      ? String(pageItems[pageItems.length - 1].id)
+      : null;
     return {
       items: pageItems,
-      nextCursor: lastDoc ? String(lastDoc.id) : null,
-      hasMore: snapshot.docs.length > scanLimit,
+      nextCursor,
+      hasMore: Boolean(nextCursor),
     };
   } catch (error) {
-    if (lastGoodArticles?.items.length) {
+    if (localFallbackEnabled() && lastGoodArticles?.items.length) {
       logger.warn(
         {
           error: error instanceof Error ? error.message : String(error),
@@ -417,6 +408,7 @@ export async function countFirestoreArticles(query: { status?: string } = {}): P
 }
 
 export async function getFirestoreArticle(id: number): Promise<Article | null> {
+  if (localStoreModeEnabled()) return getLocalArticle(id);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db } = await getFirebaseBundle();
@@ -428,6 +420,7 @@ export async function getFirestoreArticle(id: number): Promise<Article | null> {
 }
 
 export async function getFirestoreArticleByUrl(url: string): Promise<Article | null> {
+  if (localStoreModeEnabled()) return getLocalArticleByUrl(url);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db } = await getFirebaseBundle();
@@ -442,6 +435,7 @@ export async function getFirestoreArticleByUrl(url: string): Promise<Article | n
 }
 
 export async function createFirestoreArticle(article: Partial<Article>): Promise<Article> {
+  if (localStoreModeEnabled()) return createLocalArticle(article);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db, FieldValue } = await getFirebaseBundle();
@@ -499,6 +493,7 @@ export async function createFirestoreArticle(article: Partial<Article>): Promise
 
 export async function updateFirestoreArticles(ids: number[], patch: Partial<Article>): Promise<void> {
   if (!ids.length) return;
+  if (localStoreModeEnabled()) return updateLocalArticles(ids, patch);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db, FieldValue } = await getFirebaseBundle();
@@ -516,6 +511,7 @@ export async function updateFirestoreArticles(ids: number[], patch: Partial<Arti
 }
 
 export async function updateFirestoreArticle(id: number, patch: Partial<Article> & Record<string, unknown>): Promise<Article | null> {
+  if (localStoreModeEnabled()) return updateLocalArticle(id, patch);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db, FieldValue } = await getFirebaseBundle();
@@ -533,6 +529,7 @@ export async function updateFirestoreArticle(id: number, patch: Partial<Article>
 }
 
 export async function deleteFirestoreArticle(id: number): Promise<boolean> {
+  if (localStoreModeEnabled()) return deleteLocalArticle(id);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db } = await getFirebaseBundle();
@@ -566,6 +563,7 @@ export async function listActiveFirestoreSources(): Promise<Source[]> {
 }
 
 export async function listFirestoreDigests(query: { status?: string; limit?: number } = {}): Promise<DigestArticle[]> {
+  if (localStoreModeEnabled()) return listLocalDigests(query);
   try {
     const { db } = await getFirebaseBundle();
     let ref: any = db.collection("digest_articles");
@@ -601,6 +599,7 @@ export async function countFirestoreDigests(query: { status?: string } = {}): Pr
 }
 
 export async function getFirestoreDigest(id: number): Promise<DigestArticle | null> {
+  if (localStoreModeEnabled()) return getLocalDigest(id);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db } = await getFirebaseBundle();
@@ -612,6 +611,7 @@ export async function getFirestoreDigest(id: number): Promise<DigestArticle | nu
 }
 
 export async function createFirestoreDigest(article: Partial<DigestArticle>): Promise<DigestArticle> {
+  if (localStoreModeEnabled()) return createLocalDigest(article);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db, FieldValue } = await getFirebaseBundle();
@@ -631,6 +631,7 @@ export async function createFirestoreDigest(article: Partial<DigestArticle>): Pr
 }
 
 export async function updateFirestoreDigest(id: number, patch: Partial<DigestArticle>): Promise<DigestArticle | null> {
+  if (localStoreModeEnabled()) return updateLocalDigest(id, patch);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db, FieldValue } = await getFirebaseBundle();
@@ -648,6 +649,7 @@ export async function updateFirestoreDigest(id: number, patch: Partial<DigestArt
 }
 
 export async function deleteFirestoreDigest(id: number): Promise<boolean> {
+  if (localStoreModeEnabled()) return deleteLocalDigest(id);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db } = await getFirebaseBundle();
@@ -669,6 +671,7 @@ export async function enrichFirestoreDigest(article: DigestArticle): Promise<Dig
 }
 
 export async function getFirestoreSettings(): Promise<Settings> {
+  if (localStoreModeEnabled()) return getLocalSettings();
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db } = await getFirebaseBundle();
@@ -680,6 +683,7 @@ export async function getFirestoreSettings(): Promise<Settings> {
 }
 
 export async function upsertFirestoreSettings(patch: Partial<Settings>): Promise<Settings> {
+  if (localStoreModeEnabled()) return upsertLocalSettings(patch);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
     const { db, FieldValue } = await getFirebaseBundle();

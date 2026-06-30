@@ -21,7 +21,7 @@ import NotFound from "@/pages/not-found";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
+      retry: false,
       refetchOnWindowFocus: false,
       staleTime: 15_000,
     },

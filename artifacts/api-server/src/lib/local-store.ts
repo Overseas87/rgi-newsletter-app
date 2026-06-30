@@ -82,6 +82,14 @@ export function localStorePath(): string {
   return STORE_PATH;
 }
 
+export function localStoreModeEnabled(): boolean {
+  return process.env.RGI_FORCE_LOCAL_STORE === "true" || process.env.USE_MOCK_DATA === "true";
+}
+
+export function localFallbackEnabled(): boolean {
+  return localStoreModeEnabled() || process.env.RGI_ALLOW_LOCAL_FALLBACK === "true";
+}
+
 export async function listLocalSources(): Promise<Source[]> {
   return (await loadDb()).sources.sort((a, b) => Number(a.tier) - Number(b.tier) || a.name.localeCompare(b.name));
 }
@@ -274,8 +282,263 @@ export async function upsertLocalSettings(patch: Partial<Settings>): Promise<Set
   return db.settings;
 }
 
+export async function seedLocalDemoData(): Promise<{
+  storePath: string;
+  sources: number;
+  articles: number;
+  pendingBriefs: number;
+  publishedBriefs: number;
+  rejectedBriefs: number;
+}> {
+  const db = await loadDb();
+  const now = new Date();
+  const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 60 * 60 * 1000);
+
+  const articles: Article[] = [
+    {
+      id: 1,
+      headline: "Gulf Shipping Pressure Tests Energy Security Assumptions",
+      url: "https://example.com/rgi/gulf-shipping-energy-security",
+      sourceName: "Reuters World",
+      sourceUrl: "https://www.reuters.com/world/",
+      author: null,
+      authorType: "Institutional",
+      platform: "news",
+      isEmergingSignal: true,
+      isPrimarySignal: true,
+      relevancyScore: 8.7,
+      authenticityScore: 9,
+      viewpoint: null,
+      topicTags: ["Geopolitics & Global Power", "Energy & Resources", "Supply Chains & Global Trade"],
+      teaserSummary: "Rising concern around Gulf shipping routes is forcing firms to reassess energy, insurance, and logistics assumptions.",
+      publishedAt: hoursAgo(2),
+      scrapedAt: hoursAgo(1),
+      content: "Rising concern around Gulf shipping routes is forcing firms to reassess energy, insurance, and logistics assumptions.",
+      status: "pending",
+      disciplineAlignment: "Strategic Foresight",
+    } as Article,
+    {
+      id: 2,
+      headline: "Central Bank Signals Keep Inflation Risk on Executive Agendas",
+      url: "https://example.com/rgi/central-bank-inflation-risk",
+      sourceName: "Financial Times World",
+      sourceUrl: "https://www.ft.com/world",
+      author: null,
+      authorType: "Institutional",
+      platform: "news",
+      isEmergingSignal: false,
+      isPrimarySignal: true,
+      relevancyScore: 8.1,
+      authenticityScore: 9,
+      viewpoint: null,
+      topicTags: ["Economics & Macroeconomics", "Currency & Monetary Policy", "Finance & Markets"],
+      teaserSummary: "Central bank caution is keeping capital costs, hiring plans, and pricing discipline in focus for enterprise leaders.",
+      publishedAt: hoursAgo(4),
+      scrapedAt: hoursAgo(3),
+      content: "Central bank caution is keeping capital costs, hiring plans, and pricing discipline in focus for enterprise leaders.",
+      status: "pending",
+      disciplineAlignment: "System Vitality",
+    } as Article,
+    {
+      id: 3,
+      headline: "AI Governance Debate Moves From Adoption Speed to Accountability",
+      url: "https://example.com/rgi/ai-governance-accountability",
+      sourceName: "Council on Foreign Relations",
+      sourceUrl: "https://www.cfr.org/",
+      author: null,
+      authorType: "Think Tank",
+      platform: "news",
+      isEmergingSignal: true,
+      isPrimarySignal: true,
+      relevancyScore: 8.9,
+      authenticityScore: 9,
+      viewpoint: null,
+      topicTags: ["Technology & AI", "Policy, Regulation & Governance", "Leadership & Organizations"],
+      teaserSummary: "The AI debate is shifting toward verification, board accountability, and what should remain under human judgment.",
+      publishedAt: hoursAgo(6),
+      scrapedAt: hoursAgo(5),
+      content: "The AI debate is shifting toward verification, board accountability, and what should remain under human judgment.",
+      status: "pending",
+      disciplineAlignment: "Strategic Foresight",
+    } as Article,
+    {
+      id: 4,
+      headline: "Supply Chain Diversification Raises Hidden Governance Costs",
+      url: "https://example.com/rgi/supply-chain-governance-costs",
+      sourceName: "BBC World",
+      sourceUrl: "https://www.bbc.com/news/world",
+      author: null,
+      authorType: "Institutional",
+      platform: "news",
+      isEmergingSignal: false,
+      isPrimarySignal: false,
+      relevancyScore: 7.4,
+      authenticityScore: 8,
+      viewpoint: null,
+      topicTags: ["Supply Chains & Global Trade", "Operations & Manufacturing", "Policy, Regulation & Governance"],
+      teaserSummary: "Diversification reduces single-country dependence, but it adds oversight, compliance, and management complexity.",
+      publishedAt: hoursAgo(8),
+      scrapedAt: hoursAgo(7),
+      content: "Diversification reduces single-country dependence, but it adds oversight, compliance, and management complexity.",
+      status: "pending",
+      disciplineAlignment: "System Vitality",
+    } as Article,
+    {
+      id: 5,
+      headline: "Policy Volatility Pushes Boards to Recheck Capital Allocation Assumptions",
+      url: "https://example.com/rgi/policy-volatility-capital-allocation",
+      sourceName: "Associated Press World",
+      sourceUrl: "https://apnews.com/hub/world-news",
+      author: null,
+      authorType: "Institutional",
+      platform: "news",
+      isEmergingSignal: false,
+      isPrimarySignal: false,
+      relevancyScore: 7.8,
+      authenticityScore: 8,
+      viewpoint: null,
+      topicTags: ["Policy, Regulation & Governance", "Finance & Markets", "Business Strategy & Corporations"],
+      teaserSummary: "Policy swings are changing the risk calculus for capital allocation, market entry, and executive timing.",
+      publishedAt: hoursAgo(10),
+      scrapedAt: hoursAgo(9),
+      content: "Policy swings are changing the risk calculus for capital allocation, market entry, and executive timing.",
+      status: "pending",
+      disciplineAlignment: "Civic Stewardship",
+    } as Article,
+  ];
+
+  const body = "The immediate facts matter, but they are only the starting point. RGI's judgment is that leaders should read this development as an early test of assumptions that often remain hidden until pressure arrives. The next consequence is not simply operational disruption. It is the burden placed on executives to decide what must be verified, what can wait, and where accountability will land if old planning models fail.";
+
+  const digests: DigestArticle[] = [
+    {
+      id: 1,
+      articleType: "daily_brief",
+      headline: "Energy Security Is Becoming a Planning-Cycle Problem",
+      body,
+      executiveSummary: ["Gulf shipping pressure is testing operating assumptions.", "Energy, insurance, and logistics risks can move faster than planning cycles."],
+      rgiTake: "RGI's judgment is that temporary market calm should not be mistaken for institutional readiness.",
+      keyTakeaways: ["Shipping routes remain a board-level exposure.", "Insurance and procurement assumptions deserve review.", "Security guarantees are becoming less predictable."],
+      implificationsForLeaders: ["Recheck energy continuity plans.", "Verify supplier and insurer assumptions.", "Separate temporary relief from durable resilience."],
+      whatMostAreMissing: "The hidden issue is not price movement. It is whether decision systems can respond before the disruption is obvious.",
+      mechanism: [],
+      constraintsAndRisks: [],
+      whatChangedSinceYesterday: [],
+      whatToWatch: ["Insurance costs", "Shipping delays", "Diplomatic signaling"],
+      summaryTakeaways: [],
+      topicTags: ["Energy & Resources", "Geopolitics & Global Power"],
+      sourceArticleIds: [1, 4],
+      relevancyScore: 8.6,
+      status: "pending_review",
+      editorNotes: null,
+      publishedAt: null,
+      discipline: "Strategic Foresight",
+      newsletterSentAt: null,
+      newsletterSentCount: null,
+      createdAt: hoursAgo(1),
+      updatedAt: hoursAgo(1),
+    } as DigestArticle,
+    {
+      id: 2,
+      articleType: "topic_article",
+      headline: "AI Accountability Is Moving Faster Than Board Verification",
+      body,
+      executiveSummary: ["AI adoption is shifting from experimentation to accountability.", "The leadership issue is what to automate, verify, resist, or retain."],
+      rgiTake: "As analysis becomes more abundant, judgment becomes more scarce.",
+      keyTakeaways: ["AI oversight is becoming a governance test.", "Boards need verification habits, not just adoption plans.", "Human accountability cannot be delegated to tools."],
+      implificationsForLeaders: ["Identify decisions that must remain human.", "Require evidence of model limits.", "Assign clear accountability for AI-driven outputs."],
+      whatMostAreMissing: "The adoption question is less important than the accountability question.",
+      mechanism: [],
+      constraintsAndRisks: [],
+      whatChangedSinceYesterday: [],
+      whatToWatch: ["AI policy", "Board oversight", "Model verification"],
+      summaryTakeaways: [],
+      topicTags: ["Technology & AI", "Governance"],
+      sourceArticleIds: [3],
+      relevancyScore: 8.9,
+      status: "pending_review",
+      editorNotes: null,
+      publishedAt: null,
+      discipline: "Strategic Foresight",
+      newsletterSentAt: null,
+      newsletterSentCount: null,
+      createdAt: hoursAgo(2),
+      updatedAt: hoursAgo(2),
+    } as DigestArticle,
+    {
+      id: 3,
+      articleType: "daily_brief",
+      headline: "Inflation Discipline Remains a Leadership Constraint",
+      body,
+      executiveSummary: ["Central bank caution keeps capital costs in focus.", "Executive timing remains constrained by inflation uncertainty."],
+      rgiTake: "The useful question is not whether rates fall. It is whether leaders have tested plans against slower relief.",
+      keyTakeaways: ["Capital costs remain uncertain.", "Pricing discipline matters.", "Hiring and investment plans need scenario checks."],
+      implificationsForLeaders: ["Stress-test capital allocation.", "Protect pricing discipline.", "Avoid building plans around quick monetary relief."],
+      whatMostAreMissing: "A softer inflation reading can still leave organizations exposed if capital assumptions are too optimistic.",
+      mechanism: [],
+      constraintsAndRisks: [],
+      whatChangedSinceYesterday: [],
+      whatToWatch: ["Central bank language", "Credit conditions", "Labor costs"],
+      summaryTakeaways: [],
+      topicTags: ["Economics & Macroeconomics", "Finance & Markets"],
+      sourceArticleIds: [2, 5],
+      relevancyScore: 8.1,
+      status: "approved",
+      editorNotes: null,
+      publishedAt: hoursAgo(6),
+      discipline: "System Vitality",
+      newsletterSentAt: null,
+      newsletterSentCount: null,
+      createdAt: hoursAgo(7),
+      updatedAt: hoursAgo(6),
+    } as DigestArticle,
+    {
+      id: 4,
+      articleType: "topic_article",
+      headline: "Archived Test Brief",
+      body,
+      executiveSummary: ["This rejected demo brief verifies the rejected workflow."],
+      rgiTake: "This item exists only to verify local rejected-state rendering.",
+      keyTakeaways: [],
+      implificationsForLeaders: [],
+      whatMostAreMissing: null,
+      mechanism: [],
+      constraintsAndRisks: [],
+      whatChangedSinceYesterday: [],
+      whatToWatch: [],
+      summaryTakeaways: [],
+      topicTags: ["Demo"],
+      sourceArticleIds: [5],
+      relevancyScore: 5,
+      status: "rejected",
+      editorNotes: null,
+      publishedAt: null,
+      discipline: "Civic Stewardship",
+      newsletterSentAt: null,
+      newsletterSentCount: null,
+      createdAt: hoursAgo(12),
+      updatedAt: hoursAgo(11),
+    } as DigestArticle,
+  ];
+
+  db.articles = articles;
+  db.digest_articles = digests;
+  db.counters.articles = articles.length;
+  db.counters.digest_articles = digests.length;
+  if (!db.sources?.length) db.sources = DEFAULT_SOURCES;
+  await saveDb(db);
+
+  return {
+    storePath: STORE_PATH,
+    sources: db.sources.length,
+    articles: db.articles.length,
+    pendingBriefs: db.digest_articles.filter((digest) => normalizeStatus(digest.status) === "pending_review").length,
+    publishedBriefs: db.digest_articles.filter((digest) => normalizeStatus(digest.status) === "approved").length,
+    rejectedBriefs: db.digest_articles.filter((digest) => normalizeStatus(digest.status) === "rejected").length,
+  };
+}
+
 export async function localFallback<T>(label: string, error: unknown, fallback: () => Promise<T>): Promise<T> {
-  if (process.env.RGI_ALLOW_LOCAL_FALLBACK !== "true") {
+  if (!localFallbackEnabled()) {
     logger.error(
       { label, error: error instanceof Error ? error.message : String(error), store: STORE_PATH },
       "Firestore unavailable; local fallback disabled"

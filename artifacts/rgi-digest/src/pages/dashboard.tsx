@@ -18,10 +18,13 @@ import {
   MessageSquareQuote,
   BarChart2,
   ArrowRight,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "wouter";
 import { asArray, asNumber, asString, asStringArray, safeDate } from "@/lib/arrays";
+import { userSafeErrorMessage } from "@/lib/api-error";
 
 const DISCIPLINE_COLORS: Record<string, string> = {
   "Strategic Foresight": "bg-blue-50 text-blue-700 border-blue-200",
@@ -636,7 +639,7 @@ function WhatMattersTodayPanel({
 export default function Dashboard() {
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [topicArticlesOpen, setTopicArticlesOpen] = useState(false);
-  const { data: summary, isLoading } = useGetDashboardSummary();
+  const { data: summary, isLoading, isError, error, refetch } = useGetDashboardSummary();
   const { data: scrapeStatus } = useGetScrapeStatus();
   const [, navigate] = useLocation();
 
@@ -652,11 +655,16 @@ export default function Dashboard() {
     );
   }
 
-  if (!summary) {
+  if (isError || !summary) {
     return (
-      <div className="py-16 text-center text-muted-foreground">
-        <p className="font-medium mb-1">Dashboard data is unavailable</p>
-        <p className="text-sm">Try refreshing or running a scrape from the sidebar.</p>
+      <div className="py-16 text-center text-muted-foreground space-y-3">
+        <AlertCircle className="h-8 w-8 mx-auto text-destructive/60" />
+        <p className="font-medium mb-1">Dashboard load failed</p>
+        <p className="text-sm">{userSafeErrorMessage(error, "Try refreshing after the database is available.")}</p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          <RefreshCw className="h-3.5 w-3.5 mr-2" />
+          Retry
+        </Button>
       </div>
     );
   }

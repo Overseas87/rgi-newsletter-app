@@ -13,11 +13,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { format, formatDistanceToNow } from "date-fns";
-import { ExternalLink, Edit3, Save, X, Eye, RotateCcw, Trash2, Clock } from "lucide-react";
+import { ExternalLink, Edit3, Save, X, Eye, RotateCcw, Trash2, Clock, AlertCircle, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { asArray, asNumber, asString, asStringArray, safeDate, safeTextBlocks } from "@/lib/arrays";
 import { useToast } from "@/hooks/use-toast";
 import { stripMarkdown } from "@/lib/utils";
+import { userSafeErrorMessage } from "@/lib/api-error";
 
 const DISCIPLINE_BADGE: Record<string, string> = {
   "Strategic Foresight": "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -380,7 +381,7 @@ function RejectedCard({ article }: { article: DigestArticle }) {
 }
 
 export default function Rejected() {
-  const { data: articles = [], isLoading } = useListDigestArticles({ status: "rejected" });
+  const { data: articles = [], isLoading, isError, error, refetch } = useListDigestArticles({ status: "rejected" });
   const safeArticles = asArray<DigestArticle>(articles);
 
   return (
@@ -397,6 +398,16 @@ export default function Rejected() {
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-40 w-full" />)}
+        </div>
+      ) : isError ? (
+        <div className="py-24 text-center text-muted-foreground space-y-3">
+          <AlertCircle className="h-8 w-8 mx-auto text-destructive/60" />
+          <p className="text-lg font-medium">Rejected items failed to load</p>
+          <p className="text-sm mt-1">{userSafeErrorMessage(error, "The rejected list could not be loaded.")}</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="h-3.5 w-3.5 mr-2" />
+            Retry
+          </Button>
         </div>
       ) : safeArticles.length === 0 ? (
         <div className="py-24 text-center text-muted-foreground">

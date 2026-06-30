@@ -18,6 +18,12 @@ if [[ -f .env ]]; then
   set +a
 fi
 
+export FIRESTORE_RETRY_ATTEMPTS="${FIRESTORE_RETRY_ATTEMPTS:-2}"
+# Firestore can take several seconds locally when the collection has hundreds
+# of articles. A too-small timeout makes healthy data look empty or stale.
+export FIRESTORE_OPERATION_TIMEOUT_MS="${FIRESTORE_OPERATION_TIMEOUT_MS:-10000}"
+export API_ROUTE_TIMEOUT_MS="${API_ROUTE_TIMEOUT_MS:-12000}"
+
 mkdir -p .local-run
 
 check_can_bind() {
