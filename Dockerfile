@@ -5,7 +5,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=8080
-ENV FIREBASE_PROJECT_ID=rgi-insight-blog-generator
+ENV FIREBASE_PROJECT_ID=blog-generator-1bb12
 ENV RGI_INLINE_JOBS=true
 
 RUN corepack enable

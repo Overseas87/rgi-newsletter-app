@@ -15,7 +15,7 @@ const BUILD_MARKER = "rgi-local-2026-05-20-scrape-sync-daily-brief-selection-v2"
 
 function runtimeFlags() {
   return {
-    firestoreProjectId: process.env.FIREBASE_PROJECT_ID ?? "rgi-insight-blog-generator",
+    firestoreProjectId: process.env.FIREBASE_PROJECT_ID ?? "blog-generator-1bb12",
     firestoreEmulatorHost: process.env.FIRESTORE_EMULATOR_HOST ?? null,
     firestoreEmulatorActive: Boolean(process.env.FIRESTORE_EMULATOR_HOST || process.env.USE_FIRESTORE_EMULATOR === "true"),
     localStoreMode: localStoreModeEnabled(),

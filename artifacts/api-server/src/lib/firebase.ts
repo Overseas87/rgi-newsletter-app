@@ -9,7 +9,7 @@ type FirebaseBundle = {
 
 let bundlePromise: Promise<FirebaseBundle> | null = null;
 
-export const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "rgi-insight-blog-generator";
+export const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "blog-generator-1bb12";
 
 function isManagedGoogleRuntime(): boolean {
   return Boolean(

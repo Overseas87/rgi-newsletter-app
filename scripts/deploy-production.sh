@@ -4,7 +4,7 @@ set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-PROJECT_ID="${PROJECT_ID:-rgi-insight-blog-generator}"
+PROJECT_ID="${PROJECT_ID:-blog-generator-1bb12}"
 FRONTEND_URL="${FRONTEND_URL:-https://${PROJECT_ID}.web.app}"
 
 export PATH="/Users/aaronschoneck/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH"
