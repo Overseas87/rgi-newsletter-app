@@ -34,6 +34,10 @@ const DEFAULT_SETTINGS: Settings = {
 let lastGoodArticles: { items: Article[]; loadedAt: Date } | null = null;
 let lastGoodDigests: { items: DigestArticle[]; loadedAt: Date } | null = null;
 
+type DigestWritePatch = Partial<DigestArticle> & {
+  strategicPlan?: unknown;
+};
+
 export function useFirestoreData(): boolean {
   return true;
 }
@@ -197,20 +201,23 @@ function digestFromDoc(doc: any): DigestArticle {
     rejectedAt: dateOrNull(data.rejectedAt),
     generationMode: data.generationMode === "fallback" ? "fallback" : data.generationMode === "ai" ? "ai" : undefined,
     fallbackReason: typeof data.fallbackReason === "string" ? data.fallbackReason : null,
+    strategicPlan: typeof data.strategicPlan === "object" && data.strategicPlan !== null ? data.strategicPlan : null,
   } as DigestArticle & {
     approvedAt?: Date | null;
     rejectedAt?: Date | null;
     generationMode?: "ai" | "fallback";
     fallbackReason?: string | null;
+    strategicPlan?: unknown;
   };
 }
 
-function digestToDoc(article: Partial<DigestArticle>, includeDefaults = false): Record<string, unknown> {
-  const extended = article as Partial<DigestArticle> & {
+function digestToDoc(article: DigestWritePatch, includeDefaults = false): Record<string, unknown> {
+  const extended = article as DigestWritePatch & {
     approvedAt?: Date | string | null;
     rejectedAt?: Date | string | null;
     generationMode?: "ai" | "fallback";
     fallbackReason?: string | null;
+    strategicPlan?: unknown;
   };
   const doc: Record<string, unknown> = {
     articleType: article.articleType,
@@ -239,6 +246,7 @@ function digestToDoc(article: Partial<DigestArticle>, includeDefaults = false): 
     rejectedAt: extended.rejectedAt,
     generationMode: extended.generationMode,
     fallbackReason: extended.fallbackReason,
+    strategicPlan: extended.strategicPlan,
   };
   return Object.fromEntries(Object.entries(doc).filter(([, value]) => value !== undefined));
 }
@@ -262,6 +270,7 @@ export async function listFirestoreArticles(query: {
   search?: string;
   sortBy?: string;
   limit?: number;
+  summaryOnly?: boolean;
 } = {}): Promise<Article[]> {
   let articles: Article[];
   if (localStoreModeEnabled()) {
@@ -273,6 +282,42 @@ export async function listFirestoreArticles(query: {
     if (query.source) ref = ref.where("sourceName", "==", query.source);
     if (query.platform) ref = ref.where("platform", "==", query.platform);
     if (query.sortBy === "time") ref = ref.orderBy("publishedAt", "desc");
+    if (query.summaryOnly) {
+      ref = ref.select(
+        "id",
+        "headline",
+        "url",
+        "sourceName",
+        "sourceUrl",
+        "author",
+        "authorType",
+        "platform",
+        "isEmergingSignal",
+        "isPrimarySignal",
+        "relevancyScore",
+        "authenticityScore",
+        "viewpoint",
+        "topicTags",
+        "teaserSummary",
+        "publishedAt",
+        "scrapedAt",
+        "status",
+        "disciplineAlignment",
+        "scoreExplanation",
+        "scoreBreakdown",
+        "recencyScore",
+        "sourceAuthorityScore",
+        "strategicImpactScore",
+        "executiveRelevanceScore",
+        "recommendedUse",
+        "reasonForAcceptance",
+        "reasonForRejection",
+        "rgiProfileVersion",
+        "moderationNote",
+        "moderatedAt",
+        "moderatedBy",
+      );
+    }
     const snapshot: any = await withFirestoreRetry("List Firestore articles", () =>
       ref.limit(Math.min(query.limit ?? 200, 2000)).get()
     );
@@ -335,7 +380,7 @@ export async function listFirestoreArticlesPage(query: {
     return { items: articles.slice(0, limit), nextCursor: null, hasMore: articles.length > limit };
   }
   try {
-    const scanLimit = Math.min(Math.max(limit * 8, 120), 250);
+    const scanLimit = Math.min(Math.max(limit * 3, 80), 180);
     let articles = await listFirestoreArticles({
       status: query.status,
       minScore: query.minScore,
@@ -345,6 +390,7 @@ export async function listFirestoreArticlesPage(query: {
       search: query.search,
       sortBy: query.sortBy === "source" ? "source" : "time",
       limit: scanLimit,
+      summaryOnly: true,
     });
     if (!query.includeArchive && !query.status) {
       articles = articles.filter((article: Article) => articleRecommendedFor(article as Article & Record<string, unknown>, "feed"));
@@ -610,7 +656,7 @@ export async function getFirestoreDigest(id: number): Promise<DigestArticle | nu
   }
 }
 
-export async function createFirestoreDigest(article: Partial<DigestArticle>): Promise<DigestArticle> {
+export async function createFirestoreDigest(article: DigestWritePatch): Promise<DigestArticle> {
   if (localStoreModeEnabled()) return createLocalDigest(article);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
@@ -630,7 +676,7 @@ export async function createFirestoreDigest(article: Partial<DigestArticle>): Pr
   }
 }
 
-export async function updateFirestoreDigest(id: number, patch: Partial<DigestArticle>): Promise<DigestArticle | null> {
+export async function updateFirestoreDigest(id: number, patch: DigestWritePatch): Promise<DigestArticle | null> {
   if (localStoreModeEnabled()) return updateLocalDigest(id, patch);
   try {
     if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");

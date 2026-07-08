@@ -51,10 +51,13 @@ async function createOpenAiMessage(request: AnthropicLikeRequest) {
 }
 
 export const anthropic = {
-  messages: {
+	messages: {
     create(request: AnthropicLikeRequest) {
       if (process.env.OPENAI_API_KEY) return createOpenAiMessage(request);
-      return anthropicClient.messages.create(request);
+      return anthropicClient.messages.create({
+        ...request,
+        max_tokens: request.max_tokens ?? 4096,
+      });
     },
   },
 };

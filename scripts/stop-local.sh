@@ -4,31 +4,21 @@ set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-stop_port() {
-  local port="$1"
-  local pids
-  pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
-  if [[ -z "$pids" ]]; then
-    echo "No local RGI process is listening on port $port."
-    return
-  fi
+# shellcheck source=scripts/local-process-utils.sh
+source ./scripts/local-process-utils.sh
 
-  echo "Stopping process(es) on port $port: $pids"
-  # shellcheck disable=SC2086
-  kill $pids >/dev/null 2>&1 || true
-  sleep 1
+status=0
 
-  pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
-  if [[ -n "$pids" ]]; then
-    echo "Force-stopping process(es) on port $port: $pids"
-    # shellcheck disable=SC2086
-    kill -9 $pids >/dev/null 2>&1 || true
-  fi
-}
+local_stop_owned_processes || status=1
+local_stop_project_port_listeners 3000 || status=1
+local_stop_project_port_listeners 21410 || status=1
 
-stop_port 3000
-stop_port 21410
+if local_verify_ports_clear; then
+  echo "Local RGI app ports are clear."
+  exit 0
+fi
 
-rm -f .local-run/backend.pid .local-run/frontend.pid
-
-echo "Local RGI app ports are clear."
+echo
+echo "Local RGI app ports are not clear."
+echo "The remaining listener(s) were not killed because they do not clearly belong to this project, or the OS refused the signal."
+exit 1

@@ -85,6 +85,8 @@ async function healthPayload() {
 function summarizeScrapeStatus() {
   const status = getScrapeStatus();
   return {
+    state: status.state,
+    message: status.message,
     isRunning: status.isRunning,
     startedAt: status.startedAt,
     staleAfterMs: status.staleAfterMs,

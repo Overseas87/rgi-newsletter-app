@@ -222,6 +222,7 @@ export async function createLocalDigest(article: Partial<DigestArticle>): Promis
   const id = (db.counters.digest_articles ?? 0) + 1;
   db.counters.digest_articles = id;
   const now = new Date();
+  const extended = article as Partial<DigestArticle> & { strategicPlan?: unknown };
   const saved = {
     id,
     articleType: article.articleType ?? "daily_brief",
@@ -246,9 +247,10 @@ export async function createLocalDigest(article: Partial<DigestArticle>): Promis
     discipline: article.discipline ?? null,
     newsletterSentAt: article.newsletterSentAt ?? null,
     newsletterSentCount: article.newsletterSentCount ?? null,
+    strategicPlan: extended.strategicPlan ?? null,
     createdAt: now,
     updatedAt: now,
-  } as DigestArticle;
+  } as DigestArticle & { strategicPlan?: unknown };
   db.digest_articles.push(saved);
   await saveDb(db);
   return saved;

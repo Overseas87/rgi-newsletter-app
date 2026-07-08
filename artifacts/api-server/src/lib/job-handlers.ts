@@ -53,6 +53,7 @@ async function persistStrategicBrief(job: JobRecord): Promise<DigestArticle & { 
     editorNotes,
     generationMode: generated.generationMode ?? "ai",
     fallbackReason: generated.fallbackReason ?? null,
+    strategicPlan: generated.strategicPlan ?? null,
   } as Partial<DigestArticle>);
 
   if (articleIds.length) await updateFirestoreArticles(articleIds, { status: "selected" });
@@ -92,6 +93,7 @@ async function persistDailyBrief(job: JobRecord): Promise<DigestArticle & { sour
     editorNotes,
     generationMode: generated.generationMode ?? "ai",
     fallbackReason: generated.fallbackReason ?? null,
+    strategicPlan: generated.strategicPlan ?? null,
   } as Partial<DigestArticle>);
 
   if (generated.sourceArticleIds.length) await updateFirestoreArticles(generated.sourceArticleIds, { status: "selected" });

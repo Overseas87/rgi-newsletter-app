@@ -139,6 +139,8 @@ type ScrapeSummary = {
   feedResults: ScrapeFeedResult[];
 };
 
+type ScrapeState = "idle" | "running" | "completed" | "partial" | "failed" | "stale";
+
 type ValidScrapedItem = ScrapedItem & {
   headline: string;
   url: string;
@@ -400,7 +402,7 @@ type StrategicScoreBreakdown = {
 export const ARTICLE_INSERTION_SCORE_THRESHOLD = 4.0;
 export const DASHBOARD_SIGNAL_SCORE_THRESHOLD = 5.5;
 export const BRIEF_CANDIDATE_SCORE_THRESHOLD = 7.0;
-const ARTICLE_SCORING_TIMEOUT_MS = Number(process.env.RGI_ARTICLE_SCORING_TIMEOUT_MS ?? 8000);
+const ARTICLE_SCORING_TIMEOUT_MS = Number(process.env.RGI_ARTICLE_SCORING_TIMEOUT_MS ?? 3000);
 
 const RGI_FACTOR_WEIGHTS = {
   sourceAuthority: 0.08,
@@ -933,6 +935,8 @@ let scrapeStartedAt: Date | null = null;
 let lastScrapeAt: Date | null = null;
 let lastScrapeArticlesFound = 0;
 let lastScrapeFailures: ScrapeFailure[] = [];
+let lastScrapeState: ScrapeState = "idle";
+let lastScrapeMessage = "No scrape has run yet.";
 let lastScrapeSummary: ScrapeSummary = {
   startedAt: null,
   finishedAt: null,
@@ -971,6 +975,7 @@ const sourceFailureCounts = new Map<string, number>();
 const sourceLastFetched = new Map<string, number>(); // source URL → timestamp ms
 const SOURCE_CACHE_TTL_MS = 12 * 60 * 1000; // 12 minutes
 const SCRAPE_STALE_AFTER_MS = Number(process.env.RGI_SCRAPE_STALE_AFTER_MS ?? 15 * 60 * 1000);
+const SCRAPE_EXISTING_DEDUPE_LIMIT = 120;
 
 function resetStaleScrapeLockIfNeeded(): boolean {
   if (!scrapeInProgress || !scrapeStartedAt) return false;
@@ -982,11 +987,13 @@ function resetStaleScrapeLockIfNeeded(): boolean {
     "Resetting stale scrape lock"
   );
   scrapeInProgress = false;
+  lastScrapeState = "stale";
+  lastScrapeMessage = `Scrape lock reset after ${Math.round(ageMs / 1000)} seconds without completion.`;
   lastScrapeFailures.unshift({
     source: "Scrape runner",
     url: "internal",
     attempts: 0,
-    message: `Scrape lock reset after ${Math.round(ageMs / 1000)} seconds without completion.`,
+    message: lastScrapeMessage,
     code: "STALE_SCRAPE_LOCK",
   });
   if (!lastScrapeSummary.finishedAt) lastScrapeSummary.finishedAt = new Date().toISOString();
@@ -997,6 +1004,10 @@ function resetStaleScrapeLockIfNeeded(): boolean {
 export function getScrapeStatus() {
   resetStaleScrapeLockIfNeeded();
   return {
+    state: scrapeInProgress ? "running" : lastScrapeState,
+    message: scrapeInProgress
+      ? lastScrapeMessage || "Scrape is running."
+      : lastScrapeMessage,
     isRunning: scrapeInProgress,
     startedAt: scrapeStartedAt?.toISOString() ?? lastScrapeSummary.startedAt,
     staleAfterMs: SCRAPE_STALE_AFTER_MS,
@@ -1206,16 +1217,26 @@ export async function initializeScrapeStatus(): Promise<void> {
 }
 
 export async function runScrape(options: { ignoreSourceCache?: boolean } = {}): Promise<{
+  status: ScrapeState;
+  message: string;
   articlesFound: number;
   articlesAdded: number;
   summary?: ScrapeSummary;
 }> {
   resetStaleScrapeLockIfNeeded();
   if (scrapeInProgress) {
-    return { articlesFound: 0, articlesAdded: 0 };
+    return {
+      status: "running",
+      message: "Scrape is already running.",
+      articlesFound: 0,
+      articlesAdded: 0,
+      summary: lastScrapeSummary,
+    };
   }
 
   scrapeInProgress = true;
+  lastScrapeState = "running";
+  lastScrapeMessage = "Scrape is running.";
   logger.info("Starting parallel scrape run");
 
   let articlesFound = 0;
@@ -1267,14 +1288,29 @@ export async function runScrape(options: { ignoreSourceCache?: boolean } = {}): 
     logger.info({ scrapeRunId, activeSources: sources.length }, "Scrape run loaded active Firestore sources");
 
     lastScrapeSummary.totalFeeds = sources.length;
+    lastScrapeMessage = `Loaded ${sources.length} active source${sources.length === 1 ? "" : "s"}. Preparing duplicate checks.`;
 
-    const existingArticles = await listFirestoreArticles({ limit: 1000 });
+    const existingArticles = await listFirestoreArticles({ limit: SCRAPE_EXISTING_DEDUPE_LIMIT, sortBy: "time" }).catch((error) => {
+      const summary = summarizeHttpError(error);
+      lastScrapeFailures.push({
+        source: "Dedupe preflight",
+        url: "firestore://articles",
+        attempts: 0,
+        ...summary,
+      });
+      logger.warn(
+        { scrapeRunId, limit: SCRAPE_EXISTING_DEDUPE_LIMIT, error: summary },
+        "Existing article dedupe preflight failed; continuing with direct per-article dedupe checks"
+      );
+      return [];
+    });
     const existingUrls = new Set(existingArticles.map((article) => normalizeUrl(article.url)).filter(Boolean));
     const existingTitles = new Set(existingArticles.map((article) => titleFingerprint(article.headline)).filter(Boolean));
     const batchUrls = new Set<string>();
     const batchTitles = new Set<string>();
 
     // Bounded concurrency keeps scraping from starving UI/API requests during slow feed runs.
+    lastScrapeMessage = `Fetching ${sources.length} RSS/feed source${sources.length === 1 ? "" : "s"}.`;
     logger.info({ scrapeRunId, count: sources.length, concurrency: 6 }, "Fetching sources with bounded concurrency");
     const fetchResults = await mapWithConcurrency(
       sources,
@@ -1404,6 +1440,7 @@ export async function runScrape(options: { ignoreSourceCache?: boolean } = {}): 
     lastScrapeSummary.successfulFeeds = lastScrapeSummary.feedResults.filter((feed) => feed.status === "success").length;
     lastScrapeSummary.emptyFeeds = lastScrapeSummary.feedResults.filter((feed) => feed.status === "empty").length;
     lastScrapeSummary.failedFeeds = lastScrapeSummary.feedResults.filter((feed) => feed.status === "failed").length;
+    lastScrapeMessage = `Scoring ${articlesFound} article${articlesFound === 1 ? "" : "s"} from ${lastScrapeSummary.successfulFeeds} successful feed${lastScrapeSummary.successfulFeeds === 1 ? "" : "s"}.`;
     logger.info({ scrapeRunId, articlesFound, summary: lastScrapeSummary }, "All sources fetched — scoring articles");
 
     // Scoring is also bounded so provider/network stalls cannot monopolize the server.
@@ -1652,6 +1689,7 @@ export async function runScrape(options: { ignoreSourceCache?: boolean } = {}): 
     lastScrapeSummary.acceptedForFeed = validArticles.filter((article) => article.recommendedUse === "feed").length;
     lastScrapeSummary.acceptedForDashboard = validArticles.filter((article) => article.recommendedUse === "dashboard").length;
     lastScrapeSummary.acceptedForDailyBrief = validArticles.filter((article) => article.recommendedUse === "daily_brief").length;
+    lastScrapeMessage = `Saving ${validArticles.length} qualifying article${validArticles.length === 1 ? "" : "s"}.`;
 
     // Group by leading tag to detect coverage clusters
     const clusterMap = new Map<string, ArticleToInsert[]>();
@@ -1681,6 +1719,7 @@ export async function runScrape(options: { ignoreSourceCache?: boolean } = {}): 
 
     // Insert new articles — skip low-relevance content below the ingestion threshold.
     for (const article of validArticles) {
+      lastScrapeMessage = `Saving articles (${articlesAdded}/${validArticles.length}).`;
       const multiSourceBoost = boostMap.get(article.url) ?? 0;
       const boostedScore = Math.min(10, Math.round((article.relevancyScore + multiSourceBoost) * 10) / 10);
 
@@ -1780,6 +1819,10 @@ export async function runScrape(options: { ignoreSourceCache?: boolean } = {}): 
         "Scrape disposition total does not match accepted article count"
       );
     }
+    lastScrapeState = lastScrapeSummary.failedFeeds > 0 || lastScrapeFailures.length > 0 ? "partial" : "completed";
+    lastScrapeMessage = lastScrapeState === "partial"
+      ? `Scrape completed with partial failures: ${articlesAdded} articles saved, ${lastScrapeSummary.failedFeeds} feeds failed, ${lastScrapeFailures.length} scrape issue${lastScrapeFailures.length === 1 ? "" : "s"} recorded.`
+      : `Scrape completed successfully: ${articlesAdded} articles saved.`;
     logger.info({ scrapeRunId, articlesFound, articlesAdded, feedFailures: lastScrapeFailures.length, summary: lastScrapeSummary }, "Parallel scrape run complete");
   } catch (e) {
     const summary = summarizeHttpError(e);
@@ -1789,6 +1832,8 @@ export async function runScrape(options: { ignoreSourceCache?: boolean } = {}): 
       attempts: 0,
       ...summary,
     });
+    lastScrapeState = "failed";
+    lastScrapeMessage = summary.message;
     logger.error({ scrapeRunId, error: summary, summary: lastScrapeSummary }, "Scrape run failed");
   } finally {
     scrapeInProgress = false;
@@ -1796,5 +1841,5 @@ export async function runScrape(options: { ignoreSourceCache?: boolean } = {}): 
     if (!lastScrapeSummary.finishedAt) lastScrapeSummary.finishedAt = new Date().toISOString();
   }
 
-  return { articlesFound, articlesAdded, summary: lastScrapeSummary };
+  return { status: lastScrapeState, message: lastScrapeMessage, articlesFound, articlesAdded, summary: lastScrapeSummary };
 }

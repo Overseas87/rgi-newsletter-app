@@ -1,6 +1,34 @@
 import app, { initializeApp } from "./app";
 import { logger } from "./lib/logger";
 
+function toError(reason: unknown): Error {
+  return reason instanceof Error ? reason : new Error(String(reason));
+}
+
+process.on("uncaughtException", (err) => {
+  logger.fatal({ err }, "Backend uncaught exception; process will exit");
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.fatal({ err: toError(reason) }, "Backend unhandled rejection; process will exit");
+  process.exit(1);
+});
+
+process.once("SIGINT", () => {
+  logger.info({ signal: "SIGINT" }, "Backend received shutdown signal");
+  process.exit(0);
+});
+
+process.once("SIGTERM", () => {
+  logger.info({ signal: "SIGTERM" }, "Backend received shutdown signal");
+  process.exit(0);
+});
+
+process.on("exit", (code) => {
+  logger.info({ code }, "Backend process exiting");
+});
+
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {

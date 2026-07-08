@@ -5,7 +5,54 @@ import { getFirestoreArticle, getFirestoreDigest, listFirestoreArticles, listFir
 import { listFirestoreNewsletterSubscribers } from "./firestore-newsletter";
 import { BRIEF_CANDIDATE_SCORE_THRESHOLD, DASHBOARD_SIGNAL_SCORE_THRESHOLD, runScrape } from "./scraper";
 import { articleRecommendedFor } from "./rgi-relevance";
-import { applyBrandComplianceToBrief, applyRgiBrandComplianceToText, RGI_BRAND_VOICE_SYSTEM_PROMPT } from "./brand-voice";
+import { applyBrandComplianceToBrief, applyRgiBrandComplianceToText, RGI_BRAND_VOICE_SYSTEM_PROMPT, type BrandComplianceReport } from "./brand-voice";
+
+export type StrategicPlanSourceRole = "core" | "supporting" | "context";
+
+export interface StrategicPlan {
+  plannerVersion: "strategic-planning-metadata-v1";
+  generatedAt: string;
+  centralThesis: string;
+  judgmentIssue: string;
+  whyThisNow: string;
+  selectedSources: Array<{
+    articleId: number;
+    source: string;
+    role: StrategicPlanSourceRole;
+    evidenceUsed: string;
+    whyItBelongs: string;
+  }>;
+  rejectedSources: Array<{
+    articleId: number;
+    reason: string;
+  }>;
+  causalMechanism: {
+    cause: string;
+    transmission: string;
+    effect: string;
+  };
+  secondOrderConsequences: string[];
+  thirdOrderConsequences: string[];
+  executiveBlindSpot: string;
+  dangerousAssumption: string;
+  institutionalExposure: string;
+  governanceImplication: string;
+  whoIsMostExposed: string[];
+  whatToVerify: string[];
+  whatToResist: string[];
+  whatRequiresAction: string[];
+  whatRequiresRestraint: string[];
+  confidence: number;
+  confidenceReason: string;
+  competingExplanations: string[];
+  whatWouldChangeThisView: string[];
+  rgiJudgment: string;
+  titleDirection: string;
+  lengthPlan: {
+    targetWords: number;
+    paragraphCount: number;
+  };
+}
 
 // Topic article: Key: sorted article IDs + editorNotes → cached result + timestamp
 interface CachedArticle {
@@ -13,12 +60,16 @@ interface CachedArticle {
     headline: string; body: string; executiveSummary: string[]; rgiTake: string;
     keyTakeaways: string[]; whatToWatch: string[]; topicTags: string[]; discipline: string; relevancyScore: number;
     generationMode?: "ai" | "fallback"; fallbackReason?: string;
+    strategicPlan?: StrategicPlan | null;
   };
   generatedAt: number;
 }
 const topicArticleCache = new Map<string, CachedArticle>();
 const TOPIC_CACHE_TTL_MS = 60 * 60 * 1000; // 60 minutes
 const GENERATION_FORMAT_VERSION = "rgi-foresight-one-page-v1";
+const DAILY_BRIEF_RECENT_SCAN_LIMIT = 120;
+const DAILY_BRIEF_SCORE_FALLBACK_SCAN_LIMIT = 120;
+const DAILY_BRIEF_MAX_SOURCE_ARTICLES = 7;
 
 function topicArticleCacheKey(articleIds: number[], editorNotes?: string | null): string {
   return `${GENERATION_FORMAT_VERSION}:${[...articleIds].sort((a, b) => a - b).join(",")}:${editorNotes?.trim() || ""}`;
@@ -32,6 +83,7 @@ interface DailyBriefResult {
   whatMostAreMissing: string | null; mechanism: string[]; constraintsAndRisks: string[];
   topicTags: string[]; discipline: string; relevancyScore: number; sourceArticleIds: number[];
   generationMode?: "ai" | "fallback"; fallbackReason?: string;
+  strategicPlan?: StrategicPlan | null;
 }
 
 // Compact source format — headline + viewpoint + short summary (no full content dump)
@@ -569,6 +621,71 @@ function chooseDailyBriefArticles(allArticles: Article[], today: Date, excludedT
   return { articles: [], selectionMode: "none" };
 }
 
+function mergeUniqueArticles(...groups: Article[][]): Article[] {
+  const byId = new Map<number, Article>();
+  for (const group of groups) {
+    for (const article of group) byId.set(article.id, article);
+  }
+  return [...byId.values()];
+}
+
+async function loadDailyBriefArticlesById(articleIds: number[], traceId: string): Promise<Article[]> {
+  const uniqueIds = [...new Set(articleIds.map(Number).filter((id) => Number.isFinite(id)))];
+  const articles = (await Promise.all(uniqueIds.map((id) => getFirestoreArticle(id))))
+    .filter((article): article is Article => Boolean(article));
+  const ranked = rankDailyBriefArticles(articles).slice(0, DAILY_BRIEF_MAX_SOURCE_ARTICLES);
+  logger.info(
+    {
+      traceId,
+      requestedArticleIds: uniqueIds,
+      loadedArticleIds: ranked.map((article) => article.id),
+      requestedCount: uniqueIds.length,
+      loadedCount: ranked.length,
+    },
+    "[daily-brief-trace] Loaded explicit Daily Brief articles by document id"
+  );
+  return ranked;
+}
+
+async function loadDailyBriefCandidateArticles(traceId: string): Promise<Article[]> {
+  const recent = await listFirestoreArticles({ limit: DAILY_BRIEF_RECENT_SCAN_LIMIT, sortBy: "time" });
+  const strongRecentCount = recent.filter((article) =>
+    articleRecommendedFor(article as Article & Record<string, unknown>, "daily_brief") ||
+    articleRecommendedFor(article as Article & Record<string, unknown>, "dashboard")
+  ).length;
+
+  if (strongRecentCount >= 8) {
+    logger.info(
+      {
+        traceId,
+        strategy: "recent-bounded",
+        recentLimit: DAILY_BRIEF_RECENT_SCAN_LIMIT,
+        loadedCount: recent.length,
+        strongRecentCount,
+      },
+      "[daily-brief-trace] Loaded bounded recent Daily Brief candidate pool"
+    );
+    return recent;
+  }
+
+  const scoreFallback = await listFirestoreArticles({ limit: DAILY_BRIEF_SCORE_FALLBACK_SCAN_LIMIT });
+  const merged = mergeUniqueArticles(recent, scoreFallback);
+  logger.info(
+    {
+      traceId,
+      strategy: "recent-plus-score-fallback",
+      recentLimit: DAILY_BRIEF_RECENT_SCAN_LIMIT,
+      scoreFallbackLimit: DAILY_BRIEF_SCORE_FALLBACK_SCAN_LIMIT,
+      recentCount: recent.length,
+      scoreFallbackCount: scoreFallback.length,
+      mergedCount: merged.length,
+      strongRecentCount,
+    },
+    "[daily-brief-trace] Loaded bounded Daily Brief candidate pool with relevance fallback"
+  );
+  return merged;
+}
+
 function topSourceNames(articles: Array<Record<string, unknown>>, limit = 5): string[] {
   return uniqueStrings(articles.map((a) => cleanSnippet(a.sourceName, 80)), ["source"]).slice(0, limit);
 }
@@ -820,6 +937,15 @@ type GeneratedBriefDraft = {
   discipline?: string;
   relevancyScore?: number;
   generationMode?: "ai" | "fallback";
+  brandCompliance?: BrandComplianceReport;
+  strategicPlan?: StrategicPlan | null;
+};
+
+type CompleteGeneratedBriefDraft = GeneratedBriefDraft & {
+  whatToWatch: string[];
+  topicTags: string[];
+  discipline: string;
+  relevancyScore: number;
 };
 
 function countWords(value: unknown): number {
@@ -843,7 +969,7 @@ function anilAlignmentIssues(brief: GeneratedBriefDraft): string[] {
   if (foresightWords < Math.max(220, signalWords * 1.75)) {
     issues.push("The analytical essay is not the center of gravity");
   }
-  if (countWords(fullText) > 560) {
+  if (countWords(fullText) > 850) {
     issues.push("The brief is too long for the one-page PDF constraint");
   }
   if (!/\b(second-order|third-order|two moves|compound|structural|institutional|governance|legitimacy|accountability|assumption|consequence|exposure)\b/i.test(foresightText)) {
@@ -880,6 +1006,334 @@ function anilAlignmentIssues(brief: GeneratedBriefDraft): string[] {
 function parseJsonResponse(text: string): Record<string, unknown> {
   const cleanText = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
   return JSON.parse(cleanText) as Record<string, unknown>;
+}
+
+function parsedString(value: unknown, fallback = ""): string {
+  return typeof value === "string" && value.trim().length > 0 ? value : fallback;
+}
+
+const STRATEGIC_PLANNER_PROMPT = `You are the strategic planning layer for the Rick Goings Institute (RGI).
+
+Your task is NOT to write the brief. Your task is to think before writing and produce internal planning metadata only.
+
+RGI exists to help accomplished leaders improve judgment where conventional business training, technical expertise, and analytic tools are no longer enough. The planning layer must identify one coherent RGI thesis, the evidence that truly belongs, the evidence that should be excluded, the causal mechanism, second-order and third-order consequences, and the judgment discipline leaders need.
+
+Brief type: {BRIEF_TYPE}
+
+Candidate article signals:
+{SOURCES}
+
+Editorial direction:
+{NOTES}
+
+Coherence boundary:
+{COHERENCE_CONTEXT}
+
+Planner requirements:
+1. Select the single strongest thesis. Do not create a roundup.
+2. Include only articles that directly support the thesis.
+3. Reject interesting but off-thesis articles.
+4. Explain the causal mechanism that connects the evidence to consequence.
+5. Identify second-order and third-order consequences.
+6. Identify what executives are likely to miss.
+7. Identify what leaders should verify, resist, act on, and hold back on.
+8. State what is uncertain and what would change the judgment.
+9. Avoid generic claims. Use specific actors, constraints, tradeoffs, and consequences from the source material.
+
+Return ONLY valid JSON. No markdown. No prose outside JSON.
+The JSON object must have exactly this shape:
+{
+  "centralThesis": "specific one-sentence thesis",
+  "judgmentIssue": "specific judgment problem",
+  "whyThisNow": "why the issue matters now",
+  "selectedSources": [
+    {
+      "articleId": 123,
+      "source": "source name",
+      "role": "core | supporting | context",
+      "evidenceUsed": "specific evidence used",
+      "whyItBelongs": "why this evidence supports the thesis"
+    }
+  ],
+  "rejectedSources": [
+    {
+      "articleId": 456,
+      "reason": "why this article is off-thesis or weaker"
+    }
+  ],
+  "causalMechanism": {
+    "cause": "initial cause",
+    "transmission": "how the cause moves through institutions, markets, policy, or behavior",
+    "effect": "observable or likely consequence"
+  },
+  "secondOrderConsequences": ["specific consequence"],
+  "thirdOrderConsequences": ["specific consequence"],
+  "executiveBlindSpot": "what leaders are likely to miss",
+  "dangerousAssumption": "assumption that could fail",
+  "institutionalExposure": "institution or governance exposure",
+  "governanceImplication": "governance implication",
+  "whoIsMostExposed": ["specific actor or institution"],
+  "whatToVerify": ["specific question or signal to verify"],
+  "whatToResist": ["specific response or assumption to resist"],
+  "whatRequiresAction": ["specific action area"],
+  "whatRequiresRestraint": ["specific area requiring restraint"],
+  "confidence": 1-10,
+  "confidenceReason": "why confidence is set at this level",
+  "competingExplanations": ["credible alternative explanation"],
+  "whatWouldChangeThisView": ["evidence that would change the judgment"],
+  "rgiJudgment": "concise RGI judgment",
+  "titleDirection": "title direction, not final headline",
+  "lengthPlan": {
+    "targetWords": 725,
+    "paragraphCount": 6
+  }
+}`;
+
+function plannerSource(article: Article, index: number): string {
+  const summary = cleanSnippet(article.teaserSummary || article.content || article.headline, 500);
+  const tags = Array.isArray(article.topicTags) ? article.topicTags.join(", ") : "";
+  return [
+    `A${index + 1}`,
+    `articleId: ${article.id}`,
+    `source: ${article.sourceName}`,
+    `headline: ${article.headline}`,
+    `score: ${article.relevancyScore}/10`,
+    tags ? `topics: ${tags}` : null,
+    `summary: ${summary}`,
+  ].filter(Boolean).join("\n");
+}
+
+function requirePlanString(record: Record<string, unknown>, key: string): string {
+  const value = record[key];
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`Strategic planner returned missing field: ${key}`);
+  }
+  return stripEmDash(value.trim());
+}
+
+function requirePlanStringArray(record: Record<string, unknown>, key: string): string[] {
+  const value = record[key];
+  if (!Array.isArray(value)) throw new Error(`Strategic planner returned non-array field: ${key}`);
+  return uniqueStrings(value.map((item) => typeof item === "string" ? stripEmDash(item.trim()) : "").filter(Boolean));
+}
+
+function normalizePlanRole(value: unknown): StrategicPlanSourceRole {
+  if (value === "core" || value === "supporting" || value === "context") return value;
+  throw new Error(`Strategic planner returned invalid source role: ${String(value)}`);
+}
+
+function normalizeStrategicPlan(parsed: Record<string, unknown>, articles: Article[]): StrategicPlan {
+  const articleIds = new Set(articles.map((article) => article.id));
+  const selectedRaw = parsed.selectedSources;
+  const rejectedRaw = parsed.rejectedSources;
+  const causalRaw = parsed.causalMechanism;
+  const lengthRaw = parsed.lengthPlan;
+
+  if (!Array.isArray(selectedRaw)) throw new Error("Strategic planner returned non-array selectedSources");
+  if (!Array.isArray(rejectedRaw)) throw new Error("Strategic planner returned non-array rejectedSources");
+  if (typeof causalRaw !== "object" || causalRaw === null) throw new Error("Strategic planner returned invalid causalMechanism");
+  if (typeof lengthRaw !== "object" || lengthRaw === null) throw new Error("Strategic planner returned invalid lengthPlan");
+
+  const selectedSources = selectedRaw.map((item) => {
+    if (typeof item !== "object" || item === null) throw new Error("Strategic planner returned invalid selected source");
+    const source = item as Record<string, unknown>;
+    const articleId = Number(source.articleId);
+    if (!Number.isFinite(articleId) || !articleIds.has(articleId)) {
+      throw new Error(`Strategic planner selected unknown articleId: ${String(source.articleId)}`);
+    }
+    return {
+      articleId,
+      source: requirePlanString(source, "source"),
+      role: normalizePlanRole(source.role),
+      evidenceUsed: requirePlanString(source, "evidenceUsed"),
+      whyItBelongs: requirePlanString(source, "whyItBelongs"),
+    };
+  });
+
+  if (selectedSources.length === 0) {
+    throw new Error("Strategic planner selected no sources");
+  }
+
+  const rejectedSources = rejectedRaw.map((item) => {
+    if (typeof item !== "object" || item === null) throw new Error("Strategic planner returned invalid rejected source");
+    const source = item as Record<string, unknown>;
+    const articleId = Number(source.articleId);
+    if (!Number.isFinite(articleId) || !articleIds.has(articleId)) {
+      throw new Error(`Strategic planner rejected unknown articleId: ${String(source.articleId)}`);
+    }
+    return {
+      articleId,
+      reason: requirePlanString(source, "reason"),
+    };
+  });
+
+  const causal = causalRaw as Record<string, unknown>;
+  const lengthPlan = lengthRaw as Record<string, unknown>;
+  const targetWords = Number(lengthPlan.targetWords);
+  const paragraphCount = Number(lengthPlan.paragraphCount);
+
+  return {
+    plannerVersion: "strategic-planning-metadata-v1",
+    generatedAt: new Date().toISOString(),
+    centralThesis: requirePlanString(parsed, "centralThesis"),
+    judgmentIssue: requirePlanString(parsed, "judgmentIssue"),
+    whyThisNow: requirePlanString(parsed, "whyThisNow"),
+    selectedSources,
+    rejectedSources,
+    causalMechanism: {
+      cause: requirePlanString(causal, "cause"),
+      transmission: requirePlanString(causal, "transmission"),
+      effect: requirePlanString(causal, "effect"),
+    },
+    secondOrderConsequences: requirePlanStringArray(parsed, "secondOrderConsequences"),
+    thirdOrderConsequences: requirePlanStringArray(parsed, "thirdOrderConsequences"),
+    executiveBlindSpot: requirePlanString(parsed, "executiveBlindSpot"),
+    dangerousAssumption: requirePlanString(parsed, "dangerousAssumption"),
+    institutionalExposure: requirePlanString(parsed, "institutionalExposure"),
+    governanceImplication: requirePlanString(parsed, "governanceImplication"),
+    whoIsMostExposed: requirePlanStringArray(parsed, "whoIsMostExposed"),
+    whatToVerify: requirePlanStringArray(parsed, "whatToVerify"),
+    whatToResist: requirePlanStringArray(parsed, "whatToResist"),
+    whatRequiresAction: requirePlanStringArray(parsed, "whatRequiresAction"),
+    whatRequiresRestraint: requirePlanStringArray(parsed, "whatRequiresRestraint"),
+    confidence: clampScore(parsed.confidence, 6),
+    confidenceReason: requirePlanString(parsed, "confidenceReason"),
+    competingExplanations: requirePlanStringArray(parsed, "competingExplanations"),
+    whatWouldChangeThisView: requirePlanStringArray(parsed, "whatWouldChangeThisView"),
+    rgiJudgment: requirePlanString(parsed, "rgiJudgment"),
+    titleDirection: requirePlanString(parsed, "titleDirection"),
+    lengthPlan: {
+      targetWords: Number.isFinite(targetWords) ? Math.max(450, Math.min(900, Math.round(targetWords))) : 725,
+      paragraphCount: Number.isFinite(paragraphCount) ? Math.max(4, Math.min(8, Math.round(paragraphCount))) : 6,
+    },
+  };
+}
+
+async function createStrategicPlan(options: {
+  articles: Article[];
+  briefType: "daily_brief" | "topic_brief";
+  editorNotes?: string | null;
+  coherenceContext?: BriefCoherenceContext | null;
+  compositionPlan?: string;
+  traceId?: string;
+}): Promise<StrategicPlan | null> {
+  const traceId = options.traceId ?? `${options.briefType}-${Date.now()}`;
+  logger.info(
+    {
+      traceId,
+      plannerVersion: "strategic-planning-metadata-v1",
+      briefType: options.briefType,
+      sourceArticleIds: options.articles.map((article) => article.id),
+    },
+    "Strategic planner started"
+  );
+
+  const coherenceContext = options.coherenceContext
+    ? `Central thesis: ${options.coherenceContext.clusterThesis}\n${boundaryToPrompt(options.coherenceContext.boundary)}`
+    : options.compositionPlan?.trim() || "No explicit coherence boundary supplied. Select the strongest coherent thesis from the provided article signals.";
+
+  const prompt = STRATEGIC_PLANNER_PROMPT
+    .replace("{BRIEF_TYPE}", options.briefType)
+    .replace("{SOURCES}", options.articles.map(plannerSource).join("\n\n---\n\n"))
+    .replace("{NOTES}", options.editorNotes?.trim() || "No editor notes. Apply the RGI judgment framework.")
+    .replace("{COHERENCE_CONTEXT}", coherenceContext);
+
+  try {
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2500,
+      system: RGI_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const block = message.content[0];
+    const text = block.type === "text" ? block.text : "{}";
+    const plan = normalizeStrategicPlan(parseJsonResponse(text), options.articles);
+    logger.info(
+      {
+        traceId,
+        plannerVersion: plan.plannerVersion,
+        selectedSourceCount: plan.selectedSources.length,
+        rejectedSourceCount: plan.rejectedSources.length,
+        confidence: plan.confidence,
+        selectedArticleIds: plan.selectedSources.map((source) => source.articleId),
+        rejectedArticleIds: plan.rejectedSources.map((source) => source.articleId),
+      },
+      "Strategic planner succeeded"
+    );
+    return plan;
+  } catch (error) {
+    logger.warn(
+      {
+        traceId,
+        plannerVersion: "strategic-planning-metadata-v1",
+        briefType: options.briefType,
+        error: summarizeProviderError(error),
+        fallbackUsed: true,
+      },
+      "Strategic planner failed; continuing with existing generation pipeline"
+    );
+    return null;
+  }
+}
+
+function applyStrategicPlanSourceBoundary(
+  articles: Article[],
+  strategicPlan: StrategicPlan | null,
+  generator: "generateDailyBrief" | "generateDigestArticle",
+  traceId?: string
+): Article[] {
+  if (!strategicPlan) return articles;
+
+  const preferredSourceIds = new Set(
+    strategicPlan.selectedSources
+      .filter((source) => source.role === "core" || source.role === "supporting")
+      .map((source) => source.articleId)
+  );
+  const selectedSourceIds = preferredSourceIds.size > 0
+    ? preferredSourceIds
+    : new Set(strategicPlan.selectedSources.map((source) => source.articleId));
+  const boundedArticles = articles.filter((article) => selectedSourceIds.has(article.id));
+
+  if (boundedArticles.length === 0) {
+    logger.warn(
+      {
+        traceId,
+        generator,
+        plannerVersion: strategicPlan.plannerVersion,
+        candidateArticleIds: articles.map((article) => article.id),
+        selectedArticleIds: strategicPlan.selectedSources.map((source) => source.articleId),
+        rejectedArticleIds: strategicPlan.rejectedSources.map((source) => source.articleId),
+      },
+      "Strategic planner source boundary produced no usable articles; using original source set"
+    );
+    return articles;
+  }
+
+  logger.info(
+    {
+      traceId,
+      generator,
+      plannerVersion: strategicPlan.plannerVersion,
+      sourceBoundaryApplied: boundedArticles.length !== articles.length,
+      candidateArticleIds: articles.map((article) => article.id),
+      writingArticleIds: boundedArticles.map((article) => article.id),
+      rejectedArticleIds: strategicPlan.rejectedSources.map((source) => source.articleId),
+      selectedSourceCount: boundedArticles.length,
+    },
+    "Strategic planner source boundary applied"
+  );
+
+  return boundedArticles;
+}
+
+function completeGeneratedBrief(brief: GeneratedBriefDraft): CompleteGeneratedBriefDraft {
+  return {
+    ...brief,
+    whatToWatch: brief.whatToWatch ?? [],
+    topicTags: brief.topicTags ?? [],
+    discipline: brief.discipline ?? "Multiple",
+    relevancyScore: brief.relevancyScore ?? 7,
+  };
 }
 
 async function reviseForAnilAlignment<T extends GeneratedBriefDraft>(
@@ -921,12 +1375,12 @@ Revise this brief so it is built around one coherent RGI thesis and fits on one 
 Use the source material only as evidence for one RGI thesis. The opening paragraph belongs, but it is the foundation, not the product. The product is what this story produces next, what leaders may miss, and what judgment is required. If a factual point does not support the thesis, remove it.
 
 Required product structure, represented by these JSON fields:
-- executiveSummary = one short factual opening paragraph, no label, 55-85 words
-- keyTakeaways = 3 narrative paragraphs, no bullets, no label. Include RGI's judgment, forward-looking risk, and what leaders may miss
+- executiveSummary = one factual opening paragraph, no label, 85-120 words
+- keyTakeaways = 4-5 narrative paragraphs, no bullets, no label. Include RGI's judgment, forward-looking risk, second-order consequence, and what leaders may miss
 - rgiTake = final bottom-line essay paragraph beginning with "RGI's bottom line:" and no label
 - body and implicationsForLeaders may be empty because the public product has only two sections
 
-Do not use em dashes. Do not use publication names. Do not use "This highlights," "This underscores," "Moreover," "Furthermore," "Notably," "strategic imperative," or "RGI partially agrees." Keep the total under 560 words.
+Do not use em dashes. Do not use publication names. Do not use "This highlights," "This underscores," "Moreover," "Furthermore," "Notably," "strategic imperative," or "RGI partially agrees." Target 725-850 words while preserving the one-page PDF constraint.
 
 SOURCE SIGNALS:
 ${sourceSignals}
@@ -1412,13 +1866,13 @@ function firstSentences(value: string, maxSentences: number, maxWords: number): 
 function enforceOnePageBriefBudget<T extends GeneratedBriefDraft>(brief: T): T {
   const summary = (brief.executiveSummary ?? [])
     .slice(0, 1)
-    .map((paragraph) => firstSentences(paragraph, 2, 85))
+    .map((paragraph) => firstSentences(paragraph, 4, 120))
     .filter(Boolean);
   const analysis = (brief.keyTakeaways ?? [])
-    .map((paragraph) => firstSentences(paragraph, 3, 95))
+    .map((paragraph) => firstSentences(paragraph, 5, 165))
     .filter(Boolean)
-    .slice(0, 3);
-  const closing = firstSentences(brief.rgiTake ?? "", 2, 75);
+    .slice(0, 4);
+  const closing = firstSentences(brief.rgiTake ?? "", 4, 125);
   const totalWords = [
     brief.headline,
     ...summary,
@@ -1426,7 +1880,7 @@ function enforceOnePageBriefBudget<T extends GeneratedBriefDraft>(brief: T): T {
     closing,
   ].join(" ").split(/\s+/).filter(Boolean).length;
 
-  if (totalWords <= 560) {
+  if (totalWords <= 850) {
     return {
       ...brief,
       executiveSummary: summary.length ? summary : brief.executiveSummary,
@@ -1439,10 +1893,10 @@ function enforceOnePageBriefBudget<T extends GeneratedBriefDraft>(brief: T): T {
 
   return {
     ...brief,
-    executiveSummary: summary.map((paragraph) => firstSentences(paragraph, 1, 70)),
-    keyTakeaways: analysis.slice(0, 3).map((paragraph) => firstSentences(paragraph, 2, 80)),
+    executiveSummary: summary.map((paragraph) => firstSentences(paragraph, 3, 105)),
+    keyTakeaways: analysis.slice(0, 4).map((paragraph) => firstSentences(paragraph, 4, 140)),
     implificationsForLeaders: [],
-    rgiTake: firstSentences(closing, 1, 60),
+    rgiTake: firstSentences(closing, 3, 105),
     body: "",
   };
 }
@@ -1488,13 +1942,20 @@ ${thesisBlock}
 Essay requirements:
 - One coherent story and one thesis.
 - Headline: sharp, analytical, judgment-oriented. It should communicate the strategic thesis, not merely summarize the topic.
-- Opening paragraph: 55-85 words, factual setup only.
-- Analysis: 3-4 tight paragraphs, 300-430 words total.
+- Opening paragraph: 85-120 words, factual setup only.
+- Analysis: 4-5 tight paragraphs, 600-730 words total.
 - At least one analysis paragraph must explicitly state RGI's judgment using language such as "RGI's judgment is that..." or "RGI's view is that..."
 - Include a clear forward-looking implication using language such as "The strategic implication is..." or "The forward-looking risk is..."
 - Include a concrete blind spot using language such as "What leaders may miss is..."
 - End with a concise bottom line using "RGI's bottom line:" and a decisive, forward-looking judgment.
-- The brief must fit on one PDF page. If in doubt, compress. Cut repeated facts and secondary explanation before cutting the main judgment.
+- Internal page-fit pass before returning JSON:
+  1. Draft the newsletter in the standard RGI plain-article format.
+  2. Estimate whether it fills one page using the existing template: title at top left, RGI logo top right, Aptos/Arial/Helvetica body text, compact margins, no section labels.
+  3. If it leaves more than a normal bottom margin, add substantive strategic analysis, not filler.
+  4. If it exceeds one page, compress while preserving the core judgment.
+  5. Return only the final page-fitted newsletter.
+- Default target: 725-850 total words, about 25% longer than the prior output. It should fill the page by default and must never exceed one page.
+- If over length, cut repeated facts and secondary explanation before cutting the main judgment.
 - Use source material as evidence, not as the structure.
 - Do not write one paragraph per article.
 - Do not use the public phrase "two moves out"; express the idea naturally.
@@ -1510,8 +1971,8 @@ ${currentBrief}
 Return ONLY valid JSON:
 {
   "headline": "string",
-  "briefSummary": "single opening paragraph, 55-85 words",
-  "essayParagraphs": ["RGI judgment paragraph", "strategic foresight paragraph", "what leaders may miss paragraph", "RGI bottom line paragraph"],
+  "briefSummary": "single opening paragraph, 85-120 words",
+  "essayParagraphs": ["RGI judgment paragraph", "strategic foresight paragraph", "second-order consequence paragraph", "what leaders may miss paragraph", "RGI bottom line paragraph"],
   "topicTags": ["tag"],
   "discipline": "Strategic Foresight | System Vitality | Civic Stewardship | Multiple",
   "relevancyScore": 1-10
@@ -1669,17 +2130,22 @@ function cleanTextArray(value: unknown, fallback: string[] = []): string[] {
 }
 
 // ── Fixed length constraint ─────────────────────────────────────────────────
-const FIXED_LENGTH_CONSTRAINTS = `ONE-PAGE PDF LIMIT: hard maximum 560 words.
-The entire brief should normally be 420-540 words.
+const FIXED_LENGTH_CONSTRAINTS = `ONE-PAGE PDF LIMIT: hard maximum one rendered PDF page.
+The entire brief should normally be 725-850 words and should fill the page by default.
 If the output is too long: cut repeated facts, secondary explanation, and weaker points before cutting the main judgment.
-If the output is too short: add one concrete forward-looking implication, not more news recap.
+If the output is too short or would leave more than a normal bottom margin: add substantive analysis, concrete forward-looking implication, second-order consequence, or executive blind spot. Do not add filler or more news recap.
 Do not ignore this constraint.
 Paragraph limits:
-  - Opening factual setup: one compact paragraph, 55-85 words
-  - Strategic foresight essay: 3-4 narrative paragraphs, 300-430 words total
+  - Opening factual setup: one compact paragraph, 85-120 words
+  - Strategic foresight essay: 4-5 narrative paragraphs, 600-730 words total
 Approximate balance: 15% factual setup, 85% RGI judgment and foresight.
 If more than the first paragraph is primarily descriptive, revise it before returning JSON.
-Before outputting, silently count your total words. If above 560 words, revise until you are under the one-page limit.`;
+Before outputting, perform an internal page-fit pass:
+  1. Draft the newsletter in the standard plain RGI article format.
+  2. Estimate whether the rendered content fills the page using the existing template, font, margins, and logo placement.
+  3. If the draft leaves excess blank space, expand with substantive analysis.
+  4. If the draft exceeds one page, compress while preserving the core judgment.
+  5. Return only the final page-fitted newsletter.`;
 
 const RGI_SYSTEM_PROMPT = `${RGI_BRAND_VOICE_SYSTEM_PROMPT}
 
@@ -1833,7 +2299,7 @@ EDITORIAL STANDARDS
 ═══════════════════════════════════════════════════════
 - INTERPRETATION RULE: After the first paragraph, never restate what sources say. State what it means. Your value is the inference, not the report.
 - FORESIGHT RULE: Every brief must explicitly contain RGI's judgment, the strategic implication, what leaders may miss, and RGI's bottom line.
-- ONE-PAGE RULE: Every brief must fit on one PDF page. When in doubt, compress. Cut weaker explanation and repeated facts before cutting the central judgment.
+- ONE-PAGE RULE: Every brief must fit on one PDF page while normally filling the page. Target 725-850 words. If sparse, expand with substantive analysis. If over, compress by cutting weaker explanation and repeated facts before cutting the central judgment.
 - SYNTHESIS RULE: Find the single thread connecting disparate signals — the structural force driving multiple developments simultaneously.
 - DENSITY RULE: Every sentence must add new information or new analysis. No filler. No transitions that only restate the previous point.
 - CONFLICT RULE: When sources disagree, surface the disagreement explicitly. Name the competing claims. Evaluate the evidence. Never flatten contradictions into false consensus.
@@ -1923,10 +2389,10 @@ If a paragraph does not strengthen the insight, delete it.
 Reflect the core insight directly. The title must be sharp, analytical, and judgment-oriented. It should communicate the strategic thesis, not merely summarize the topic.
 
 ## Opening paragraph
-One compact factual paragraph, 55-85 words. Give the reader the necessary entry point: what happened, who is involved, and what changed. Do not analyze at length here. Do not begin with "recent developments," "this highlights," or any throat-clearing.
+One compact factual paragraph, 85-120 words. Give the reader the necessary entry point: what happened, who is involved, and what changed. Do not analyze at length here. Do not begin with "recent developments," "this highlights," or any throat-clearing.
 
 ## RGI strategic foresight essay
-Three to four tight narrative paragraphs, no bullets. This is the product. After the opening paragraph, stop summarizing and interpret the pattern. Clearly state RGI's judgment, the strategic implication, what leaders may miss, and a decisive RGI bottom line. Explain second-order consequences: what changes after the first visible effect, what institutions become exposed, what assumption weakens, what risk forms beneath the surface, and what executives should notice before the implication becomes obvious.
+Four to five tight narrative paragraphs, no bullets. This is the product. After the opening paragraph, stop summarizing and interpret the pattern. Clearly state RGI's judgment, the strategic implication, what leaders may miss, and a decisive RGI bottom line. Explain second-order consequences: what changes after the first visible effect, what institutions become exposed, what assumption weakens, what risk forms beneath the surface, and what executives should notice before the implication becomes obvious.
 
 {LENGTH_CONSTRAINTS}
 
@@ -1970,9 +2436,9 @@ OUTPUT FORMAT: return ONLY valid JSON, no markdown, no preamble.
 ONLY these fields — do NOT add any others:
 {
   "headline": "string: 8-12 words, sharp strategic thesis. No em dashes.",
-  "executiveSummary": ["single compact opening paragraph, 55-85 words; factual setup only, no section label"],
+  "executiveSummary": ["single compact opening paragraph, 85-120 words; factual setup only, no section label"],
   "keyTakeaways": [],
-  "strategicAssessment": ["RGI judgment paragraph", "strategic foresight paragraph", "what leaders may miss paragraph"],
+  "strategicAssessment": ["RGI judgment paragraph", "strategic foresight paragraph", "second-order consequence paragraph", "what leaders may miss paragraph"],
   "implicationsForLeaders": [],
   "rgiTake": "final paragraph beginning with RGI's bottom line:. It must be decisive, forward-looking, and specific. No em dashes.",
   "topicTags": ["from the 12 allowed tags only"],
@@ -2032,9 +2498,9 @@ Publication names, outlet names, author names, and references to "sources," "sou
 
 HEADLINE: 8-12 words maximum. Sharp, analytical, and judgment-oriented. Communicate the strategic thesis, not merely the topic. Avoid neutral news headlines. Use a colon when it sharpens the consequence. Do not use em dashes.
 
-OPENING PARAGRAPH: One compact factual setup paragraph, 55-85 words. State what happened, who is involved, and what changed. This is only the entry point. Do not turn it into the product. Do not mention publications, sources, article sets, coverage, reporting, or the synthesis process. Never begin with generic change language.
+OPENING PARAGRAPH: One compact factual setup paragraph, 85-120 words. State what happened, who is involved, and what changed. This is only the entry point. Do not turn it into the product. Do not mention publications, sources, article sets, coverage, reporting, or the synthesis process. Never begin with generic change language.
 
-STRATEGIC FORESIGHT ESSAY: Three to four narrative paragraphs, not bullets. This is the product. After the first paragraph, do not continue summarizing events. Clearly state RGI's judgment, the strategic implication, what leaders may miss, and RGI's bottom line. The analysis must explain second-order consequences: what changes after the visible headline, who is exposed, what pressure point is likely to emerge, what assumption is becoming dangerous, and what executives should prepare for next.
+STRATEGIC FORESIGHT ESSAY: Four to five narrative paragraphs, not bullets. This is the product. After the first paragraph, do not continue summarizing events. Clearly state RGI's judgment, the strategic implication, what leaders may miss, and RGI's bottom line. The analysis must explain second-order consequences: what changes after the visible headline, who is exposed, what pressure point is likely to emerge, what assumption is becoming dangerous, and what executives should prepare for next.
 
 Required phrases or equivalents:
 ✓ "RGI's judgment is that..." or "RGI's view is that..."
@@ -2063,7 +2529,7 @@ ABSOLUTE RULES:
 ✗ No fabrication: all claims trace to provided sources
 ✓ Surface source conflicts explicitly
 ✓ Every sentence adds new information or analysis
-✓ Total word count: stay within the one-page mode limit. Condense ruthlessly if over.
+✓ Total word count: target 725-850 words while staying within the one-page mode limit. Expand with real analysis if sparse. Condense ruthlessly if over.
 
 ═══════════════════════════════════════════════════════
 OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble
@@ -2071,9 +2537,9 @@ OUTPUT FORMAT — return ONLY valid JSON, no markdown, no preamble
 ONLY these fields — do NOT add any others:
 {
   "headline": "string: 8 to 12 words, sharp strategic thesis, scannable in 3 seconds. No em dashes.",
-  "executiveSummary": ["single opening factual setup paragraph, 55-85 words, no section label and no source/publication/process references"],
+  "executiveSummary": ["single opening factual setup paragraph, 85-120 words, no section label and no source/publication/process references"],
   "keyTakeaways": [],
-  "strategicAssessment": ["RGI judgment paragraph", "strategic implication paragraph", "what leaders may miss paragraph"],
+  "strategicAssessment": ["RGI judgment paragraph", "strategic implication paragraph", "second-order consequence paragraph", "what leaders may miss paragraph"],
   "implicationsForLeaders": [],
   "rgiTake": "final paragraph beginning with RGI's bottom line:. Strategic, decisive, forward-looking, and specific. Do not include a section label. No source/publication/process references. No em dashes.",
   "topicTags": ["from the 12 allowed tags only"],
@@ -2109,6 +2575,7 @@ export async function generateDigestArticle(
   fromCache: boolean;
   generationMode?: "ai" | "fallback";
   fallbackReason?: string;
+  strategicPlan?: StrategicPlan | null;
 }> {
   // ── Cache check ────────────────────────────────────────────────────────────
   const cacheKey = topicArticleCacheKey(articleIds, editorNotes);
@@ -2157,6 +2624,14 @@ export async function generateDigestArticle(
     .replace("{NOTES}", `${notesText}${topicCoherenceNotes}`)
     .replace("{LENGTH_CONSTRAINTS}", FIXED_LENGTH_CONSTRAINTS);
 
+  const strategicPlan = await createStrategicPlan({
+    articles,
+    briefType: "topic_brief",
+    editorNotes,
+    coherenceContext: topicCoherenceContext,
+    traceId: `topic-${Date.now()}`,
+  });
+
   let text = "{}";
   try {
     const message = await anthropic.messages.create({
@@ -2184,7 +2659,7 @@ export async function generateDigestArticle(
   try {
 	    const parsed = parseJsonResponse(text);
     const rawResult = {
-      headline: stripEmDash(parsed.headline || "Untitled Brief"),
+      headline: stripEmDash(parsedString(parsed.headline, "Untitled Brief")),
       body: cleanBriefBody(parsed.keyTakeaways ?? parsed.keyDevelopments ?? parsed.body, articles as unknown as Array<Record<string, unknown>>),
       executiveSummary: cleanParagraphArray(parsed.executiveSummary, articles as unknown as Array<Record<string, unknown>>, ["The judgment challenge is to decide whether the visible development is a temporary event or a signal that institutional assumptions are weakening. Leaders should focus less on the headline and more on what it produces two moves out: exposed commitments, weaker planning assumptions, and consequences that may compound quietly before the public narrative catches up."], 1),
       rgiTake: cleanBriefText(parsed.rgiTake, articles as unknown as Array<Record<string, unknown>>, "RGI's judgment is that leaders must decide what deserves action, what requires restraint, what must be verified, and what consequences they are prepared to own."),
@@ -2200,15 +2675,16 @@ export async function generateDigestArticle(
       constraintsAndRisks: cleanTextArray(parsed.constraintsAndRisks),
       implificationsForLeaders: cleanBriefArray(parsed.implicationsForLeaders ?? parsed.executiveImplications ?? parsed.implificationsForLeaders, articles as unknown as Array<Record<string, unknown>>, ["Name the uncertainty, assign ownership for validation, and avoid treating volume of information as certainty."]),
       topicTags: cleanTextArray(parsed.topicTags, ["Business Strategy & Corporations"]).slice(0, 3),
-      discipline: parsed.discipline || "Multiple",
+      discipline: parsedString(parsed.discipline, "Multiple"),
       relevancyScore: clampScore(parsed.relevancyScore, 7),
       generationMode: "ai" as const,
+      strategicPlan,
     };
 	    const sanitized = applyBrandComplianceToBrief(rawResult);
 	    const aligned = await reviseForAnilAlignment(sanitized, articles as unknown as Array<Record<string, unknown>>, "generateDigestArticle");
 	    const coherent = await enforceBriefCoherence(aligned, articles as unknown as Array<Record<string, unknown>>, topicCoherenceContext, "generateDigestArticle");
 	    const humanized = await humanizeBriefEditorially(coherent, articles as unknown as Array<Record<string, unknown>>, topicCoherenceContext, "generateDigestArticle");
-	    const result = await composeClassicalJudgmentEssay(humanized, articles as unknown as Array<Record<string, unknown>>, topicCoherenceContext, "generateDigestArticle");
+	    const result = completeGeneratedBrief(await composeClassicalJudgmentEssay(humanized, articles as unknown as Array<Record<string, unknown>>, topicCoherenceContext, "generateDigestArticle"));
 
     // Store in cache (only when no editorNotes — editorial direction makes each unique)
     if (!editorNotes?.trim()) {
@@ -2359,20 +2835,27 @@ export async function refineArticle(
   try {
 	    const parsed = parseJsonResponse(text);
 
-    const rawRefined = {
-      headline: parsed.headline || article.headline,
-      body: Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways.join("\n") : (Array.isArray(parsed.keyDevelopments) ? parsed.keyDevelopments.join("\n") : (parsed.body || article.body)),
-      executiveSummary: Array.isArray(parsed.executiveSummary) ? parsed.executiveSummary : (article.executiveSummary || []),
-      rgiTake: parsed.rgiTake || article.rgiTake,
-      keyTakeaways: Array.isArray(parsed.strategicAssessment) ? parsed.strategicAssessment : (Array.isArray(parsed.strategicAnalysis) ? parsed.strategicAnalysis : (Array.isArray(parsed.whyItMatters) ? parsed.whyItMatters : article.keyTakeaways)),
-      implificationsForLeaders: Array.isArray(parsed.implicationsForLeaders) ? parsed.implicationsForLeaders : (Array.isArray(parsed.executiveImplications) ? parsed.executiveImplications : ((article as Record<string, unknown>).implificationsForLeaders as string[] || [])),
-      whatToWatch: Array.isArray(parsed.whatToWatch) ? parsed.whatToWatch : ((article as Record<string, unknown>).whatToWatch as string[] || []),
-    };
-    const refined = applyBrandComplianceToBrief(rawRefined);
+	    const rawRefined = {
+	      headline: parsedString(parsed.headline, article.headline),
+	      body: cleanBriefBody(parsed.keyTakeaways ?? parsed.keyDevelopments ?? parsed.body, []) || article.body,
+	      executiveSummary: cleanTextArray(parsed.executiveSummary, article.executiveSummary || []),
+	      rgiTake: parsedString(parsed.rgiTake, article.rgiTake),
+	      keyTakeaways: cleanTextArray(parsed.strategicAssessment ?? parsed.strategicAnalysis ?? parsed.whyItMatters, article.keyTakeaways || []),
+	      implificationsForLeaders: Array.isArray(parsed.implicationsForLeaders) ? parsed.implicationsForLeaders : (Array.isArray(parsed.executiveImplications) ? parsed.executiveImplications : ((article as Record<string, unknown>).implificationsForLeaders as string[] || [])),
+	      whatToWatch: Array.isArray(parsed.whatToWatch) ? parsed.whatToWatch : ((article as Record<string, unknown>).whatToWatch as string[] || []),
+	    };
+	    const refined = applyBrandComplianceToBrief(rawRefined);
 
     await updateFirestoreDigest(articleId, refined);
 
-    return refined;
+	    return {
+        headline: refined.headline,
+        body: refined.body,
+        executiveSummary: refined.executiveSummary,
+        rgiTake: refined.rgiTake,
+        keyTakeaways: refined.keyTakeaways,
+        whatToWatch: refined.whatToWatch ?? [],
+      };
   } catch (e) {
     logger.error({ err: e, text }, "Failed to parse refined article response");
     throw new Error("Failed to parse refined article");
@@ -2539,22 +3022,20 @@ export async function generateDailyBrief(
   let coherenceContext: BriefCoherenceContext | null = null;
 
   if (articleIds && articleIds.length > 0) {
-    articles = (await listFirestoreArticles({ limit: 500 })).filter((article) => articleIds.includes(article.id));
-    // Cap to top 7 by score
-    articles = [...articles].sort((a, b) => b.relevancyScore - a.relevancyScore).slice(0, 7);
+    articles = await loadDailyBriefArticlesById(articleIds, traceId);
     const topicCluster = selectCoherentArticleCluster(articles, Math.min(5, articles.length || 5));
     coherenceContext = coherenceContextFromSelection(topicCluster) ?? coherenceContextForArticles(articles);
     if (topicCluster.clusterThesis) {
       compositionPlan = compositionPlanFromSelection(topicCluster, articles);
     }
   } else {
-    let allArticles = await listFirestoreArticles({ limit: 500, sortBy: "time" });
+    let allArticles = await loadDailyBriefCandidateArticles(traceId);
     let selected = chooseDailyBriefArticles(allArticles, today, excludedTopics);
     if (selected.articles.length === 0) {
       logger.warn({ traceId, availableArticles: allArticles.length }, "[daily-brief-trace] No usable articles found; running one recovery scrape before failing");
       console.log(`[daily-brief-trace:${traceId}] no usable articles found; running recovery scrape`);
       await runScrape({ ignoreSourceCache: true });
-      allArticles = await listFirestoreArticles({ limit: 500, sortBy: "time" });
+      allArticles = await loadDailyBriefCandidateArticles(traceId);
       selected = chooseDailyBriefArticles(allArticles, today, excludedTopics);
     }
     articles = selected.articles;
@@ -2579,6 +3060,16 @@ export async function generateDailyBrief(
   if (articles.length === 0) {
     throw new Error("No qualifying articles found for the brief. Add active sources or run a scrape, then try again.");
   }
+
+  const strategicPlan = await createStrategicPlan({
+    articles,
+    briefType: "daily_brief",
+    editorNotes,
+    coherenceContext,
+    compositionPlan,
+    traceId,
+  });
+  articles = applyStrategicPlanSourceBoundary(articles, strategicPlan, "generateDailyBrief", traceId);
 
   // Group articles by topic to understand theme count
   const topicSet = new Set<string>();
@@ -2638,11 +3129,10 @@ export async function generateDailyBrief(
   }
 
   try {
-    const cleanText = text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
-    const parsed = JSON.parse(cleanText);
+    const parsed = parseJsonResponse(text);
 
     const rawResult: DailyBriefResult = {
-      headline: stripEmDash(parsed.headline || "RGI Daily Strategic Intelligence Brief"),
+      headline: stripEmDash(parsedString(parsed.headline, "RGI Daily Strategic Intelligence Brief")),
       executiveSummary: cleanParagraphArray(parsed.executiveSummary, articles as unknown as Array<Record<string, unknown>>, [
         "The judgment challenge is to decide whether today's visible developments are temporary noise or evidence that institutional assumptions are becoming weaker. Leaders should focus less on the headline and more on what the signal produces two moves out: exposed commitments, governance pressure, and consequences that may compound quietly before consensus catches up.",
       ], 1),
@@ -2662,16 +3152,31 @@ export async function generateDailyBrief(
       whatToWatch: cleanBriefArray(parsed.whatToWatch, articles as unknown as Array<Record<string, unknown>>, ["Watch for concrete actor decisions, policy movement, capital flows, and operational changes that confirm whether the signal is becoming structural."]),
       summaryTakeaways: cleanTextArray(parsed.summaryTakeaways),
       topicTags: cleanTextArray(parsed.topicTags, ["Business Strategy & Corporations"]).slice(0, 3),
-      discipline: parsed.discipline || "Multiple",
+      discipline: parsedString(parsed.discipline, "Multiple"),
       relevancyScore: clampScore(parsed.relevancyScore, 8),
       sourceArticleIds: articles.map((a) => a.id),
       generationMode: "ai",
+      strategicPlan,
     };
 	    const sanitized = applyBrandComplianceToBrief(rawResult);
 	    const aligned = await reviseForAnilAlignment(sanitized, articles as unknown as Array<Record<string, unknown>>, "generateDailyBrief", traceId);
 	    const coherent = await enforceBriefCoherence(aligned, articles as unknown as Array<Record<string, unknown>>, coherenceContext, "generateDailyBrief", traceId);
 		    const humanized = await humanizeBriefEditorially(coherent, articles as unknown as Array<Record<string, unknown>>, coherenceContext, "generateDailyBrief", traceId);
-		    const result = await composeClassicalJudgmentEssay(humanized, articles as unknown as Array<Record<string, unknown>>, coherenceContext, "generateDailyBrief", traceId);
+		    const shaped = completeGeneratedBrief(await composeClassicalJudgmentEssay(humanized, articles as unknown as Array<Record<string, unknown>>, coherenceContext, "generateDailyBrief", traceId));
+        const result: DailyBriefResult & { brandCompliance?: BrandComplianceReport } = {
+          ...rawResult,
+          ...shaped,
+          implificationsForLeaders: shaped.implificationsForLeaders ?? rawResult.implificationsForLeaders,
+          whatChangedSinceYesterday: rawResult.whatChangedSinceYesterday,
+          whatToWatch: shaped.whatToWatch,
+          summaryTakeaways: rawResult.summaryTakeaways,
+          whatMostAreMissing: rawResult.whatMostAreMissing,
+          mechanism: rawResult.mechanism,
+          constraintsAndRisks: rawResult.constraintsAndRisks,
+          sourceArticleIds: rawResult.sourceArticleIds,
+          generationMode: shaped.generationMode ?? rawResult.generationMode,
+          strategicPlan: rawResult.strategicPlan,
+        };
 
     logger.info(
       {
