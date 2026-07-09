@@ -1,4 +1,6 @@
 import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { logger } from "./logger";
 
 type FirebaseBundle = {
@@ -20,10 +22,23 @@ function isManagedGoogleRuntime(): boolean {
   );
 }
 
+function wellKnownAdcPath(): string {
+  return join(homedir(), ".config", "gcloud", "application_default_credentials.json");
+}
+
+function hasWellKnownApplicationDefaultCredentials(): boolean {
+  return existsSync(wellKnownAdcPath());
+}
+
 export function isFirebaseConfigured(): boolean {
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   const hasUsableServiceAccount = Boolean(serviceAccount && !serviceAccount.includes("PLACEHOLDER"));
-  return Boolean(hasUsableServiceAccount || process.env.GOOGLE_APPLICATION_CREDENTIALS || isManagedGoogleRuntime());
+  return Boolean(
+    hasUsableServiceAccount ||
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    hasWellKnownApplicationDefaultCredentials() ||
+    isManagedGoogleRuntime()
+  );
 }
 
 export function getFirebaseDiagnostics(): Record<string, unknown> {
@@ -35,6 +50,7 @@ export function getFirebaseDiagnostics(): Record<string, unknown> {
     hasUsableServiceAccountJson: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON.includes("PLACEHOLDER")),
     googleApplicationCredentials: credentialsPath,
     googleApplicationCredentialsExists: credentialsPath ? existsSync(credentialsPath) : false,
+    hasWellKnownApplicationDefaultCredentials: hasWellKnownApplicationDefaultCredentials(),
     managedGoogleRuntime: isManagedGoogleRuntime(),
     nodeEnv: process.env.NODE_ENV ?? null,
   };
@@ -45,8 +61,9 @@ export function missingFirebaseConfig(): string[] {
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   const hasJson = Boolean(serviceAccount && !serviceAccount.includes("PLACEHOLDER"));
   const hasGoogleCredentials = Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS);
-  if (!hasJson && !hasGoogleCredentials && !isManagedGoogleRuntime()) {
-    missing.push("FIREBASE_SERVICE_ACCOUNT_JSON or GOOGLE_APPLICATION_CREDENTIALS");
+  const hasWellKnownAdc = hasWellKnownApplicationDefaultCredentials();
+  if (!hasJson && !hasGoogleCredentials && !hasWellKnownAdc && !isManagedGoogleRuntime()) {
+    missing.push("FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_APPLICATION_CREDENTIALS, or well-known Application Default Credentials");
   }
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
     missing.push(`GOOGLE_APPLICATION_CREDENTIALS file does not exist: ${process.env.GOOGLE_APPLICATION_CREDENTIALS}`);
