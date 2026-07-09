@@ -10,7 +10,11 @@ import {
 import { listFirestoreSources } from "../lib/firestore-sources";
 import { buildSignalClusters } from "../lib/signal-intelligence";
 import { articleRecommendedFor } from "../lib/rgi-relevance";
-import { sendApiError, withApiTimeout } from "../lib/api-errors";
+import { getErrorMessage, sendApiError, withApiTimeout } from "../lib/api-errors";
+
+const DASHBOARD_ARTICLE_SCAN_LIMIT = 120;
+const DASHBOARD_DIGEST_SCAN_LIMIT = 120;
+const DASHBOARD_SECTION_TIMEOUT_MS = 8000;
 
 const DISCIPLINE_KEYWORDS: Record<string, string[]> = {
   "Strategic Foresight": [
@@ -79,11 +83,52 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   try {
-      const [articles, digestArticles, sources] = await withApiTimeout("Dashboard Firestore reads", Promise.all([
-        listFirestoreArticles({ limit: 200, sortBy: "time" }),
-        listFirestoreDigests({ limit: 200 }),
-        listFirestoreSources(),
-      ]));
+      const [articlesResult, digestArticlesResult, sourcesResult] = await Promise.allSettled([
+        withApiTimeout(
+          "Dashboard articles Firestore read",
+          listFirestoreArticles({ limit: DASHBOARD_ARTICLE_SCAN_LIMIT, sortBy: "time", summaryOnly: true }),
+          DASHBOARD_SECTION_TIMEOUT_MS,
+        ),
+        withApiTimeout(
+          "Dashboard digest Firestore read",
+          listFirestoreDigests({ limit: DASHBOARD_DIGEST_SCAN_LIMIT }),
+          DASHBOARD_SECTION_TIMEOUT_MS,
+        ),
+        withApiTimeout(
+          "Dashboard sources Firestore read",
+          listFirestoreSources(),
+          DASHBOARD_SECTION_TIMEOUT_MS,
+        ),
+      ]);
+
+      const sectionErrors: Array<{ section: string; message: string }> = [];
+      const articles = articlesResult.status === "fulfilled" ? articlesResult.value : [];
+      const digestArticles = digestArticlesResult.status === "fulfilled" ? digestArticlesResult.value : [];
+      const sources = sourcesResult.status === "fulfilled" ? sourcesResult.value : [];
+
+      if (articlesResult.status === "rejected") {
+        const message = getErrorMessage(articlesResult.reason);
+        sectionErrors.push({ section: "topArticles", message });
+        req.log.warn({ err: articlesResult.reason }, "Dashboard articles section failed");
+      }
+      if (digestArticlesResult.status === "rejected") {
+        const message = getErrorMessage(digestArticlesResult.reason);
+        sectionErrors.push({ section: "reviewCounts", message });
+        req.log.warn({ err: digestArticlesResult.reason }, "Dashboard digest section failed");
+      }
+      if (sourcesResult.status === "rejected") {
+        const message = getErrorMessage(sourcesResult.reason);
+        sectionErrors.push({ section: "sourceCounts", message });
+        req.log.warn({ err: sourcesResult.reason }, "Dashboard sources section failed");
+      }
+
+      if (
+        articlesResult.status === "rejected" &&
+        digestArticlesResult.status === "rejected" &&
+        sourcesResult.status === "rejected"
+      ) {
+        throw articlesResult.reason;
+      }
 
       const todayArticles = articles.filter((a) => articleRecommendedFor(a as typeof a & Record<string, unknown>, "feed"));
       const contentWindow = todayArticles.length >= 15 ? today : sevenDaysAgo;
@@ -148,7 +193,15 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
         .sort((a, b) => b.importanceScore - a.importanceScore);
 
       const scrapeStatus = getScrapeStatus();
-      req.log.info({ articleCount: articles.length, digestCount: digestArticles.length, sourceCount: sources.length }, "Dashboard summary fetch succeeded");
+      req.log.info(
+        {
+          articleCount: articles.length,
+          digestCount: digestArticles.length,
+          sourceCount: sources.length,
+          sectionErrors,
+        },
+        sectionErrors.length > 0 ? "Dashboard summary fetch succeeded with degraded sections" : "Dashboard summary fetch succeeded"
+      );
       res.json({
         totalArticlesToday: todayArticles.length,
         pendingReview: digestArticles.filter((a) => a.status === "pending_review").length,
@@ -165,6 +218,8 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
         emergingSignalsCount,
         contentWindowStart: contentWindow.toISOString(),
         minTopicScore: DASHBOARD_SIGNAL_SCORE_THRESHOLD,
+        sectionErrors,
+        degraded: sectionErrors.length > 0,
       });
       return;
   } catch (e) {

@@ -167,6 +167,7 @@ async function persistGeneratedTopicArticle(articleIds: number[], editorNotes: s
     editorNotes: editorNotes ?? null,
     generationMode: generated.generationMode ?? "ai",
     fallbackReason: generated.fallbackReason ?? null,
+    strategicPlan: generated.strategicPlan ?? null,
   } as const;
 
   const digestArticle = useFirestoreData()
@@ -221,6 +222,7 @@ async function persistGeneratedDailyBrief(articleIds: number[] | undefined, edit
     editorNotes,
     generationMode: generated.generationMode ?? "ai",
     fallbackReason: generated.fallbackReason ?? null,
+    strategicPlan: generated.strategicPlan ?? null,
   } as const;
 
   const digestArticle = useFirestoreData()
@@ -389,6 +391,7 @@ router.post("/digest/generate", async (req, res): Promise<void> => {
         status: "pending_review",
         generationMode: generated.generationMode ?? "ai",
         fallbackReason: generated.fallbackReason ?? null,
+        strategicPlan: generated.strategicPlan ?? null,
       } as const;
 
     const digestArticle = useFirestoreData()
@@ -481,6 +484,7 @@ router.post("/digest/daily-brief", async (req, res): Promise<void> => {
         status: "pending_review",
         generationMode: generated.generationMode ?? "ai",
         fallbackReason: generated.fallbackReason ?? null,
+        strategicPlan: generated.strategicPlan ?? null,
       } as const;
 
     const digestArticle = useFirestoreData()
@@ -610,6 +614,7 @@ router.post("/digest/generate-on-demand", async (req, res): Promise<void> => {
           editorNotes,
           generationMode: generated.generationMode ?? "ai",
           fallbackReason: generated.fallbackReason ?? null,
+          strategicPlan: generated.strategicPlan ?? null,
         } as const;
       const digestArticle = useFirestoreData()
         ? await createFirestoreDigest(digestValues)
@@ -653,6 +658,7 @@ router.post("/digest/generate-on-demand", async (req, res): Promise<void> => {
         editorNotes: topicsNote,
         generationMode: generated.generationMode ?? "ai",
         fallbackReason: generated.fallbackReason ?? null,
+        strategicPlan: generated.strategicPlan ?? null,
       } as const;
 
     const digestArticle = useFirestoreData()
@@ -767,7 +773,8 @@ router.get("/digest/:id/pdf", async (req, res): Promise<void> => {
     }
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${payload.filename}"`);
+    const disposition = req.query.inline === "1" ? "inline" : "attachment";
+    res.setHeader("Content-Disposition", `${disposition}; filename="${payload.filename}"`);
     res.setHeader("Content-Length", payload.buffer.length);
     res.setHeader("Cache-Control", "no-store");
     res.end(payload.buffer);
@@ -1059,6 +1066,7 @@ router.post("/digest/:id/regenerate", async (req, res): Promise<void> => {
         editorNotes: body.data.editorNotes ?? existing.editorNotes,
         generationMode: generated.generationMode ?? "ai",
         fallbackReason: generated.fallbackReason ?? null,
+        strategicPlan: generated.strategicPlan ?? null,
       } as const;
 
     const updated = useFirestoreData()

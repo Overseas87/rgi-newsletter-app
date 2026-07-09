@@ -8,9 +8,9 @@ router.post("/scrape/trigger", async (req, res): Promise<void> => {
   const current = getScrapeStatus();
   if (current.isRunning) {
     res.status(202).json({
-      message: "Scrape is already running",
-      status: "running",
       ...current,
+      message: "Scrape is already running",
+      status: "already_running",
     });
     return;
   }
@@ -18,16 +18,22 @@ router.post("/scrape/trigger", async (req, res): Promise<void> => {
   req.log.info("Manual scrape triggered; running in background");
   void runScrape({ ignoreSourceCache: true })
     .then((result) => {
-      logger.info(result, "Manual scrape completed");
+      if (result.status === "failed") {
+        logger.error(result, "Manual scrape failed");
+      } else if (result.status === "partial") {
+        logger.warn(result, "Manual scrape completed with partial failures");
+      } else {
+        logger.info(result, "Manual scrape completed");
+      }
     })
     .catch((err) => {
       logger.error({ err }, "Manual scrape failed");
     });
 
   res.status(202).json({
+    ...getScrapeStatus(),
     message: "Scrape started",
     status: "running",
-    ...getScrapeStatus(),
   });
 });
 

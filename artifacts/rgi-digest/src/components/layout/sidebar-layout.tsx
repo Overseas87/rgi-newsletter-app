@@ -25,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQueryClient } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { GenerateModal } from "@/components/generate-modal";
 import { asArray, safeDate } from "@/lib/arrays";
@@ -76,6 +76,16 @@ type RuntimeHealth = {
   };
 };
 
+type ScrapeSummaryLite = {
+  finishedAt?: string | null;
+  articlesSaved?: number;
+  articlesAlreadyExisting?: number;
+  lowScoreSkipped?: number;
+  duplicatesSkipped?: number;
+  failedFeeds?: number;
+  firestoreWriteFailures?: number;
+};
+
 async function fetchRuntimeHealth(): Promise<RuntimeHealth> {
   const base = import.meta.env.VITE_API_BASE_URL || "";
   const response = await fetch(`${base}/api/health`, { headers: { accept: "application/json" } });
@@ -104,13 +114,21 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const triggerScrape = useTriggerScrape();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const activeScrapeStartedAtRef = useRef<string | null>(null);
+  const notifiedScrapeFinishedAtRef = useRef<string | null>(null);
 
   const pendingCount = asArray<{ id: number }>(pendingArticles).length;
   const scrapeStatusRecord = scrapeStatus as (typeof scrapeStatus & {
+    state?: unknown;
+    message?: unknown;
     startedAt?: unknown;
     staleAfterMs?: unknown;
     lastScrapeFailures?: unknown;
+    lastScrapeSummary?: ScrapeSummaryLite;
   }) | undefined;
+  const scrapeState = typeof scrapeStatusRecord?.state === "string" ? scrapeStatusRecord.state : undefined;
+  const scrapeMessage = typeof scrapeStatusRecord?.message === "string" ? scrapeStatusRecord.message : undefined;
+  const scrapeSummary = scrapeStatusRecord?.lastScrapeSummary;
   const scrapeStartedAt = typeof scrapeStatusRecord?.startedAt === "string"
     ? scrapeStatusRecord.startedAt
     : null;
@@ -118,7 +136,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const scrapeStaleAfterMs = Number(scrapeStatusRecord?.staleAfterMs ?? 15 * 60 * 1000);
   const isScrapeStale = Boolean(scrapeStatus?.isRunning && scrapeStartedMs && Date.now() - scrapeStartedMs > scrapeStaleAfterMs);
   const scrapeRunning = Boolean(scrapeStatus?.isRunning && !isScrapeStale);
-  const latestScrapeFailure = asArray<{ message?: string }>(scrapeStatusRecord?.lastScrapeFailures)[0]?.message;
+  const latestScrapeFailure = scrapeState === "failed" || scrapeState === "partial" || scrapeState === "stale"
+    ? scrapeMessage ?? asArray<{ message?: string }>(scrapeStatusRecord?.lastScrapeFailures)[0]?.message
+    : asArray<{ message?: string }>(scrapeStatusRecord?.lastScrapeFailures)[0]?.message;
   const runtime = runtimeHealth?.runtime;
   const databaseUnavailable = runtimeHealth?.status === "degraded" || runtimeHealth?.database === "unverified" || runtimeHealth?.database === "unreachable";
   const runtimeModeLabel = runtime?.mockDataMode
@@ -145,7 +165,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const lastScrapeLabel = scrapeStatusError
     ? "Scrape status unavailable"
     : scrapeRunning && scrapeStartedAt
-      ? <>Running since {format(safeDate(scrapeStartedAt), "h:mm a")}</>
+      ? <>
+          Running since {format(safeDate(scrapeStartedAt), "h:mm a")}
+          {scrapeMessage ? <span className="text-gray-400"> · {scrapeMessage}</span> : null}
+        </>
       : isScrapeStale
         ? "Previous scrape timed out"
         : scrapeStatus?.lastScrapeAt
@@ -154,6 +177,66 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               <span className="text-gray-400"> · {formatDistanceToNow(safeDate(scrapeStatus.lastScrapeAt), { addSuffix: true })}</span>
             </>
           : "Never scraped";
+
+  useEffect(() => {
+    const activeStartedAt = activeScrapeStartedAtRef.current;
+    const finishedAt = scrapeSummary?.finishedAt ?? null;
+    if (!activeStartedAt || scrapeStatus?.isRunning || !finishedAt) return;
+    if (scrapeStartedAt !== activeStartedAt) return;
+    if (notifiedScrapeFinishedAtRef.current === finishedAt) return;
+
+    notifiedScrapeFinishedAtRef.current = finishedAt;
+    activeScrapeStartedAtRef.current = null;
+
+    const saved = Number(scrapeSummary?.articlesSaved ?? 0);
+    const existing = Number(scrapeSummary?.articlesAlreadyExisting ?? 0);
+    const lowScore = Number(scrapeSummary?.lowScoreSkipped ?? 0);
+    const duplicate = Number(scrapeSummary?.duplicatesSkipped ?? 0);
+    const failedFeeds = Number(scrapeSummary?.failedFeeds ?? 0);
+    const writeFailures = Number(scrapeSummary?.firestoreWriteFailures ?? 0);
+    const failed = scrapeState === "failed";
+    const partial = scrapeState === "partial" || failedFeeds > 0 || writeFailures > 0;
+
+    toast({
+      title: failed
+        ? "Scrape failed"
+        : partial
+          ? `Scrape completed with partial failures`
+          : saved > 0
+            ? `Scrape saved ${saved} new article${saved === 1 ? "" : "s"}`
+            : "Scrape completed: no new articles saved",
+      description: failed
+        ? scrapeMessage ?? "The scrape did not complete. Check backend logs."
+        : [
+            saved > 0 ? `${saved} saved` : null,
+            existing > 0 ? `${existing} already existed` : null,
+            duplicate > 0 ? `${duplicate} duplicate${duplicate === 1 ? "" : "s"}` : null,
+            lowScore > 0 ? `${lowScore} below RGI threshold` : null,
+            failedFeeds > 0 ? `${failedFeeds} feed${failedFeeds === 1 ? "" : "s"} failed` : null,
+            writeFailures > 0 ? `${writeFailures} write failure${writeFailures === 1 ? "" : "s"}` : null,
+          ].filter(Boolean).join(" · ") || scrapeMessage || "Scrape completed.",
+      variant: failed ? "destructive" : undefined,
+    });
+
+    queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/articles"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/articles/page"] });
+    queryClient.invalidateQueries({ queryKey: getGetScrapeStatusQueryKey() });
+  }, [
+    queryClient,
+    scrapeMessage,
+    scrapeStartedAt,
+    scrapeState,
+    scrapeStatus?.isRunning,
+    scrapeSummary?.articlesAlreadyExisting,
+    scrapeSummary?.articlesSaved,
+    scrapeSummary?.duplicatesSkipped,
+    scrapeSummary?.failedFeeds,
+    scrapeSummary?.finishedAt,
+    scrapeSummary?.firestoreWriteFailures,
+    scrapeSummary?.lowScoreSkipped,
+    toast,
+  ]);
 
   const handleScrape = () => {
     triggerScrape.mutate(undefined, {
@@ -170,9 +253,23 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             duplicatesSkipped?: number;
             failedFeeds?: number;
           };
+          startedAt?: string;
+          lastScrapeSummary?: ScrapeSummaryLite;
         } : {};
 
+        if (payload.status === "already_running") {
+          activeScrapeStartedAtRef.current = typeof payload.startedAt === "string" ? payload.startedAt : null;
+          toast({
+            title: "Scrape already running",
+            description: "The existing scrape is still active. This panel will update when it finishes.",
+          });
+          queryClient.invalidateQueries({ queryKey: getGetScrapeStatusQueryKey() });
+          return;
+        }
+
         if (payload.status === "running" || payload.message?.toLowerCase().includes("started")) {
+          activeScrapeStartedAtRef.current = typeof payload.startedAt === "string" ? payload.startedAt : null;
+          notifiedScrapeFinishedAtRef.current = null;
           toast({
             title: "Scrape started",
             description: "The scraper is running in the background. This panel will update automatically.",

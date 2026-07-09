@@ -9,6 +9,8 @@ interface UsePdfDownloadOptions {
 interface UsePdfDownloadReturn {
   download: () => Promise<void>;
   open: () => void;
+  openUrl: string;
+  downloadUrl: string;
   isDownloading: boolean;
 }
 
@@ -28,21 +30,11 @@ export function usePdfDownload({ url, filename }: UsePdfDownloadOptions): UsePdf
   const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
   const anchorRef = useRef<HTMLAnchorElement | null>(null);
+  const openUrl = url ? `${url}${url.includes("?") ? "&" : "?"}inline=1` : "";
 
   const open = () => {
     if (!url) return;
-    console.info("[PDF download] opening PDF route", { url, filename });
-    const opened = window.open(url, "_blank");
-    if (!opened) {
-      toast({
-        title: "PDF popup blocked",
-        description: "Your browser blocked the PDF tab. Try allowing popups or opening the PDF route directly.",
-        variant: "destructive",
-        duration: 6000,
-      });
-      return;
-    }
-    opened.opener = null;
+    window.location.assign(openUrl);
   };
 
   const download = async () => {
@@ -184,16 +176,15 @@ export function usePdfDownload({ url, filename }: UsePdfDownloadOptions): UsePdf
         variant: "destructive",
         duration: 6000,
       });
-      console.warn("[PDF download] falling back to opening PDF route", {
+      console.warn("[PDF download] PDF generation/download failed", {
         url,
         filename,
         error: message,
       });
-      open();
     } finally {
       setIsDownloading(false);
     }
   };
 
-  return { download, open, isDownloading };
+  return { download, open, openUrl, downloadUrl: url, isDownloading };
 }

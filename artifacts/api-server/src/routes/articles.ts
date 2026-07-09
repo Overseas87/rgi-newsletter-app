@@ -12,9 +12,78 @@ import {
   GetArticleParams,
   DeleteArticleParams,
 } from "@workspace/api-zod";
-import { sendApiError, withApiTimeout } from "../lib/api-errors";
+import { getErrorMessage, sendApiError, withApiTimeout } from "../lib/api-errors";
 
 const router: IRouter = Router();
+
+type ArticleRecord = NonNullable<Awaited<ReturnType<typeof getFirestoreArticle>>>;
+
+type OptionalArticleScoring = {
+  scoreExplanation?: unknown;
+};
+
+function compactText(value: unknown, maxLength = 240): string {
+  if (typeof value !== "string") return "";
+  const text = value.replace(/\s+/g, " ").trim();
+  return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
+}
+
+function parseExplanationText(text: string): string | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = JSON.parse(trimmed) as { explanation?: unknown };
+    return typeof parsed.explanation === "string" && parsed.explanation.trim()
+      ? parsed.explanation.trim()
+      : null;
+  } catch {
+    return trimmed;
+  }
+}
+
+function extractProviderMessageText(message: unknown): string {
+  if (typeof message !== "object" || message === null) return "";
+  const content = (message as { content?: unknown }).content;
+  if (!Array.isArray(content)) return "";
+  const textBlocks = content
+    .map((block) => {
+      if (typeof block !== "object" || block === null) return "";
+      const candidate = block as { type?: unknown; text?: unknown };
+      return candidate.type === "text" && typeof candidate.text === "string"
+        ? candidate.text.trim()
+        : "";
+    })
+    .filter(Boolean);
+  return textBlocks.join("\n").trim();
+}
+
+function fallbackExplanation(article: ArticleRecord): string {
+  const topics = Array.isArray(article.topicTags) && article.topicTags.length > 0
+    ? article.topicTags.slice(0, 3).join(", ")
+    : "strategic leadership";
+  const discipline = compactText(article.disciplineAlignment, 80) || "Strategic Foresight";
+  const summary = compactText(article.teaserSummary || article.content, 260);
+  const source = compactText(article.sourceName, 80) || "the source";
+  const score = Number.isFinite(Number(article.relevancyScore))
+    ? `${Number(article.relevancyScore).toFixed(1)}/10`
+    : "the stored RGI score";
+  const scoreExplanation = compactText((article as OptionalArticleScoring).scoreExplanation, 260);
+
+  const summarySentence = summary
+    ? `The source summary says: ${summary}`
+    : "The stored article metadata does not include a detailed source summary, so editors should verify the causal mechanism before relying on it.";
+  const scoreSentence = scoreExplanation
+    ? scoreExplanation
+    : `The stored RGI score places this item in the ${discipline} lane because it connects ${topics} to executive judgment.`;
+
+  return [
+    `${article.headline} matters to RGI because it connects ${topics} to decisions senior leaders may need to make before the full consequence is visible.`,
+    summarySentence,
+    `${source} gives this signal enough source authority to warrant review, but the key question is not the headline itself; it is which assumptions, timing decisions, or governance responsibilities the story may pressure next.`,
+    `${scoreSentence}`,
+    `Based on the stored article metadata, this item currently carries a relevance score of ${score} and should be treated as a candidate for editorial judgment rather than a finished conclusion.`,
+  ].join(" ");
+}
 
 router.get("/articles/page", async (req, res): Promise<void> => {
   const limit = Math.min(Math.max(Number(req.query.limit ?? 50) || 50, 1), 100);
@@ -162,19 +231,37 @@ Discipline: ${article.disciplineAlignment}
 Topics: ${(Array.isArray(article.topicTags) ? article.topicTags : []).join(", ")}
 Summary: ${article.teaserSummary || article.content?.slice(0, 500) || "(no summary available)"}
 
-Write the explanation as 4-6 crisp, analytical sentences. No bullet points. No preamble. No "This article..." opener — start with the substantive observation.`;
+Write the explanation as 4-6 crisp, analytical sentences. No bullet points. No preamble. No "This article..." opener — start with the substantive observation.
+
+Return ONLY valid JSON in this exact shape:
+{"explanation":"the explanation text"}`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 512,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const block = message.content[0];
-    const explanation = block.type === "text" ? block.text.trim() : "Unable to generate explanation.";
-    res.json({ explanation, discipline: article.disciplineAlignment, score: article.relevancyScore });
+    const message = await withApiTimeout(
+      "Article explanation provider call",
+      Promise.resolve(
+        anthropic.messages.create({
+          model: "claude-haiku-4-5",
+          max_tokens: 512,
+          messages: [{ role: "user", content: prompt }],
+        })
+      ),
+      12000
+    );
+    const parsedExplanation = parseExplanationText(extractProviderMessageText(message));
+    const explanation = parsedExplanation ?? fallbackExplanation(article);
+    res.json({ explanation, discipline: article.disciplineAlignment, score: article.relevancyScore, fallback: !parsedExplanation });
   } catch (e) {
-    res.status(500).json({ error: "Failed to generate explanation" });
+    req.log.warn(
+      { err: e, articleId: id, reason: getErrorMessage(e) },
+      "Provider-backed article explanation failed; returning stored metadata fallback"
+    );
+    res.json({
+      explanation: fallbackExplanation(article),
+      discipline: article.disciplineAlignment,
+      score: article.relevancyScore,
+      fallback: true,
+    });
   }
 });
 

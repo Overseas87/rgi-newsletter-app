@@ -4,6 +4,9 @@ set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# shellcheck source=scripts/local-process-utils.sh
+source ./scripts/local-process-utils.sh
+
 export PATH="/Users/aaronschoneck/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH"
 export NODE_ENV="${NODE_ENV:-development}"
 export RGI_INLINE_JOBS="${RGI_INLINE_JOBS:-true}"
@@ -26,6 +29,8 @@ export API_ROUTE_TIMEOUT_MS="${API_ROUTE_TIMEOUT_MS:-12000}"
 export RGI_FORCE_LOCAL_STORE="${RGI_FORCE_LOCAL_STORE:-false}"
 
 mkdir -p .local-run
+LOG_MAX_BYTES="${RGI_LOCAL_LOG_MAX_BYTES:-5242880}"
+LOG_RETAIN_BYTES="${RGI_LOCAL_LOG_RETAIN_BYTES:-1048576}"
 
 check_can_bind() {
   local port="$1"
@@ -66,41 +71,11 @@ check_can_bind() {
   exit 1
 }
 
-kill_port() {
-  local port="$1"
-  local pids
-  pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
-  if [[ -n "$pids" ]]; then
-    echo "Stopping stale process(es) on port $port: $pids"
-    # shellcheck disable=SC2086
-    kill $pids >/dev/null 2>&1 || true
-    sleep 1
-    pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
-    if [[ -n "$pids" ]]; then
-      # shellcheck disable=SC2086
-      kill -9 $pids >/dev/null 2>&1 || true
-      sleep 1
-    fi
-  fi
-
-  pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
-  if [[ -n "$pids" ]]; then
-    echo "Could not clear port $port. Stale process(es) still running: $pids"
-    echo "Close the old terminal window, or run: kill -9 $pids"
-    exit 1
-  fi
-}
-
-if [[ -f .local-run/backend.pid ]]; then
-  OLD_BACKEND_PID="$(cat .local-run/backend.pid || true)"
-  if [[ -n "${OLD_BACKEND_PID}" ]]; then
-    kill "${OLD_BACKEND_PID}" >/dev/null 2>&1 || true
-    sleep 1
-  fi
-fi
-rm -f .local-run/backend.pid .local-run/frontend.pid
-kill_port 3000
-kill_port 21410
+echo "Checking for existing RGI local processes..."
+local_stop_owned_processes
+local_stop_project_port_listeners 3000 || true
+local_stop_project_port_listeners 21410 || true
+local_require_ports_available || exit 1
 check_can_bind 3000
 check_can_bind 21410
 : > .local-run/backend.log
@@ -109,12 +84,9 @@ check_can_bind 21410
 cleanup() {
   echo
   echo "Stopping local RGI app..."
-  if [[ -f .local-run/backend.pid ]]; then
-    kill "$(cat .local-run/backend.pid)" >/dev/null 2>&1 || true
-  fi
-  if [[ -f .local-run/frontend.pid ]]; then
-    kill "$(cat .local-run/frontend.pid)" >/dev/null 2>&1 || true
-  fi
+  local_stop_owned_processes
+  local_stop_project_port_listeners 3000 || true
+  local_stop_project_port_listeners 21410 || true
 }
 trap cleanup EXIT
 
@@ -122,7 +94,24 @@ echo "Building backend..."
 pnpm --filter @workspace/api-server run build
 
 echo "Starting backend on http://localhost:3000"
-(HOST=127.0.0.1 PORT=3000 node --enable-source-maps ./artifacts/api-server/dist/index.mjs > .local-run/backend.log 2>&1 & echo $! > .local-run/backend.pid)
+(
+  HOST=127.0.0.1 PORT=3000 node --enable-source-maps ./artifacts/api-server/dist/index.mjs 2>&1 &
+  BACKEND_PID=$!
+  if ! echo "$BACKEND_PID" > .local-run/backend.pid; then
+    echo "[local-run] Warning: could not write backend PID file"
+  fi
+  set +e
+  wait "$BACKEND_PID"
+  EXIT_CODE=$?
+  set -e
+  if [[ "$EXIT_CODE" == "143" ]]; then
+    echo "[local-run] Backend received SIGTERM. This is expected when stopping or restarting the local app."
+    exit 0
+  fi
+  echo "[local-run] Backend process exited with code $EXIT_CODE"
+  exit "$EXIT_CODE"
+) | RGI_LOCAL_LOG_MAX_BYTES="$LOG_MAX_BYTES" RGI_LOCAL_LOG_RETAIN_BYTES="$LOG_RETAIN_BYTES" node ./scripts/local-log-writer.mjs .local-run/backend.log --quiet &
+echo $! > .local-run/backend-wrapper.pid
 
 for i in {1..45}; do
   if curl -fsS http://localhost:3000/api/readyz >/dev/null 2>&1; then
@@ -158,6 +147,7 @@ echo "Keep this terminal window open while using the local app."
 echo "If a page says data is unavailable, check:"
 echo "  Backend log:  .local-run/backend.log"
 echo "  Frontend log: .local-run/frontend.log"
+echo "  Log cap:      $LOG_MAX_BYTES bytes, retaining last $LOG_RETAIN_BYTES bytes"
 echo
 
 (for i in {1..30}; do
@@ -168,4 +158,20 @@ echo
   sleep 1
 done) &
 
-PORT=21410 BASE_PATH=/ pnpm --filter @workspace/rgi-digest run dev 2>&1 | tee .local-run/frontend.log
+(
+  PORT=21410 BASE_PATH=/ pnpm --filter @workspace/rgi-digest run dev 2>&1 &
+  FRONTEND_PID=$!
+  if ! echo "$FRONTEND_PID" > .local-run/frontend.pid; then
+    echo "[local-run] Warning: could not write frontend PID file"
+  fi
+  set +e
+  wait "$FRONTEND_PID"
+  EXIT_CODE=$?
+  set -e
+  if [[ "$EXIT_CODE" == "143" ]]; then
+    echo "[local-run] Frontend received SIGTERM. This is expected when stopping or restarting the local app."
+    exit 0
+  fi
+  echo "[local-run] Frontend process exited with code $EXIT_CODE"
+  exit "$EXIT_CODE"
+) | RGI_LOCAL_LOG_MAX_BYTES="$LOG_MAX_BYTES" RGI_LOCAL_LOG_RETAIN_BYTES="$LOG_RETAIN_BYTES" node ./scripts/local-log-writer.mjs .local-run/frontend.log

@@ -2,6 +2,7 @@
 
 # compiled output
 dist
+build/
 tmp
 out-tsc
 *.tsbuildinfo
@@ -10,6 +11,7 @@ out-tsc
 
 # dependencies
 node_modules
+.pnpm-store/
 
 # IDEs and editors
 /.idea

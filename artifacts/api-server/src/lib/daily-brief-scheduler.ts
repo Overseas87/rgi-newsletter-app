@@ -3,6 +3,8 @@ import { generateDailyBrief } from "./ai-writer";
 import { runScrape } from "./scraper";
 import { createFirestoreDigest, listFirestoreArticles, listFirestoreDigests } from "./firestore-data";
 
+const SCHEDULER_DAILY_BRIEF_ARTICLE_SCAN_LIMIT = 120;
+
 /** Fetches yesterday's daily_brief and formats it as context for "What Changed Since Yesterday". */
 async function getYesterdayBriefContext(): Promise<string | null> {
   const now = new Date();
@@ -59,7 +61,7 @@ async function dailyBriefExistsForToday(): Promise<boolean> {
 /** Returns the number of articles scraped within the last hoursBack hours */
 async function recentArticleCount(hoursBack: number): Promise<number> {
   const cutoff = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
-  return (await listFirestoreArticles({ limit: 1000 }))
+  return (await listFirestoreArticles({ limit: SCHEDULER_DAILY_BRIEF_ARTICLE_SCAN_LIMIT, sortBy: "time" }))
     .filter((article) => new Date(article.scrapedAt).getTime() >= cutoff.getTime())
     .length;
 }
@@ -91,7 +93,7 @@ async function attemptBriefGeneration(
       );
 
       const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const fallbackRows = (await listFirestoreArticles({ limit: 500 }))
+      const fallbackRows = (await listFirestoreArticles({ limit: SCHEDULER_DAILY_BRIEF_ARTICLE_SCAN_LIMIT, sortBy: "time" }))
         .filter((article) => new Date(article.scrapedAt).getTime() >= cutoff.getTime())
         .sort((a, b) => b.relevancyScore - a.relevancyScore)
         .slice(0, 7);
@@ -125,6 +127,7 @@ async function attemptBriefGeneration(
       relevancyScore: brief.relevancyScore,
       discipline: brief.discipline,
       status: "pending_review",
+      strategicPlan: brief.strategicPlan ?? null,
       editorNotes: usedFallback
         ? "Auto-generated daily brief (limited recent articles — multi-day synthesis)"
         : "Auto-generated daily brief",
