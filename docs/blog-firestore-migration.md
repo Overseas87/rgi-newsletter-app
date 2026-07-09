@@ -4,6 +4,44 @@ This migration copies selected Firestore collections from `rgi-insight-blog-gene
 
 Migration is separate from deployment. Do not deploy Hosting, Functions, App Hosting, rules, indexes, or secrets as part of a migration dry-run.
 
+## Status
+
+Firestore data migration completed on 2026-07-09.
+
+Execution summary:
+
+| Collection | Created documents |
+| --- | ---: |
+| `settings` | 1 |
+| `sources` | 32 |
+| `_meta` | 1 |
+| `_article_dedupe` | 5,388 |
+| `articles` | 3,086 |
+| `digest_articles` | 49 |
+
+Total created: 8,557 documents.
+
+Conflicts: 0.
+
+Post-migration verification dry-run:
+
+- Target collection counts matched source collection counts.
+- `planned=0`.
+- `created=0`.
+- Conflicts equaled existing target documents, which is expected after a successful create-only migration.
+- No Firestore writes were performed in the verification dry-run.
+
+Explicitly excluded or unchanged:
+
+- `background_jobs` was intentionally excluded.
+- Firebase Auth was not migrated.
+- Firebase Storage was not migrated.
+- Firebase Functions were not redeployed.
+- Firebase Hosting and App Hosting were not deployed.
+- Firebase secrets were not changed.
+
+Do not rerun execute mode unless a new migration plan is reviewed and explicitly approved.
+
 ## Dry-run with source ADC
 
 Use this when Application Default Credentials have read access to `rgi-insight-blog-generator` and access to inspect `blog-generator-1bb12`.
