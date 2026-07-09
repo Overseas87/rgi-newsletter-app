@@ -24,9 +24,11 @@ function usage() {
     "  node scripts/migration/blog-targeted-firestore-migrate.mjs \\",
     "    --source-project rgi-insight-blog-generator \\",
     "    --target-project blog-generator-1bb12 \\",
-    "    --source-credentials /path/to/source-service-account.json \\",
+    "    (--source-use-adc | --source-credentials /path/to/source-service-account.json) \\",
     "    --collections settings,sources,_meta,_article_dedupe,articles,digest_articles",
     "",
+    "Source credentials must use exactly one of --source-use-adc or --source-credentials.",
+    "Target credentials default to Application Default Credentials unless --target-credentials is provided.",
     "Dry-run is the default. Writes require --execute --confirm-target blog-generator-1bb12.",
   ].join("\n");
 }
@@ -36,6 +38,7 @@ function parseArgs(argv) {
     sourceProject: null,
     targetProject: null,
     sourceCredentials: null,
+    sourceUseAdc: false,
     targetCredentials: null,
     collections: DEFAULT_COLLECTIONS,
     execute: false,
@@ -70,6 +73,9 @@ function parseArgs(argv) {
         break;
       case "--source-credentials":
         args.sourceCredentials = readValue();
+        break;
+      case "--source-use-adc":
+        args.sourceUseAdc = true;
         break;
       case "--target-credentials":
         args.targetCredentials = readValue();
@@ -107,7 +113,12 @@ function validateArgs(args) {
   if (args.help) return;
   if (!args.sourceProject) throw new Error("--source-project is required");
   if (!args.targetProject) throw new Error("--target-project is required");
-  if (!args.sourceCredentials) throw new Error("--source-credentials is required for old-project reads");
+  if (!args.sourceCredentials && !args.sourceUseAdc) {
+    throw new Error("Source credentials require exactly one of --source-use-adc or --source-credentials");
+  }
+  if (args.sourceCredentials && args.sourceUseAdc) {
+    throw new Error("Source credentials are ambiguous; use either --source-use-adc or --source-credentials, not both");
+  }
   if (args.sourceProject !== EXPECTED_SOURCE_PROJECT) {
     throw new Error(`Refusing unexpected source project: ${args.sourceProject}`);
   }
@@ -260,6 +271,9 @@ async function main() {
   console.log(`Source project: ${args.sourceProject}`);
   console.log(`Target project: ${args.targetProject}`);
   console.log(`Collections: ${args.collections.join(",")}`);
+  if (args.sourceUseAdc) {
+    console.log("Source credentials: Application Default Credentials");
+  }
   if (!args.targetCredentials) {
     console.log("Target credentials: Application Default Credentials");
   }
@@ -271,7 +285,7 @@ async function main() {
     name: "blog-source",
     projectId: args.sourceProject,
     credentialPath: args.sourceCredentials,
-    useAdcFallback: false,
+    useAdcFallback: args.sourceUseAdc,
   });
   const target = initializeFirestore({
     name: "blog-target",
