@@ -42,6 +42,34 @@ Explicitly excluded or unchanged:
 
 Do not rerun execute mode unless a new migration plan is reviewed and explicitly approved.
 
+## Migrated Local Backend Smoke Test
+
+Ignored local env files may still contain pre-migration values. Treat `.env` and `.env.local` as local-only files that can be stale after the migration; do not commit them, paste them into chat, or use them as proof of the production runtime target.
+
+Use the read-only smoke command to verify the local API against the migrated backend:
+
+```bash
+pnpm smoke:firebase-readonly
+```
+
+This command does not source `.env` or `.env.local`. It starts the API with explicit overrides for `FIREBASE_PROJECT_ID=blog-generator-1bb12`, `RGI_READ_ONLY_STARTUP=true`, scheduler-disabled startup, and well-known Application Default Credentials. It then runs GET-only checks for readiness, health, diagnostics, articles, sources, settings, and digest data. It must not deploy, run migration scripts, or write to Firestore.
+
+Normal local app startup should not target `rgi-insight-blog-generator`. Runtime Firebase initialization now fails if the API is configured for that legacy project.
+
+To update ignored local env files manually, use placeholders and local paths only:
+
+```bash
+# .env or .env.local
+FIREBASE_PROJECT_ID=blog-generator-1bb12
+
+# Preferred local credentials flow:
+# Run gcloud auth application-default login in Terminal.
+# Do not set GOOGLE_APPLICATION_CREDENTIALS unless a reviewed local key-file flow is required.
+
+# Optional local key-file flow, only when explicitly approved:
+# GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/local-service-account.json
+```
+
 ## Dry-run with source ADC
 
 Use this when Application Default Credentials have read access to `rgi-insight-blog-generator` and access to inspect `blog-generator-1bb12`.

@@ -10,7 +10,8 @@
     "dev:local": "bash ./scripts/dev-local.sh",
     "start:local": "bash ./scripts/start-local-detached.sh",
     "stop:local": "bash ./scripts/stop-local.sh",
-    "smoke:local": "bash ./scripts/smoke-local.sh"
+    "smoke:local": "bash ./scripts/smoke-local.sh",
+    "smoke:firebase-readonly": "bash ./scripts/smoke-firebase-readonly.sh"
   },
   "private": true,
   "devDependencies": {
