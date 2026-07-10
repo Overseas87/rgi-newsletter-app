@@ -1,4 +1,6 @@
 import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { logger } from "./logger";
 
 type FirebaseBundle = {
@@ -9,7 +11,9 @@ type FirebaseBundle = {
 
 let bundlePromise: Promise<FirebaseBundle> | null = null;
 
-export const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "blog-generator-1bb12";
+export const EXPECTED_FIREBASE_PROJECT_ID = "blog-generator-1bb12";
+export const LEGACY_FIREBASE_PROJECT_ID = "rgi-insight-blog-generator";
+export const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || EXPECTED_FIREBASE_PROJECT_ID;
 
 function isManagedGoogleRuntime(): boolean {
   return Boolean(
@@ -20,10 +24,23 @@ function isManagedGoogleRuntime(): boolean {
   );
 }
 
+function wellKnownAdcPath(): string {
+  return join(homedir(), ".config", "gcloud", "application_default_credentials.json");
+}
+
+function hasWellKnownApplicationDefaultCredentials(): boolean {
+  return existsSync(wellKnownAdcPath());
+}
+
 export function isFirebaseConfigured(): boolean {
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   const hasUsableServiceAccount = Boolean(serviceAccount && !serviceAccount.includes("PLACEHOLDER"));
-  return Boolean(hasUsableServiceAccount || process.env.GOOGLE_APPLICATION_CREDENTIALS || isManagedGoogleRuntime());
+  return Boolean(
+    hasUsableServiceAccount ||
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    hasWellKnownApplicationDefaultCredentials() ||
+    isManagedGoogleRuntime()
+  );
 }
 
 export function getFirebaseDiagnostics(): Record<string, unknown> {
@@ -31,13 +48,25 @@ export function getFirebaseDiagnostics(): Record<string, unknown> {
   return {
     databaseProvider: "firestore",
     firebaseProjectId: process.env.FIREBASE_PROJECT_ID ?? null,
+    expectedFirebaseProjectId: EXPECTED_FIREBASE_PROJECT_ID,
+    legacyFirebaseProjectDetected: FIREBASE_PROJECT_ID === LEGACY_FIREBASE_PROJECT_ID,
     hasServiceAccountJson: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON),
     hasUsableServiceAccountJson: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON.includes("PLACEHOLDER")),
-    googleApplicationCredentials: credentialsPath,
+    hasGoogleApplicationCredentials: Boolean(credentialsPath),
     googleApplicationCredentialsExists: credentialsPath ? existsSync(credentialsPath) : false,
+    hasWellKnownApplicationDefaultCredentials: hasWellKnownApplicationDefaultCredentials(),
     managedGoogleRuntime: isManagedGoogleRuntime(),
     nodeEnv: process.env.NODE_ENV ?? null,
   };
+}
+
+export function assertSafeFirebaseProjectTarget(): void {
+  if (FIREBASE_PROJECT_ID === LEGACY_FIREBASE_PROJECT_ID) {
+    throw new Error(
+      `Runtime Firebase project is set to the legacy project ${LEGACY_FIREBASE_PROJECT_ID}. ` +
+      `Use FIREBASE_PROJECT_ID=${EXPECTED_FIREBASE_PROJECT_ID} for the migrated Blog Generator backend.`
+    );
+  }
 }
 
 export function missingFirebaseConfig(): string[] {
@@ -45,11 +74,12 @@ export function missingFirebaseConfig(): string[] {
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   const hasJson = Boolean(serviceAccount && !serviceAccount.includes("PLACEHOLDER"));
   const hasGoogleCredentials = Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS);
-  if (!hasJson && !hasGoogleCredentials && !isManagedGoogleRuntime()) {
-    missing.push("FIREBASE_SERVICE_ACCOUNT_JSON or GOOGLE_APPLICATION_CREDENTIALS");
+  const hasWellKnownAdc = hasWellKnownApplicationDefaultCredentials();
+  if (!hasJson && !hasGoogleCredentials && !hasWellKnownAdc && !isManagedGoogleRuntime()) {
+    missing.push("FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_APPLICATION_CREDENTIALS, or well-known Application Default Credentials");
   }
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
-    missing.push(`GOOGLE_APPLICATION_CREDENTIALS file does not exist: ${process.env.GOOGLE_APPLICATION_CREDENTIALS}`);
+    missing.push("GOOGLE_APPLICATION_CREDENTIALS file does not exist");
   }
   if (serviceAccount?.includes("PLACEHOLDER")) {
     missing.push("replace placeholder FIREBASE_SERVICE_ACCOUNT_JSON");
@@ -94,6 +124,7 @@ export async function getFirebaseBundle(): Promise<FirebaseBundle> {
   bundlePromise = (async () => {
     logger.info(getFirebaseDiagnostics(), "Initializing Firebase Admin SDK");
     try {
+      assertSafeFirebaseProjectTarget();
       assertFirebaseConfigured();
       const appModule = await runtimeImport<any>("firebase-admin/app");
       const firestoreModule = await runtimeImport<any>("firebase-admin/firestore");

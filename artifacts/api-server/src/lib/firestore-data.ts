@@ -450,7 +450,29 @@ export async function listFirestoreArticlesPage(query: {
 }
 
 export async function countFirestoreArticles(query: { status?: string } = {}): Promise<number> {
-  return (await listFirestoreArticles({ status: query.status, limit: 1000 })).length;
+  const localCount = () => listLocalArticles({ status: query.status, limit: Number.MAX_SAFE_INTEGER }).then((articles) => articles.length);
+  if (localStoreModeEnabled()) return localCount();
+
+  try {
+    if (isFirestoreTemporarilyDegraded()) throw new Error("Firestore is temporarily degraded");
+    const { db } = await getFirebaseBundle();
+    let ref: any = db.collection("articles");
+    if (query.status) ref = ref.where("status", "==", query.status);
+
+    return await withFirestoreRetry("Count Firestore articles", async () => {
+      if (typeof ref.count === "function") {
+        const aggregate: any = await ref.count().get();
+        return Number(aggregate.data()?.count ?? 0);
+      }
+      if (typeof ref.select === "function") {
+        const snapshot: any = await ref.select().get();
+        return Number(snapshot.size ?? snapshot.docs?.length ?? 0);
+      }
+      throw new Error("Firestore count query is not supported by this SDK");
+    }, { timeoutMs: 15000 });
+  } catch (error) {
+    return localFallback("count articles", error, localCount);
+  }
 }
 
 export async function getFirestoreArticle(id: number): Promise<Article | null> {

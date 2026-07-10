@@ -34,6 +34,10 @@ function configuredCorsOrigins(): string[] {
   return ["http://localhost:21410", "http://127.0.0.1:21410", "http://localhost:5173", "http://127.0.0.1:5173"];
 }
 
+function readOnlyStartupEnabled(): boolean {
+  return process.env.RGI_READ_ONLY_STARTUP === "true";
+}
+
 function isAdminProtectedRequest(req: express.Request): boolean {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return false;
   return req.path.startsWith("/api/") || req.path.startsWith("/sources");
@@ -104,7 +108,11 @@ export async function initializeApp() {
       logger.warn("No sources found in Firestore. Add sources in the Sources page before scraping.");
     }
 
-    await withStartupTimeout("job recovery", markStaleRunningJobsFailed(60), 5000);
+    if (readOnlyStartupEnabled()) {
+      logger.info("Read-only startup enabled; skipping Firestore job recovery writes");
+    } else {
+      await withStartupTimeout("job recovery", markStaleRunningJobsFailed(60), 5000);
+    }
     await withStartupTimeout("scrape status initialization", initializeScrapeStatus(), 5000);
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
@@ -119,7 +127,9 @@ export async function initializeApp() {
   }
 
   const managedRuntime = Boolean(process.env.FUNCTION_TARGET || process.env.K_SERVICE);
-  if (process.env.RGI_START_SCHEDULER === "false") {
+  if (readOnlyStartupEnabled()) {
+    logger.info("Read-only startup enabled; scheduler disabled");
+  } else if (process.env.RGI_START_SCHEDULER === "false") {
     logger.info("Local scheduler disabled by RGI_START_SCHEDULER=false");
   } else if (managedRuntime) {
     logger.info("Managed cloud runtime detected; Firebase scheduled functions own scrape and brief schedules");

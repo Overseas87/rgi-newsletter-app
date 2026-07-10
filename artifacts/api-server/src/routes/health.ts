@@ -18,6 +18,7 @@ function runtimeFlags() {
     firestoreProjectId: process.env.FIREBASE_PROJECT_ID ?? "blog-generator-1bb12",
     firestoreEmulatorHost: process.env.FIRESTORE_EMULATOR_HOST ?? null,
     firestoreEmulatorActive: Boolean(process.env.FIRESTORE_EMULATOR_HOST || process.env.USE_FIRESTORE_EMULATOR === "true"),
+    readOnlyStartup: process.env.RGI_READ_ONLY_STARTUP === "true",
     localStoreMode: localStoreModeEnabled(),
     localFallbackEnabled: localFallbackEnabled(),
     localStorePath: localStorePath(),
