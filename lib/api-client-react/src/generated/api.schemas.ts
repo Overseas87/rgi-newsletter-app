@@ -27,6 +27,199 @@ export interface ScrapeStatus {
   isRunning: boolean;
 }
 
+export type ProfessorProfileParticipationStatus =
+  (typeof ProfessorProfileParticipationStatus)[keyof typeof ProfessorProfileParticipationStatus];
+
+export const ProfessorProfileParticipationStatus = {
+  available: "available",
+  limited: "limited",
+  unavailable: "unavailable",
+} as const;
+
+export type ProfessorProfileStatus =
+  (typeof ProfessorProfileStatus)[keyof typeof ProfessorProfileStatus];
+
+export const ProfessorProfileStatus = {
+  active: "active",
+  paused: "paused",
+  inactive: "inactive",
+} as const;
+
+export interface ProfessorProfile {
+  id: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  fullName: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  academicTitle: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  department: string;
+  /** @maxItems 40 */
+  coursesTaught: string[];
+  /** @maxItems 40 */
+  expertiseTags: string[];
+  /** @maxItems 40 */
+  researchInterests: string[];
+  /** @maxItems 30 */
+  industries: string[];
+  /** @maxItems 30 */
+  regions: string[];
+  /** @maxLength 2000 */
+  professionalBackground: string;
+  /** @maxLength 2000 */
+  approvedBio: string;
+  /** @maxItems 40 */
+  publications: string[];
+  /** @maxItems 40 */
+  recurringThemes: string[];
+  /** @maxItems 40 */
+  contactableTopics: string[];
+  /** @maxItems 40 */
+  doNotContactTopics: string[];
+  participationStatus: ProfessorProfileParticipationStatus;
+  /**
+   * @minimum 0
+   * @maximum 20
+   */
+  maxOpenRequests: number;
+  status: ProfessorProfileStatus;
+  /** @minimum 1 */
+  schemaVersion: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProfessorLibraryConfigResponse {
+  writesEnabled: boolean;
+}
+
+export interface ListProfessorProfilesResponse {
+  items: ProfessorProfile[];
+  total: number;
+  writesEnabled: boolean;
+}
+
+export interface ProfessorProfileDetailResponse {
+  profile: ProfessorProfile;
+  writesEnabled: boolean;
+}
+
+export type CreateProfessorProfileBodyParticipationStatus =
+  (typeof CreateProfessorProfileBodyParticipationStatus)[keyof typeof CreateProfessorProfileBodyParticipationStatus];
+
+export const CreateProfessorProfileBodyParticipationStatus = {
+  available: "available",
+  limited: "limited",
+  unavailable: "unavailable",
+} as const;
+
+export type CreateProfessorProfileBodyStatus =
+  (typeof CreateProfessorProfileBodyStatus)[keyof typeof CreateProfessorProfileBodyStatus];
+
+export const CreateProfessorProfileBodyStatus = {
+  active: "active",
+  paused: "paused",
+  inactive: "inactive",
+} as const;
+
+export interface CreateProfessorProfileBody {
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  fullName: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  academicTitle: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  department: string;
+  coursesTaught?: string[];
+  expertiseTags?: string[];
+  researchInterests?: string[];
+  industries?: string[];
+  regions?: string[];
+  professionalBackground?: string;
+  approvedBio?: string;
+  publications?: string[];
+  recurringThemes?: string[];
+  contactableTopics?: string[];
+  doNotContactTopics?: string[];
+  participationStatus?: CreateProfessorProfileBodyParticipationStatus;
+  /**
+   * @minimum 0
+   * @maximum 20
+   */
+  maxOpenRequests?: number;
+  status?: CreateProfessorProfileBodyStatus;
+}
+
+export type UpdateProfessorProfileBodyParticipationStatus =
+  (typeof UpdateProfessorProfileBodyParticipationStatus)[keyof typeof UpdateProfessorProfileBodyParticipationStatus];
+
+export const UpdateProfessorProfileBodyParticipationStatus = {
+  available: "available",
+  limited: "limited",
+  unavailable: "unavailable",
+} as const;
+
+export type UpdateProfessorProfileBodyStatus =
+  (typeof UpdateProfessorProfileBodyStatus)[keyof typeof UpdateProfessorProfileBodyStatus];
+
+export const UpdateProfessorProfileBodyStatus = {
+  active: "active",
+  paused: "paused",
+  inactive: "inactive",
+} as const;
+
+export interface UpdateProfessorProfileBody {
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  fullName?: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  academicTitle?: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  department?: string;
+  coursesTaught?: string[];
+  expertiseTags?: string[];
+  researchInterests?: string[];
+  industries?: string[];
+  regions?: string[];
+  professionalBackground?: string;
+  approvedBio?: string;
+  publications?: string[];
+  recurringThemes?: string[];
+  contactableTopics?: string[];
+  doNotContactTopics?: string[];
+  participationStatus?: UpdateProfessorProfileBodyParticipationStatus;
+  /**
+   * @minimum 0
+   * @maximum 20
+   */
+  maxOpenRequests?: number;
+  status?: UpdateProfessorProfileBodyStatus;
+}
+
 export type ArticleStatus = (typeof ArticleStatus)[keyof typeof ArticleStatus];
 
 export const ArticleStatus = {
@@ -102,12 +295,10 @@ export interface DigestArticle {
   rgiTake: string;
   keyTakeaways: string[];
   implificationsForLeaders: string[];
-  whatChangedSinceYesterday: string[];
   whatToWatch: string[];
-  summaryTakeaways: string[];
   topicTags: string[];
   sourceArticleIds: number[];
-  sourceArticles?: (Article | { id: number; url: string; headline: string; sourceName?: string | null })[];
+  sourceArticles?: Article[];
   /** @nullable */
   relevancyScore?: number | null;
   status: DigestArticleStatus;
@@ -142,11 +333,10 @@ export const UpdateDigestArticleBodyStatus = {
 export interface UpdateDigestArticleBody {
   headline?: string;
   body?: string;
-  executiveSummary?: string[];
   rgiTake?: string;
+  executiveSummary?: string[];
   keyTakeaways?: string[];
   implificationsForLeaders?: string[];
-  whatToWatch?: string[];
   topicTags?: string[];
   /** @nullable */
   editorNotes?: string | null;
@@ -196,8 +386,6 @@ export interface Source {
   authorType?: string | null;
   /** @nullable */
   authorityLevel?: number | null;
-  /** @nullable */
-  weight?: number | null;
   /** @nullable */
   description?: string | null;
   createdAt: string;
@@ -261,9 +449,12 @@ export interface UpdateSourceBody {
   /** @nullable */
   authorityLevel?: number | null;
   /** @nullable */
-  weight?: number | null;
-  /** @nullable */
   description?: string | null;
+  /**
+   * @minimum 0.5
+   * @maximum 2
+   */
+  weight?: number;
 }
 
 export interface TagCount {
@@ -274,8 +465,8 @@ export interface TagCount {
 export interface TopicIntelligence {
   topic: string;
   articleCount: number;
-  avgRelevancyScore?: number;
   importanceScore: number;
+  avgRelevancyScore: number;
   significance: string;
   discipline: string;
   hasEmergingSignal: boolean;
@@ -290,16 +481,13 @@ export interface DashboardSummary {
   topPicks: Article[];
   /** @nullable */
   lastScrapeAt?: string | null;
+  contentWindowStart?: string;
   articlesByTag: TagCount[];
   topicIntelligence: TopicIntelligence[];
   totalSources: number;
   activeSources: number;
   socialSignalsCount: number;
   emergingSignalsCount: number;
-  /** ISO date string — start of the time window used to count topic articles */
-  contentWindowStart?: string;
-  /** Minimum relevancy score used when counting topic articles (e.g. 7.0) */
-  minTopicScore?: number;
 }
 
 export interface Settings {
@@ -313,6 +501,19 @@ export interface UpdateSettingsBody {
   scrapeIntervalHours?: number;
   scrapeTimeUtc?: string;
 }
+
+export type ListProfessorProfilesParams = {
+  status?: ListProfessorProfilesStatus;
+};
+
+export type ListProfessorProfilesStatus =
+  (typeof ListProfessorProfilesStatus)[keyof typeof ListProfessorProfilesStatus];
+
+export const ListProfessorProfilesStatus = {
+  active: "active",
+  paused: "paused",
+  inactive: "inactive",
+} as const;
 
 export type ListArticlesParams = {
   status?: ListArticlesStatus;

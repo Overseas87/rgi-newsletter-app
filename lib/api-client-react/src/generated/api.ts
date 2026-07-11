@@ -18,6 +18,7 @@ import type {
 
 import type {
   Article,
+  CreateProfessorProfileBody,
   CreateSourceBody,
   DashboardSummary,
   DigestArticle,
@@ -26,6 +27,10 @@ import type {
   HealthStatus,
   ListArticlesParams,
   ListDigestArticlesParams,
+  ListProfessorProfilesParams,
+  ListProfessorProfilesResponse,
+  ProfessorLibraryConfigResponse,
+  ProfessorProfileDetailResponse,
   RegenerateDigestBody,
   RejectDigestBody,
   ScrapeResult,
@@ -33,45 +38,13 @@ import type {
   Settings,
   Source,
   UpdateDigestArticleBody,
+  UpdateProfessorProfileBody,
   UpdateSettingsBody,
   UpdateSourceBody,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
-
-function ensureArray<T>(value: unknown): T[] {
-  if (Array.isArray(value)) return value;
-  if (!value || typeof value !== "object") return [];
-
-  const record = value as Record<string, unknown>;
-  for (const key of ["data", "items", "results", "articles", "sources", "digests"]) {
-    if (Array.isArray(record[key])) return record[key] as T[];
-  }
-
-  return [];
-}
-
-function safeDashboardSummary(value: unknown): DashboardSummary {
-  const record = value && typeof value === "object" ? value as Partial<DashboardSummary> : {};
-  return {
-    totalArticlesToday: Number(record.totalArticlesToday ?? 0),
-    pendingReview: Number(record.pendingReview ?? 0),
-    approvedToday: Number(record.approvedToday ?? 0),
-    rejectedToday: Number(record.rejectedToday ?? 0),
-    topArticles: ensureArray<Article>(record.topArticles),
-    topPicks: ensureArray<Article>(record.topPicks),
-    lastScrapeAt: typeof record.lastScrapeAt === "string" ? record.lastScrapeAt : null,
-    articlesByTag: ensureArray(record.articlesByTag),
-    topicIntelligence: ensureArray(record.topicIntelligence),
-    totalSources: Number(record.totalSources ?? 0),
-    activeSources: Number(record.activeSources ?? 0),
-    socialSignalsCount: Number(record.socialSignalsCount ?? 0),
-    emergingSignalsCount: Number(record.emergingSignalsCount ?? 0),
-    contentWindowStart: typeof record.contentWindowStart === "string" ? record.contentWindowStart : undefined,
-    minTopicScore: typeof record.minTopicScore === "number" ? record.minTopicScore : undefined,
-  };
-}
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -313,6 +286,459 @@ export function useGetScrapeStatus<
 }
 
 /**
+ * @summary Get Professor Library configuration
+ */
+export const getGetProfessorLibraryConfigUrl = () => {
+  return `/api/professors/config`;
+};
+
+export const getProfessorLibraryConfig = async (
+  options?: RequestInit,
+): Promise<ProfessorLibraryConfigResponse> => {
+  return customFetch<ProfessorLibraryConfigResponse>(
+    getGetProfessorLibraryConfigUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetProfessorLibraryConfigQueryKey = () => {
+  return [`/api/professors/config`] as const;
+};
+
+export const getGetProfessorLibraryConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProfessorLibraryConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProfessorLibraryConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetProfessorLibraryConfigQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProfessorLibraryConfig>>
+  > = ({ signal }) => getProfessorLibraryConfig({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProfessorLibraryConfig>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProfessorLibraryConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProfessorLibraryConfig>>
+>;
+export type GetProfessorLibraryConfigQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get Professor Library configuration
+ */
+
+export function useGetProfessorLibraryConfig<
+  TData = Awaited<ReturnType<typeof getProfessorLibraryConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProfessorLibraryConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProfessorLibraryConfigQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List professor profiles
+ */
+export const getListProfessorProfilesUrl = (
+  params?: ListProfessorProfilesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/professors?${stringifiedParams}`
+    : `/api/professors`;
+};
+
+export const listProfessorProfiles = async (
+  params?: ListProfessorProfilesParams,
+  options?: RequestInit,
+): Promise<ListProfessorProfilesResponse> => {
+  return customFetch<ListProfessorProfilesResponse>(
+    getListProfessorProfilesUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListProfessorProfilesQueryKey = (
+  params?: ListProfessorProfilesParams,
+) => {
+  return [`/api/professors`, ...(params ? [params] : [])] as const;
+};
+
+export const getListProfessorProfilesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listProfessorProfiles>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListProfessorProfilesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listProfessorProfiles>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListProfessorProfilesQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listProfessorProfiles>>
+  > = ({ signal }) =>
+    listProfessorProfiles(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listProfessorProfiles>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListProfessorProfilesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listProfessorProfiles>>
+>;
+export type ListProfessorProfilesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List professor profiles
+ */
+
+export function useListProfessorProfiles<
+  TData = Awaited<ReturnType<typeof listProfessorProfiles>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListProfessorProfilesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listProfessorProfiles>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListProfessorProfilesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a professor profile
+ */
+export const getCreateProfessorProfileUrl = () => {
+  return `/api/professors`;
+};
+
+export const createProfessorProfile = async (
+  createProfessorProfileBody: CreateProfessorProfileBody,
+  options?: RequestInit,
+): Promise<ProfessorProfileDetailResponse> => {
+  return customFetch<ProfessorProfileDetailResponse>(
+    getCreateProfessorProfileUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(createProfessorProfileBody),
+    },
+  );
+};
+
+export const getCreateProfessorProfileMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProfessorProfile>>,
+    TError,
+    { data: BodyType<CreateProfessorProfileBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createProfessorProfile>>,
+  TError,
+  { data: BodyType<CreateProfessorProfileBody> },
+  TContext
+> => {
+  const mutationKey = ["createProfessorProfile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createProfessorProfile>>,
+    { data: BodyType<CreateProfessorProfileBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createProfessorProfile(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateProfessorProfileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createProfessorProfile>>
+>;
+export type CreateProfessorProfileMutationBody =
+  BodyType<CreateProfessorProfileBody>;
+export type CreateProfessorProfileMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a professor profile
+ */
+export const useCreateProfessorProfile = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createProfessorProfile>>,
+    TError,
+    { data: BodyType<CreateProfessorProfileBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createProfessorProfile>>,
+  TError,
+  { data: BodyType<CreateProfessorProfileBody> },
+  TContext
+> => {
+  return useMutation(getCreateProfessorProfileMutationOptions(options));
+};
+
+/**
+ * @summary Get a professor profile
+ */
+export const getGetProfessorProfileUrl = (id: string) => {
+  return `/api/professors/${id}`;
+};
+
+export const getProfessorProfile = async (
+  id: string,
+  options?: RequestInit,
+): Promise<ProfessorProfileDetailResponse> => {
+  return customFetch<ProfessorProfileDetailResponse>(
+    getGetProfessorProfileUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetProfessorProfileQueryKey = (id: string) => {
+  return [`/api/professors/${id}`] as const;
+};
+
+export const getGetProfessorProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProfessorProfile>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProfessorProfile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetProfessorProfileQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProfessorProfile>>
+  > = ({ signal }) => getProfessorProfile(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProfessorProfile>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProfessorProfileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProfessorProfile>>
+>;
+export type GetProfessorProfileQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a professor profile
+ */
+
+export function useGetProfessorProfile<
+  TData = Awaited<ReturnType<typeof getProfessorProfile>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProfessorProfile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProfessorProfileQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a professor profile
+ */
+export const getUpdateProfessorProfileUrl = (id: string) => {
+  return `/api/professors/${id}`;
+};
+
+export const updateProfessorProfile = async (
+  id: string,
+  updateProfessorProfileBody: UpdateProfessorProfileBody,
+  options?: RequestInit,
+): Promise<ProfessorProfileDetailResponse> => {
+  return customFetch<ProfessorProfileDetailResponse>(
+    getUpdateProfessorProfileUrl(id),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(updateProfessorProfileBody),
+    },
+  );
+};
+
+export const getUpdateProfessorProfileMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProfessorProfile>>,
+    TError,
+    { id: string; data: BodyType<UpdateProfessorProfileBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateProfessorProfile>>,
+  TError,
+  { id: string; data: BodyType<UpdateProfessorProfileBody> },
+  TContext
+> => {
+  const mutationKey = ["updateProfessorProfile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateProfessorProfile>>,
+    { id: string; data: BodyType<UpdateProfessorProfileBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateProfessorProfile(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateProfessorProfileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateProfessorProfile>>
+>;
+export type UpdateProfessorProfileMutationBody =
+  BodyType<UpdateProfessorProfileBody>;
+export type UpdateProfessorProfileMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update a professor profile
+ */
+export const useUpdateProfessorProfile = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProfessorProfile>>,
+    TError,
+    { id: string; data: BodyType<UpdateProfessorProfileBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateProfessorProfile>>,
+  TError,
+  { id: string; data: BodyType<UpdateProfessorProfileBody> },
+  TContext
+> => {
+  return useMutation(getUpdateProfessorProfileMutationOptions(options));
+};
+
+/**
  * @summary List scraped articles
  */
 export const getListArticlesUrl = (params?: ListArticlesParams) => {
@@ -335,12 +761,10 @@ export const listArticles = async (
   params?: ListArticlesParams,
   options?: RequestInit,
 ): Promise<Article[]> => {
-  const articles = await customFetch<unknown>(getListArticlesUrl(params), {
+  return customFetch<Article[]>(getListArticlesUrl(params), {
     ...options,
     method: "GET",
   });
-
-  return ensureArray<Article>(articles);
 };
 
 export const getListArticlesQueryKey = (params?: ListArticlesParams) => {
@@ -602,12 +1026,10 @@ export const listDigestArticles = async (
   params?: ListDigestArticlesParams,
   options?: RequestInit,
 ): Promise<DigestArticle[]> => {
-  const articles = await customFetch<unknown>(getListDigestArticlesUrl(params), {
+  return customFetch<DigestArticle[]>(getListDigestArticlesUrl(params), {
     ...options,
     method: "GET",
   });
-
-  return ensureArray<DigestArticle>(articles);
 };
 
 export const getListDigestArticlesQueryKey = (
@@ -1284,21 +1706,15 @@ export const useRegenerateDigestArticle = <
 /**
  * @summary List all sources
  */
-const sourcesApiUrl = "/api/sources";
-
 export const getListSourcesUrl = () => {
-  return sourcesApiUrl;
+  return `/api/sources`;
 };
 
 export const listSources = async (options?: RequestInit): Promise<Source[]> => {
-  const sources = await customFetch<unknown>(getListSourcesUrl(), {
+  return customFetch<Source[]>(getListSourcesUrl(), {
     ...options,
     method: "GET",
-    cache: "no-store",
-    responseType: "json",
   });
-
-  return ensureArray<Source>(sources);
 };
 
 export const getListSourcesQueryKey = () => {
@@ -1364,7 +1780,7 @@ export function useListSources<
  * @summary Add a new source
  */
 export const getCreateSourceUrl = () => {
-  return sourcesApiUrl;
+  return `/api/sources`;
 };
 
 export const createSource = async (
@@ -1450,7 +1866,7 @@ export const useCreateSource = <
  * @summary Update a source (enable/disable, change tier, authority level)
  */
 export const getUpdateSourceUrl = (id: number) => {
-  return `${sourcesApiUrl}/${id}`;
+  return `/api/sources/${id}`;
 };
 
 export const updateSource = async (
@@ -1537,7 +1953,7 @@ export const useUpdateSource = <
  * @summary Remove a source
  */
 export const getDeleteSourceUrl = (id: number) => {
-  return `${sourcesApiUrl}/${id}`;
+  return `/api/sources/${id}`;
 };
 
 export const deleteSource = async (
@@ -1627,12 +2043,10 @@ export const getGetDashboardSummaryUrl = () => {
 export const getDashboardSummary = async (
   options?: RequestInit,
 ): Promise<DashboardSummary> => {
-  const summary = await customFetch<unknown>(getGetDashboardSummaryUrl(), {
+  return customFetch<DashboardSummary>(getGetDashboardSummaryUrl(), {
     ...options,
     method: "GET",
   });
-
-  return safeDashboardSummary(summary);
 };
 
 export const getGetDashboardSummaryQueryKey = () => {

@@ -14,6 +14,7 @@ import Review from "@/pages/review";
 import Published from "@/pages/published";
 import Rejected from "@/pages/rejected";
 import Sources from "@/pages/sources";
+import Professors from "@/pages/professors";
 import Settings from "@/pages/settings";
 import About from "@/pages/about";
 import NotFound from "@/pages/not-found";
@@ -48,6 +49,7 @@ function Router() {
           <Route path="/published"><SafeRoute><Published /></SafeRoute></Route>
           <Route path="/rejected"><SafeRoute><Rejected /></SafeRoute></Route>
           <Route path="/sources"><SafeRoute><Sources /></SafeRoute></Route>
+          <Route path="/professors"><SafeRoute><Professors /></SafeRoute></Route>
           <Route path="/settings"><SafeRoute><Settings /></SafeRoute></Route>
           <Route path="/about"><SafeRoute><About /></SafeRoute></Route>
           <Route><SafeRoute><NotFound /></SafeRoute></Route>

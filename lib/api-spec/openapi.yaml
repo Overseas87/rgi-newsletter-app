@@ -20,6 +20,8 @@ tags:
     description: Dashboard summary operations
   - name: scrape
     description: Scraping operations
+  - name: professors
+    description: Professor Library operations
 paths:
   /healthz:
     get:
@@ -61,6 +63,123 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ScrapeStatus"
+
+  /professors/config:
+    get:
+      operationId: getProfessorLibraryConfig
+      tags: [professors]
+      summary: Get Professor Library configuration
+      responses:
+        "200":
+          description: Professor Library configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessorLibraryConfigResponse"
+
+  /professors:
+    get:
+      operationId: listProfessorProfiles
+      tags: [professors]
+      summary: List professor profiles
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, paused, inactive]
+      responses:
+        "200":
+          description: Professor profile list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListProfessorProfilesResponse"
+    post:
+      operationId: createProfessorProfile
+      tags: [professors]
+      summary: Create a professor profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProfessorProfileBody"
+      responses:
+        "201":
+          description: Created professor profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessorProfileDetailResponse"
+        "403":
+          description: Professor Library writes disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /professors/{id}:
+    get:
+      operationId: getProfessorProfile
+      tags: [professors]
+      summary: Get a professor profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]{8,128}$'
+      responses:
+        "200":
+          description: Professor profile detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessorProfileDetailResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateProfessorProfile
+      tags: [professors]
+      summary: Update a professor profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]{8,128}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfessorProfileBody"
+      responses:
+        "200":
+          description: Updated professor profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessorProfileDetailResponse"
+        "403":
+          description: Professor Library writes disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /articles:
     get:
@@ -484,6 +603,297 @@ components:
       required:
         - isRunning
 
+    ProfessorProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        academicTitle:
+          type: string
+          minLength: 1
+          maxLength: 160
+        department:
+          type: string
+          minLength: 1
+          maxLength: 160
+        coursesTaught:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 120
+        expertiseTags:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 80
+        researchInterests:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 160
+        industries:
+          type: array
+          maxItems: 30
+          items:
+            type: string
+            maxLength: 80
+        regions:
+          type: array
+          maxItems: 30
+          items:
+            type: string
+            maxLength: 80
+        professionalBackground:
+          type: string
+          maxLength: 2000
+        approvedBio:
+          type: string
+          maxLength: 2000
+        publications:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 240
+        recurringThemes:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 120
+        contactableTopics:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 120
+        doNotContactTopics:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 120
+        participationStatus:
+          type: string
+          enum: [available, limited, unavailable]
+        maxOpenRequests:
+          type: integer
+          minimum: 0
+          maximum: 20
+        status:
+          type: string
+          enum: [active, paused, inactive]
+        schemaVersion:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - fullName
+        - academicTitle
+        - department
+        - coursesTaught
+        - expertiseTags
+        - researchInterests
+        - industries
+        - regions
+        - professionalBackground
+        - approvedBio
+        - publications
+        - recurringThemes
+        - contactableTopics
+        - doNotContactTopics
+        - participationStatus
+        - maxOpenRequests
+        - status
+        - schemaVersion
+        - createdAt
+        - updatedAt
+
+    ProfessorLibraryConfigResponse:
+      type: object
+      properties:
+        writesEnabled:
+          type: boolean
+      required:
+        - writesEnabled
+
+    ListProfessorProfilesResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfessorProfile"
+        total:
+          type: integer
+        writesEnabled:
+          type: boolean
+      required:
+        - items
+        - total
+        - writesEnabled
+
+    ProfessorProfileDetailResponse:
+      type: object
+      properties:
+        profile:
+          $ref: "#/components/schemas/ProfessorProfile"
+        writesEnabled:
+          type: boolean
+      required:
+        - profile
+        - writesEnabled
+
+    CreateProfessorProfileBody:
+      type: object
+      additionalProperties: false
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        academicTitle:
+          type: string
+          minLength: 1
+          maxLength: 160
+        department:
+          type: string
+          minLength: 1
+          maxLength: 160
+        coursesTaught:
+          type: array
+          items:
+            type: string
+        expertiseTags:
+          type: array
+          items:
+            type: string
+        researchInterests:
+          type: array
+          items:
+            type: string
+        industries:
+          type: array
+          items:
+            type: string
+        regions:
+          type: array
+          items:
+            type: string
+        professionalBackground:
+          type: string
+        approvedBio:
+          type: string
+        publications:
+          type: array
+          items:
+            type: string
+        recurringThemes:
+          type: array
+          items:
+            type: string
+        contactableTopics:
+          type: array
+          items:
+            type: string
+        doNotContactTopics:
+          type: array
+          items:
+            type: string
+        participationStatus:
+          type: string
+          enum: [available, limited, unavailable]
+        maxOpenRequests:
+          type: integer
+          minimum: 0
+          maximum: 20
+        status:
+          type: string
+          enum: [active, paused, inactive]
+      required:
+        - fullName
+        - academicTitle
+        - department
+
+    UpdateProfessorProfileBody:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        academicTitle:
+          type: string
+          minLength: 1
+          maxLength: 160
+        department:
+          type: string
+          minLength: 1
+          maxLength: 160
+        coursesTaught:
+          type: array
+          items:
+            type: string
+        expertiseTags:
+          type: array
+          items:
+            type: string
+        researchInterests:
+          type: array
+          items:
+            type: string
+        industries:
+          type: array
+          items:
+            type: string
+        regions:
+          type: array
+          items:
+            type: string
+        professionalBackground:
+          type: string
+        approvedBio:
+          type: string
+        publications:
+          type: array
+          items:
+            type: string
+        recurringThemes:
+          type: array
+          items:
+            type: string
+        contactableTopics:
+          type: array
+          items:
+            type: string
+        doNotContactTopics:
+          type: array
+          items:
+            type: string
+        participationStatus:
+          type: string
+          enum: [available, limited, unavailable]
+        maxOpenRequests:
+          type: integer
+          minimum: 0
+          maximum: 20
+        status:
+          type: string
+          enum: [active, paused, inactive]
+
     Article:
       type: object
       properties:
@@ -566,6 +976,14 @@ components:
           type: array
           items:
             type: string
+        implificationsForLeaders:
+          type: array
+          items:
+            type: string
+        whatToWatch:
+          type: array
+          items:
+            type: string
         topicTags:
           type: array
           items:
@@ -601,6 +1019,8 @@ components:
         - executiveSummary
         - rgiTake
         - keyTakeaways
+        - implificationsForLeaders
+        - whatToWatch
         - topicTags
         - sourceArticleIds
         - status
@@ -629,6 +1049,18 @@ components:
           type: string
         rgiTake:
           type: string
+        executiveSummary:
+          type: array
+          items:
+            type: string
+        keyTakeaways:
+          type: array
+          items:
+            type: string
+        implificationsForLeaders:
+          type: array
+          items:
+            type: string
         topicTags:
           type: array
           items:
@@ -734,6 +1166,10 @@ components:
           type: ["integer", "null"]
         description:
           type: ["string", "null"]
+        weight:
+          type: number
+          minimum: 0.5
+          maximum: 2
 
     DashboardSummary:
       type: object
@@ -756,6 +1192,8 @@ components:
             $ref: "#/components/schemas/Article"
         lastScrapeAt:
           type: ["string", "null"]
+        contentWindowStart:
+          type: string
         articlesByTag:
           type: array
           items:
@@ -806,6 +1244,8 @@ components:
           type: integer
         importanceScore:
           type: number
+        avgRelevancyScore:
+          type: number
         significance:
           type: string
         discipline:
@@ -816,6 +1256,7 @@ components:
         - topic
         - articleCount
         - importanceScore
+        - avgRelevancyScore
         - significance
         - discipline
         - hasEmergingSignal
