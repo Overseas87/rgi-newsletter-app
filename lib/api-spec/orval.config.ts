@@ -4,6 +4,7 @@ import path from "path";
 const root = path.resolve(__dirname, "..", "..");
 const apiClientReactSrc = path.resolve(root, "lib", "api-client-react", "src");
 const apiZodSrc = path.resolve(root, "lib", "api-zod", "src");
+const responseAdapters = path.resolve(apiClientReactSrc, "api-response-adapters.ts");
 
 // Our exports make assumptions about the title of the API being "Api" (i.e. generated output is `api.ts`).
 const titleTransformer: InputTransformerFn = (config) => {
@@ -36,6 +37,32 @@ export default defineConfig({
         mutator: {
           path: path.resolve(apiClientReactSrc, "custom-fetch.ts"),
           name: "customFetch",
+        },
+        operations: {
+          listArticles: {
+            mutator: {
+              path: responseAdapters,
+              name: "arrayResponseFetch",
+            },
+          },
+          listDigestArticles: {
+            mutator: {
+              path: responseAdapters,
+              name: "arrayResponseFetch",
+            },
+          },
+          listSources: {
+            mutator: {
+              path: responseAdapters,
+              name: "sourceListFetch",
+            },
+          },
+          getDashboardSummary: {
+            mutator: {
+              path: responseAdapters,
+              name: "dashboardSummaryFetch",
+            },
+          },
         },
       },
     },

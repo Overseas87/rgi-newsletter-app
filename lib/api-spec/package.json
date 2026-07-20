@@ -3,9 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "codegen": "orval --config ./orval.config.ts && echo 'export * from \"./generated/api\";' > ../api-zod/src/index.ts && pnpm -w run typecheck:libs"
+    "codegen": "orval --config ./orval.config.ts && echo 'export * from \"./generated/api\";' > ../api-zod/src/index.ts && pnpm -w run typecheck:libs",
+    "codegen:verify": "node ./scripts/verify-codegen.mjs",
+    "test": "tsx --test ./test/*.test.ts"
   },
   "devDependencies": {
-    "orval": "^8.5.2"
+    "orval": "8.5.3",
+    "tsx": "catalog:"
   }
 }

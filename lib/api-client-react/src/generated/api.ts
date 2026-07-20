@@ -39,39 +39,9 @@ import type {
 
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
-
-function ensureArray<T>(value: unknown): T[] {
-  if (Array.isArray(value)) return value;
-  if (!value || typeof value !== "object") return [];
-
-  const record = value as Record<string, unknown>;
-  for (const key of ["data", "items", "results", "articles", "sources", "digests"]) {
-    if (Array.isArray(record[key])) return record[key] as T[];
-  }
-
-  return [];
-}
-
-function safeDashboardSummary(value: unknown): DashboardSummary {
-  const record = value && typeof value === "object" ? value as Partial<DashboardSummary> : {};
-  return {
-    totalArticlesToday: Number(record.totalArticlesToday ?? 0),
-    pendingReview: Number(record.pendingReview ?? 0),
-    approvedToday: Number(record.approvedToday ?? 0),
-    rejectedToday: Number(record.rejectedToday ?? 0),
-    topArticles: ensureArray<Article>(record.topArticles),
-    topPicks: ensureArray<Article>(record.topPicks),
-    lastScrapeAt: typeof record.lastScrapeAt === "string" ? record.lastScrapeAt : null,
-    articlesByTag: ensureArray(record.articlesByTag),
-    topicIntelligence: ensureArray(record.topicIntelligence),
-    totalSources: Number(record.totalSources ?? 0),
-    activeSources: Number(record.activeSources ?? 0),
-    socialSignalsCount: Number(record.socialSignalsCount ?? 0),
-    emergingSignalsCount: Number(record.emergingSignalsCount ?? 0),
-    contentWindowStart: typeof record.contentWindowStart === "string" ? record.contentWindowStart : undefined,
-    minTopicScore: typeof record.minTopicScore === "number" ? record.minTopicScore : undefined,
-  };
-}
+import { arrayResponseFetch } from "../api-response-adapters";
+import { sourceListFetch } from "../api-response-adapters";
+import { dashboardSummaryFetch } from "../api-response-adapters";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -335,12 +305,10 @@ export const listArticles = async (
   params?: ListArticlesParams,
   options?: RequestInit,
 ): Promise<Article[]> => {
-  const articles = await customFetch<unknown>(getListArticlesUrl(params), {
+  return arrayResponseFetch<Article[]>(getListArticlesUrl(params), {
     ...options,
     method: "GET",
   });
-
-  return ensureArray<Article>(articles);
 };
 
 export const getListArticlesQueryKey = (params?: ListArticlesParams) => {
@@ -358,7 +326,7 @@ export const getListArticlesQueryOptions = <
       TError,
       TData
     >;
-    request?: SecondParameter<typeof customFetch>;
+    request?: SecondParameter<typeof arrayResponseFetch>;
   },
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
@@ -396,7 +364,7 @@ export function useListArticles<
       TError,
       TData
     >;
-    request?: SecondParameter<typeof customFetch>;
+    request?: SecondParameter<typeof arrayResponseFetch>;
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListArticlesQueryOptions(params, options);
@@ -602,12 +570,10 @@ export const listDigestArticles = async (
   params?: ListDigestArticlesParams,
   options?: RequestInit,
 ): Promise<DigestArticle[]> => {
-  const articles = await customFetch<unknown>(getListDigestArticlesUrl(params), {
+  return arrayResponseFetch<DigestArticle[]>(getListDigestArticlesUrl(params), {
     ...options,
     method: "GET",
   });
-
-  return ensureArray<DigestArticle>(articles);
 };
 
 export const getListDigestArticlesQueryKey = (
@@ -627,7 +593,7 @@ export const getListDigestArticlesQueryOptions = <
       TError,
       TData
     >;
-    request?: SecondParameter<typeof customFetch>;
+    request?: SecondParameter<typeof arrayResponseFetch>;
   },
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
@@ -666,7 +632,7 @@ export function useListDigestArticles<
       TError,
       TData
     >;
-    request?: SecondParameter<typeof customFetch>;
+    request?: SecondParameter<typeof arrayResponseFetch>;
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListDigestArticlesQueryOptions(params, options);
@@ -1284,21 +1250,15 @@ export const useRegenerateDigestArticle = <
 /**
  * @summary List all sources
  */
-const sourcesApiUrl = "/api/sources";
-
 export const getListSourcesUrl = () => {
-  return sourcesApiUrl;
+  return `/api/sources`;
 };
 
 export const listSources = async (options?: RequestInit): Promise<Source[]> => {
-  const sources = await customFetch<unknown>(getListSourcesUrl(), {
+  return sourceListFetch<Source[]>(getListSourcesUrl(), {
     ...options,
     method: "GET",
-    cache: "no-store",
-    responseType: "json",
   });
-
-  return ensureArray<Source>(sources);
 };
 
 export const getListSourcesQueryKey = () => {
@@ -1314,7 +1274,7 @@ export const getListSourcesQueryOptions = <
     TError,
     TData
   >;
-  request?: SecondParameter<typeof customFetch>;
+  request?: SecondParameter<typeof sourceListFetch>;
 }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
@@ -1349,7 +1309,7 @@ export function useListSources<
     TError,
     TData
   >;
-  request?: SecondParameter<typeof customFetch>;
+  request?: SecondParameter<typeof sourceListFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListSourcesQueryOptions(options);
 
@@ -1364,7 +1324,7 @@ export function useListSources<
  * @summary Add a new source
  */
 export const getCreateSourceUrl = () => {
-  return sourcesApiUrl;
+  return `/api/sources`;
 };
 
 export const createSource = async (
@@ -1449,12 +1409,12 @@ export const useCreateSource = <
 /**
  * @summary Update a source (enable/disable, change tier, authority level)
  */
-export const getUpdateSourceUrl = (id: number) => {
-  return `${sourcesApiUrl}/${id}`;
+export const getUpdateSourceUrl = (id: string) => {
+  return `/api/sources/${id}`;
 };
 
 export const updateSource = async (
-  id: number,
+  id: string,
   updateSourceBody: UpdateSourceBody,
   options?: RequestInit,
 ): Promise<Source> => {
@@ -1473,14 +1433,14 @@ export const getUpdateSourceMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateSource>>,
     TError,
-    { id: number; data: BodyType<UpdateSourceBody> },
+    { id: string; data: BodyType<UpdateSourceBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateSource>>,
   TError,
-  { id: number; data: BodyType<UpdateSourceBody> },
+  { id: string; data: BodyType<UpdateSourceBody> },
   TContext
 > => {
   const mutationKey = ["updateSource"];
@@ -1494,7 +1454,7 @@ export const getUpdateSourceMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateSource>>,
-    { id: number; data: BodyType<UpdateSourceBody> }
+    { id: string; data: BodyType<UpdateSourceBody> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -1520,14 +1480,14 @@ export const useUpdateSource = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateSource>>,
     TError,
-    { id: number; data: BodyType<UpdateSourceBody> },
+    { id: string; data: BodyType<UpdateSourceBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof updateSource>>,
   TError,
-  { id: number; data: BodyType<UpdateSourceBody> },
+  { id: string; data: BodyType<UpdateSourceBody> },
   TContext
 > => {
   return useMutation(getUpdateSourceMutationOptions(options));
@@ -1536,12 +1496,12 @@ export const useUpdateSource = <
 /**
  * @summary Remove a source
  */
-export const getDeleteSourceUrl = (id: number) => {
-  return `${sourcesApiUrl}/${id}`;
+export const getDeleteSourceUrl = (id: string) => {
+  return `/api/sources/${id}`;
 };
 
 export const deleteSource = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<void> => {
   return customFetch<void>(getDeleteSourceUrl(id), {
@@ -1557,14 +1517,14 @@ export const getDeleteSourceMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteSource>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteSource>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   const mutationKey = ["deleteSource"];
@@ -1578,7 +1538,7 @@ export const getDeleteSourceMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteSource>>,
-    { id: number }
+    { id: string }
   > = (props) => {
     const { id } = props ?? {};
 
@@ -1604,14 +1564,14 @@ export const useDeleteSource = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteSource>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof deleteSource>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   return useMutation(getDeleteSourceMutationOptions(options));
@@ -1627,12 +1587,10 @@ export const getGetDashboardSummaryUrl = () => {
 export const getDashboardSummary = async (
   options?: RequestInit,
 ): Promise<DashboardSummary> => {
-  const summary = await customFetch<unknown>(getGetDashboardSummaryUrl(), {
+  return dashboardSummaryFetch<DashboardSummary>(getGetDashboardSummaryUrl(), {
     ...options,
     method: "GET",
   });
-
-  return safeDashboardSummary(summary);
 };
 
 export const getGetDashboardSummaryQueryKey = () => {
@@ -1648,7 +1606,7 @@ export const getGetDashboardSummaryQueryOptions = <
     TError,
     TData
   >;
-  request?: SecondParameter<typeof customFetch>;
+  request?: SecondParameter<typeof dashboardSummaryFetch>;
 }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
@@ -1683,7 +1641,7 @@ export function useGetDashboardSummary<
     TError,
     TData
   >;
-  request?: SecondParameter<typeof customFetch>;
+  request?: SecondParameter<typeof dashboardSummaryFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetDashboardSummaryQueryOptions(options);
 
