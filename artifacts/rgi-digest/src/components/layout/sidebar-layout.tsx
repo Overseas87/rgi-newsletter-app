@@ -8,6 +8,7 @@ import {
   XCircle,
   Database,
   Settings as SettingsIcon,
+  GraduationCap,
   RefreshCw,
   Menu,
   Wand2,
@@ -53,6 +54,7 @@ const NAV_GROUPS = [
     label: "Administration",
     items: [
       { path: "/sources", label: "Sources", icon: Database },
+      { path: "/professors", label: "Professors", icon: GraduationCap },
       { path: "/settings", label: "Settings", icon: SettingsIcon },
       { path: "/about", label: "About RGI", icon: Info },
     ],

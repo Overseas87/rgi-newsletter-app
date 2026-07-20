@@ -27,6 +27,163 @@ export interface ScrapeStatus {
   isRunning: boolean;
 }
 
+/**
+ * Active profiles are included in future article matching; inactive profiles are retained but excluded.
+ */
+export type ProfessorProfileStatus =
+  (typeof ProfessorProfileStatus)[keyof typeof ProfessorProfileStatus];
+
+export const ProfessorProfileStatus = {
+  active: "active",
+  inactive: "inactive",
+} as const;
+
+export interface ProfessorProfile {
+  id: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  fullName: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  academicTitle: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  department: string;
+  /** @maxItems 40 */
+  coursesTaught: string[];
+  /** @maxItems 40 */
+  expertiseTags: string[];
+  /** @maxItems 40 */
+  researchInterests: string[];
+  /** @maxItems 30 */
+  industries: string[];
+  /** @maxItems 30 */
+  regions: string[];
+  /** @maxLength 2000 */
+  professionalBackground: string;
+  /** @maxLength 2000 */
+  approvedBio: string;
+  /** @maxItems 40 */
+  publications: string[];
+  /** @maxItems 40 */
+  recurringThemes: string[];
+  /** @maxItems 40 */
+  contactableTopics: string[];
+  /** @maxItems 40 */
+  doNotContactTopics: string[];
+  /** Active profiles are included in future article matching; inactive profiles are retained but excluded. */
+  status: ProfessorProfileStatus;
+  /** @minimum 1 */
+  schemaVersion: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProfessorLibraryConfigResponse {
+  writesEnabled: boolean;
+}
+
+export interface ListProfessorProfilesResponse {
+  items: ProfessorProfile[];
+  total: number;
+  writesEnabled: boolean;
+}
+
+export interface ProfessorProfileDetailResponse {
+  profile: ProfessorProfile;
+  writesEnabled: boolean;
+}
+
+/**
+ * Active profiles are included in future article matching; inactive profiles are retained but excluded.
+ */
+export type CreateProfessorProfileBodyStatus =
+  (typeof CreateProfessorProfileBodyStatus)[keyof typeof CreateProfessorProfileBodyStatus];
+
+export const CreateProfessorProfileBodyStatus = {
+  active: "active",
+  inactive: "inactive",
+} as const;
+
+export interface CreateProfessorProfileBody {
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  fullName: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  academicTitle: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  department: string;
+  coursesTaught?: string[];
+  expertiseTags?: string[];
+  researchInterests?: string[];
+  industries?: string[];
+  regions?: string[];
+  professionalBackground?: string;
+  approvedBio?: string;
+  publications?: string[];
+  recurringThemes?: string[];
+  contactableTopics?: string[];
+  doNotContactTopics?: string[];
+  /** Active profiles are included in future article matching; inactive profiles are retained but excluded. */
+  status?: CreateProfessorProfileBodyStatus;
+}
+
+/**
+ * Active profiles are included in future article matching; inactive profiles are retained but excluded.
+ */
+export type UpdateProfessorProfileBodyStatus =
+  (typeof UpdateProfessorProfileBodyStatus)[keyof typeof UpdateProfessorProfileBodyStatus];
+
+export const UpdateProfessorProfileBodyStatus = {
+  active: "active",
+  inactive: "inactive",
+} as const;
+
+export interface UpdateProfessorProfileBody {
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  fullName?: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  academicTitle?: string;
+  /**
+   * @minLength 1
+   * @maxLength 160
+   */
+  department?: string;
+  coursesTaught?: string[];
+  expertiseTags?: string[];
+  researchInterests?: string[];
+  industries?: string[];
+  regions?: string[];
+  professionalBackground?: string;
+  approvedBio?: string;
+  publications?: string[];
+  recurringThemes?: string[];
+  contactableTopics?: string[];
+  doNotContactTopics?: string[];
+  /** Active profiles are included in future article matching; inactive profiles are retained but excluded. */
+  status?: UpdateProfessorProfileBodyStatus;
+}
+
 export type ArticleStatus = (typeof ArticleStatus)[keyof typeof ArticleStatus];
 
 export const ArticleStatus = {
@@ -418,6 +575,21 @@ export interface UpdateSettingsBody {
   scrapeIntervalHours?: number;
   scrapeTimeUtc?: string;
 }
+
+export type ListProfessorProfilesParams = {
+  /**
+   * Filter by whether a professor is included in future article matching.
+   */
+  status?: ListProfessorProfilesStatus;
+};
+
+export type ListProfessorProfilesStatus =
+  (typeof ListProfessorProfilesStatus)[keyof typeof ListProfessorProfilesStatus];
+
+export const ListProfessorProfilesStatus = {
+  active: "active",
+  inactive: "inactive",
+} as const;
 
 export type ListArticlesParams = {
   status?: ListArticlesStatus;

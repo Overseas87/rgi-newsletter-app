@@ -10,6 +10,7 @@ import settingsRouter from "./settings";
 import newsletterRouter from "./newsletter";
 import jobsRouter from "./jobs";
 import publicRouter from "./public";
+import professorsRouter from "./professors";
 
 const router: IRouter = Router();
 
@@ -23,6 +24,7 @@ router.use(dashboardRouter);
 router.use(settingsRouter);
 router.use(newsletterRouter);
 router.use(jobsRouter);
+router.use(professorsRouter);
 router.use(publicRouter);
 
 export default router;

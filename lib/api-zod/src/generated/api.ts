@@ -35,6 +35,548 @@ export const GetScrapeStatusResponse = zod.object({
 });
 
 /**
+ * @summary Get Professor Library configuration
+ */
+export const GetProfessorLibraryConfigResponse = zod.object({
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary List professor profiles
+ */
+export const ListProfessorProfilesQueryParams = zod.object({
+  status: zod
+    .enum(["active", "inactive"])
+    .optional()
+    .describe(
+      "Filter by whether a professor is included in future article matching.",
+    ),
+});
+
+export const listProfessorProfilesResponseItemsItemFullNameMax = 160;
+
+export const listProfessorProfilesResponseItemsItemAcademicTitleMax = 160;
+
+export const listProfessorProfilesResponseItemsItemDepartmentMax = 160;
+
+export const listProfessorProfilesResponseItemsItemCoursesTaughtItemMax = 120;
+
+export const listProfessorProfilesResponseItemsItemCoursesTaughtMax = 40;
+
+export const listProfessorProfilesResponseItemsItemExpertiseTagsItemMax = 80;
+
+export const listProfessorProfilesResponseItemsItemExpertiseTagsMax = 40;
+
+export const listProfessorProfilesResponseItemsItemResearchInterestsItemMax = 160;
+
+export const listProfessorProfilesResponseItemsItemResearchInterestsMax = 40;
+
+export const listProfessorProfilesResponseItemsItemIndustriesItemMax = 80;
+
+export const listProfessorProfilesResponseItemsItemIndustriesMax = 30;
+
+export const listProfessorProfilesResponseItemsItemRegionsItemMax = 80;
+
+export const listProfessorProfilesResponseItemsItemRegionsMax = 30;
+
+export const listProfessorProfilesResponseItemsItemProfessionalBackgroundMax = 2000;
+
+export const listProfessorProfilesResponseItemsItemApprovedBioMax = 2000;
+
+export const listProfessorProfilesResponseItemsItemPublicationsItemMax = 240;
+
+export const listProfessorProfilesResponseItemsItemPublicationsMax = 40;
+
+export const listProfessorProfilesResponseItemsItemRecurringThemesItemMax = 120;
+
+export const listProfessorProfilesResponseItemsItemRecurringThemesMax = 40;
+
+export const listProfessorProfilesResponseItemsItemContactableTopicsItemMax = 120;
+
+export const listProfessorProfilesResponseItemsItemContactableTopicsMax = 40;
+
+export const listProfessorProfilesResponseItemsItemDoNotContactTopicsItemMax = 120;
+
+export const listProfessorProfilesResponseItemsItemDoNotContactTopicsMax = 40;
+
+export const ListProfessorProfilesResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.string(),
+      fullName: zod
+        .string()
+        .min(1)
+        .max(listProfessorProfilesResponseItemsItemFullNameMax),
+      academicTitle: zod
+        .string()
+        .min(1)
+        .max(listProfessorProfilesResponseItemsItemAcademicTitleMax),
+      department: zod
+        .string()
+        .min(1)
+        .max(listProfessorProfilesResponseItemsItemDepartmentMax),
+      coursesTaught: zod
+        .array(
+          zod
+            .string()
+            .max(listProfessorProfilesResponseItemsItemCoursesTaughtItemMax),
+        )
+        .max(listProfessorProfilesResponseItemsItemCoursesTaughtMax),
+      expertiseTags: zod
+        .array(
+          zod
+            .string()
+            .max(listProfessorProfilesResponseItemsItemExpertiseTagsItemMax),
+        )
+        .max(listProfessorProfilesResponseItemsItemExpertiseTagsMax),
+      researchInterests: zod
+        .array(
+          zod
+            .string()
+            .max(
+              listProfessorProfilesResponseItemsItemResearchInterestsItemMax,
+            ),
+        )
+        .max(listProfessorProfilesResponseItemsItemResearchInterestsMax),
+      industries: zod
+        .array(
+          zod
+            .string()
+            .max(listProfessorProfilesResponseItemsItemIndustriesItemMax),
+        )
+        .max(listProfessorProfilesResponseItemsItemIndustriesMax),
+      regions: zod
+        .array(
+          zod
+            .string()
+            .max(listProfessorProfilesResponseItemsItemRegionsItemMax),
+        )
+        .max(listProfessorProfilesResponseItemsItemRegionsMax),
+      professionalBackground: zod
+        .string()
+        .max(listProfessorProfilesResponseItemsItemProfessionalBackgroundMax),
+      approvedBio: zod
+        .string()
+        .max(listProfessorProfilesResponseItemsItemApprovedBioMax),
+      publications: zod
+        .array(
+          zod
+            .string()
+            .max(listProfessorProfilesResponseItemsItemPublicationsItemMax),
+        )
+        .max(listProfessorProfilesResponseItemsItemPublicationsMax),
+      recurringThemes: zod
+        .array(
+          zod
+            .string()
+            .max(listProfessorProfilesResponseItemsItemRecurringThemesItemMax),
+        )
+        .max(listProfessorProfilesResponseItemsItemRecurringThemesMax),
+      contactableTopics: zod
+        .array(
+          zod
+            .string()
+            .max(
+              listProfessorProfilesResponseItemsItemContactableTopicsItemMax,
+            ),
+        )
+        .max(listProfessorProfilesResponseItemsItemContactableTopicsMax),
+      doNotContactTopics: zod
+        .array(
+          zod
+            .string()
+            .max(
+              listProfessorProfilesResponseItemsItemDoNotContactTopicsItemMax,
+            ),
+        )
+        .max(listProfessorProfilesResponseItemsItemDoNotContactTopicsMax),
+      status: zod
+        .enum(["active", "inactive"])
+        .describe(
+          "Active profiles are included in future article matching; inactive profiles are retained but excluded.",
+        ),
+      schemaVersion: zod.number().min(1),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+    }),
+  ),
+  total: zod.number(),
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary Create a professor profile
+ */
+export const createProfessorProfileBodyFullNameMax = 160;
+
+export const createProfessorProfileBodyAcademicTitleMax = 160;
+
+export const createProfessorProfileBodyDepartmentMax = 160;
+
+export const CreateProfessorProfileBody = zod.object({
+  fullName: zod.string().min(1).max(createProfessorProfileBodyFullNameMax),
+  academicTitle: zod
+    .string()
+    .min(1)
+    .max(createProfessorProfileBodyAcademicTitleMax),
+  department: zod.string().min(1).max(createProfessorProfileBodyDepartmentMax),
+  coursesTaught: zod.array(zod.string()).optional(),
+  expertiseTags: zod.array(zod.string()).optional(),
+  researchInterests: zod.array(zod.string()).optional(),
+  industries: zod.array(zod.string()).optional(),
+  regions: zod.array(zod.string()).optional(),
+  professionalBackground: zod.string().optional(),
+  approvedBio: zod.string().optional(),
+  publications: zod.array(zod.string()).optional(),
+  recurringThemes: zod.array(zod.string()).optional(),
+  contactableTopics: zod.array(zod.string()).optional(),
+  doNotContactTopics: zod.array(zod.string()).optional(),
+  status: zod
+    .enum(["active", "inactive"])
+    .optional()
+    .describe(
+      "Active profiles are included in future article matching; inactive profiles are retained but excluded.",
+    ),
+});
+
+/**
+ * @summary Get a professor profile
+ */
+export const getProfessorProfilePathIdRegExp = new RegExp(
+  "^[A-Za-z0-9_-]{8,128}$",
+);
+
+export const GetProfessorProfileParams = zod.object({
+  id: zod.coerce.string().regex(getProfessorProfilePathIdRegExp),
+});
+
+export const getProfessorProfileResponseProfileFullNameMax = 160;
+
+export const getProfessorProfileResponseProfileAcademicTitleMax = 160;
+
+export const getProfessorProfileResponseProfileDepartmentMax = 160;
+
+export const getProfessorProfileResponseProfileCoursesTaughtItemMax = 120;
+
+export const getProfessorProfileResponseProfileCoursesTaughtMax = 40;
+
+export const getProfessorProfileResponseProfileExpertiseTagsItemMax = 80;
+
+export const getProfessorProfileResponseProfileExpertiseTagsMax = 40;
+
+export const getProfessorProfileResponseProfileResearchInterestsItemMax = 160;
+
+export const getProfessorProfileResponseProfileResearchInterestsMax = 40;
+
+export const getProfessorProfileResponseProfileIndustriesItemMax = 80;
+
+export const getProfessorProfileResponseProfileIndustriesMax = 30;
+
+export const getProfessorProfileResponseProfileRegionsItemMax = 80;
+
+export const getProfessorProfileResponseProfileRegionsMax = 30;
+
+export const getProfessorProfileResponseProfileProfessionalBackgroundMax = 2000;
+
+export const getProfessorProfileResponseProfileApprovedBioMax = 2000;
+
+export const getProfessorProfileResponseProfilePublicationsItemMax = 240;
+
+export const getProfessorProfileResponseProfilePublicationsMax = 40;
+
+export const getProfessorProfileResponseProfileRecurringThemesItemMax = 120;
+
+export const getProfessorProfileResponseProfileRecurringThemesMax = 40;
+
+export const getProfessorProfileResponseProfileContactableTopicsItemMax = 120;
+
+export const getProfessorProfileResponseProfileContactableTopicsMax = 40;
+
+export const getProfessorProfileResponseProfileDoNotContactTopicsItemMax = 120;
+
+export const getProfessorProfileResponseProfileDoNotContactTopicsMax = 40;
+
+export const GetProfessorProfileResponse = zod.object({
+  profile: zod.object({
+    id: zod.string(),
+    fullName: zod
+      .string()
+      .min(1)
+      .max(getProfessorProfileResponseProfileFullNameMax),
+    academicTitle: zod
+      .string()
+      .min(1)
+      .max(getProfessorProfileResponseProfileAcademicTitleMax),
+    department: zod
+      .string()
+      .min(1)
+      .max(getProfessorProfileResponseProfileDepartmentMax),
+    coursesTaught: zod
+      .array(
+        zod
+          .string()
+          .max(getProfessorProfileResponseProfileCoursesTaughtItemMax),
+      )
+      .max(getProfessorProfileResponseProfileCoursesTaughtMax),
+    expertiseTags: zod
+      .array(
+        zod
+          .string()
+          .max(getProfessorProfileResponseProfileExpertiseTagsItemMax),
+      )
+      .max(getProfessorProfileResponseProfileExpertiseTagsMax),
+    researchInterests: zod
+      .array(
+        zod
+          .string()
+          .max(getProfessorProfileResponseProfileResearchInterestsItemMax),
+      )
+      .max(getProfessorProfileResponseProfileResearchInterestsMax),
+    industries: zod
+      .array(
+        zod.string().max(getProfessorProfileResponseProfileIndustriesItemMax),
+      )
+      .max(getProfessorProfileResponseProfileIndustriesMax),
+    regions: zod
+      .array(zod.string().max(getProfessorProfileResponseProfileRegionsItemMax))
+      .max(getProfessorProfileResponseProfileRegionsMax),
+    professionalBackground: zod
+      .string()
+      .max(getProfessorProfileResponseProfileProfessionalBackgroundMax),
+    approvedBio: zod
+      .string()
+      .max(getProfessorProfileResponseProfileApprovedBioMax),
+    publications: zod
+      .array(
+        zod.string().max(getProfessorProfileResponseProfilePublicationsItemMax),
+      )
+      .max(getProfessorProfileResponseProfilePublicationsMax),
+    recurringThemes: zod
+      .array(
+        zod
+          .string()
+          .max(getProfessorProfileResponseProfileRecurringThemesItemMax),
+      )
+      .max(getProfessorProfileResponseProfileRecurringThemesMax),
+    contactableTopics: zod
+      .array(
+        zod
+          .string()
+          .max(getProfessorProfileResponseProfileContactableTopicsItemMax),
+      )
+      .max(getProfessorProfileResponseProfileContactableTopicsMax),
+    doNotContactTopics: zod
+      .array(
+        zod
+          .string()
+          .max(getProfessorProfileResponseProfileDoNotContactTopicsItemMax),
+      )
+      .max(getProfessorProfileResponseProfileDoNotContactTopicsMax),
+    status: zod
+      .enum(["active", "inactive"])
+      .describe(
+        "Active profiles are included in future article matching; inactive profiles are retained but excluded.",
+      ),
+    schemaVersion: zod.number().min(1),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+  }),
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary Update a professor profile
+ */
+export const updateProfessorProfilePathIdRegExp = new RegExp(
+  "^[A-Za-z0-9_-]{8,128}$",
+);
+
+export const UpdateProfessorProfileParams = zod.object({
+  id: zod.coerce.string().regex(updateProfessorProfilePathIdRegExp),
+});
+
+export const updateProfessorProfileBodyFullNameMax = 160;
+
+export const updateProfessorProfileBodyAcademicTitleMax = 160;
+
+export const updateProfessorProfileBodyDepartmentMax = 160;
+
+export const UpdateProfessorProfileBody = zod.object({
+  fullName: zod
+    .string()
+    .min(1)
+    .max(updateProfessorProfileBodyFullNameMax)
+    .optional(),
+  academicTitle: zod
+    .string()
+    .min(1)
+    .max(updateProfessorProfileBodyAcademicTitleMax)
+    .optional(),
+  department: zod
+    .string()
+    .min(1)
+    .max(updateProfessorProfileBodyDepartmentMax)
+    .optional(),
+  coursesTaught: zod.array(zod.string()).optional(),
+  expertiseTags: zod.array(zod.string()).optional(),
+  researchInterests: zod.array(zod.string()).optional(),
+  industries: zod.array(zod.string()).optional(),
+  regions: zod.array(zod.string()).optional(),
+  professionalBackground: zod.string().optional(),
+  approvedBio: zod.string().optional(),
+  publications: zod.array(zod.string()).optional(),
+  recurringThemes: zod.array(zod.string()).optional(),
+  contactableTopics: zod.array(zod.string()).optional(),
+  doNotContactTopics: zod.array(zod.string()).optional(),
+  status: zod
+    .enum(["active", "inactive"])
+    .optional()
+    .describe(
+      "Active profiles are included in future article matching; inactive profiles are retained but excluded.",
+    ),
+});
+
+export const updateProfessorProfileResponseProfileFullNameMax = 160;
+
+export const updateProfessorProfileResponseProfileAcademicTitleMax = 160;
+
+export const updateProfessorProfileResponseProfileDepartmentMax = 160;
+
+export const updateProfessorProfileResponseProfileCoursesTaughtItemMax = 120;
+
+export const updateProfessorProfileResponseProfileCoursesTaughtMax = 40;
+
+export const updateProfessorProfileResponseProfileExpertiseTagsItemMax = 80;
+
+export const updateProfessorProfileResponseProfileExpertiseTagsMax = 40;
+
+export const updateProfessorProfileResponseProfileResearchInterestsItemMax = 160;
+
+export const updateProfessorProfileResponseProfileResearchInterestsMax = 40;
+
+export const updateProfessorProfileResponseProfileIndustriesItemMax = 80;
+
+export const updateProfessorProfileResponseProfileIndustriesMax = 30;
+
+export const updateProfessorProfileResponseProfileRegionsItemMax = 80;
+
+export const updateProfessorProfileResponseProfileRegionsMax = 30;
+
+export const updateProfessorProfileResponseProfileProfessionalBackgroundMax = 2000;
+
+export const updateProfessorProfileResponseProfileApprovedBioMax = 2000;
+
+export const updateProfessorProfileResponseProfilePublicationsItemMax = 240;
+
+export const updateProfessorProfileResponseProfilePublicationsMax = 40;
+
+export const updateProfessorProfileResponseProfileRecurringThemesItemMax = 120;
+
+export const updateProfessorProfileResponseProfileRecurringThemesMax = 40;
+
+export const updateProfessorProfileResponseProfileContactableTopicsItemMax = 120;
+
+export const updateProfessorProfileResponseProfileContactableTopicsMax = 40;
+
+export const updateProfessorProfileResponseProfileDoNotContactTopicsItemMax = 120;
+
+export const updateProfessorProfileResponseProfileDoNotContactTopicsMax = 40;
+
+export const UpdateProfessorProfileResponse = zod.object({
+  profile: zod.object({
+    id: zod.string(),
+    fullName: zod
+      .string()
+      .min(1)
+      .max(updateProfessorProfileResponseProfileFullNameMax),
+    academicTitle: zod
+      .string()
+      .min(1)
+      .max(updateProfessorProfileResponseProfileAcademicTitleMax),
+    department: zod
+      .string()
+      .min(1)
+      .max(updateProfessorProfileResponseProfileDepartmentMax),
+    coursesTaught: zod
+      .array(
+        zod
+          .string()
+          .max(updateProfessorProfileResponseProfileCoursesTaughtItemMax),
+      )
+      .max(updateProfessorProfileResponseProfileCoursesTaughtMax),
+    expertiseTags: zod
+      .array(
+        zod
+          .string()
+          .max(updateProfessorProfileResponseProfileExpertiseTagsItemMax),
+      )
+      .max(updateProfessorProfileResponseProfileExpertiseTagsMax),
+    researchInterests: zod
+      .array(
+        zod
+          .string()
+          .max(updateProfessorProfileResponseProfileResearchInterestsItemMax),
+      )
+      .max(updateProfessorProfileResponseProfileResearchInterestsMax),
+    industries: zod
+      .array(
+        zod
+          .string()
+          .max(updateProfessorProfileResponseProfileIndustriesItemMax),
+      )
+      .max(updateProfessorProfileResponseProfileIndustriesMax),
+    regions: zod
+      .array(
+        zod.string().max(updateProfessorProfileResponseProfileRegionsItemMax),
+      )
+      .max(updateProfessorProfileResponseProfileRegionsMax),
+    professionalBackground: zod
+      .string()
+      .max(updateProfessorProfileResponseProfileProfessionalBackgroundMax),
+    approvedBio: zod
+      .string()
+      .max(updateProfessorProfileResponseProfileApprovedBioMax),
+    publications: zod
+      .array(
+        zod
+          .string()
+          .max(updateProfessorProfileResponseProfilePublicationsItemMax),
+      )
+      .max(updateProfessorProfileResponseProfilePublicationsMax),
+    recurringThemes: zod
+      .array(
+        zod
+          .string()
+          .max(updateProfessorProfileResponseProfileRecurringThemesItemMax),
+      )
+      .max(updateProfessorProfileResponseProfileRecurringThemesMax),
+    contactableTopics: zod
+      .array(
+        zod
+          .string()
+          .max(updateProfessorProfileResponseProfileContactableTopicsItemMax),
+      )
+      .max(updateProfessorProfileResponseProfileContactableTopicsMax),
+    doNotContactTopics: zod
+      .array(
+        zod
+          .string()
+          .max(updateProfessorProfileResponseProfileDoNotContactTopicsItemMax),
+      )
+      .max(updateProfessorProfileResponseProfileDoNotContactTopicsMax),
+    status: zod
+      .enum(["active", "inactive"])
+      .describe(
+        "Active profiles are included in future article matching; inactive profiles are retained but excluded.",
+      ),
+    schemaVersion: zod.number().min(1),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+  }),
+  writesEnabled: zod.boolean(),
+});
+
+/**
  * @summary List scraped articles
  */
 export const listArticlesQueryLimitDefault = 200;
