@@ -27,21 +27,14 @@ export interface ScrapeStatus {
   isRunning: boolean;
 }
 
-export type ProfessorProfileParticipationStatus =
-  (typeof ProfessorProfileParticipationStatus)[keyof typeof ProfessorProfileParticipationStatus];
-
-export const ProfessorProfileParticipationStatus = {
-  available: "available",
-  limited: "limited",
-  unavailable: "unavailable",
-} as const;
-
+/**
+ * Active profiles are included in future article matching; inactive profiles are retained but excluded.
+ */
 export type ProfessorProfileStatus =
   (typeof ProfessorProfileStatus)[keyof typeof ProfessorProfileStatus];
 
 export const ProfessorProfileStatus = {
   active: "active",
-  paused: "paused",
   inactive: "inactive",
 } as const;
 
@@ -84,12 +77,7 @@ export interface ProfessorProfile {
   contactableTopics: string[];
   /** @maxItems 40 */
   doNotContactTopics: string[];
-  participationStatus: ProfessorProfileParticipationStatus;
-  /**
-   * @minimum 0
-   * @maximum 20
-   */
-  maxOpenRequests: number;
+  /** Active profiles are included in future article matching; inactive profiles are retained but excluded. */
   status: ProfessorProfileStatus;
   /** @minimum 1 */
   schemaVersion: number;
@@ -112,21 +100,14 @@ export interface ProfessorProfileDetailResponse {
   writesEnabled: boolean;
 }
 
-export type CreateProfessorProfileBodyParticipationStatus =
-  (typeof CreateProfessorProfileBodyParticipationStatus)[keyof typeof CreateProfessorProfileBodyParticipationStatus];
-
-export const CreateProfessorProfileBodyParticipationStatus = {
-  available: "available",
-  limited: "limited",
-  unavailable: "unavailable",
-} as const;
-
+/**
+ * Active profiles are included in future article matching; inactive profiles are retained but excluded.
+ */
 export type CreateProfessorProfileBodyStatus =
   (typeof CreateProfessorProfileBodyStatus)[keyof typeof CreateProfessorProfileBodyStatus];
 
 export const CreateProfessorProfileBodyStatus = {
   active: "active",
-  paused: "paused",
   inactive: "inactive",
 } as const;
 
@@ -157,30 +138,18 @@ export interface CreateProfessorProfileBody {
   recurringThemes?: string[];
   contactableTopics?: string[];
   doNotContactTopics?: string[];
-  participationStatus?: CreateProfessorProfileBodyParticipationStatus;
-  /**
-   * @minimum 0
-   * @maximum 20
-   */
-  maxOpenRequests?: number;
+  /** Active profiles are included in future article matching; inactive profiles are retained but excluded. */
   status?: CreateProfessorProfileBodyStatus;
 }
 
-export type UpdateProfessorProfileBodyParticipationStatus =
-  (typeof UpdateProfessorProfileBodyParticipationStatus)[keyof typeof UpdateProfessorProfileBodyParticipationStatus];
-
-export const UpdateProfessorProfileBodyParticipationStatus = {
-  available: "available",
-  limited: "limited",
-  unavailable: "unavailable",
-} as const;
-
+/**
+ * Active profiles are included in future article matching; inactive profiles are retained but excluded.
+ */
 export type UpdateProfessorProfileBodyStatus =
   (typeof UpdateProfessorProfileBodyStatus)[keyof typeof UpdateProfessorProfileBodyStatus];
 
 export const UpdateProfessorProfileBodyStatus = {
   active: "active",
-  paused: "paused",
   inactive: "inactive",
 } as const;
 
@@ -211,12 +180,7 @@ export interface UpdateProfessorProfileBody {
   recurringThemes?: string[];
   contactableTopics?: string[];
   doNotContactTopics?: string[];
-  participationStatus?: UpdateProfessorProfileBodyParticipationStatus;
-  /**
-   * @minimum 0
-   * @maximum 20
-   */
-  maxOpenRequests?: number;
+  /** Active profiles are included in future article matching; inactive profiles are retained but excluded. */
   status?: UpdateProfessorProfileBodyStatus;
 }
 
@@ -503,6 +467,9 @@ export interface UpdateSettingsBody {
 }
 
 export type ListProfessorProfilesParams = {
+  /**
+   * Filter by whether a professor is included in future article matching.
+   */
   status?: ListProfessorProfilesStatus;
 };
 
@@ -511,7 +478,6 @@ export type ListProfessorProfilesStatus =
 
 export const ListProfessorProfilesStatus = {
   active: "active",
-  paused: "paused",
   inactive: "inactive",
 } as const;
 

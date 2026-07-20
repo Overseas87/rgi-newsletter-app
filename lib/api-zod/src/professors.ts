@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-export const ProfessorProfileStatusSchema = z.enum(["active", "paused", "inactive"]);
-export const ProfessorParticipationStatusSchema = z.enum(["available", "limited", "unavailable"]);
+export const ProfessorProfileStatusSchema = z.enum(["active", "inactive"]);
 
 const SCHEMA_VERSION = 1;
 
@@ -67,8 +66,6 @@ export const ProfessorProfileSchema = z.object({
   recurringThemes: textList(40, 120),
   contactableTopics: textList(40, 120),
   doNotContactTopics: textList(40, 120),
-  participationStatus: ProfessorParticipationStatusSchema.default("available"),
-  maxOpenRequests: z.coerce.number().int().min(0).max(20).default(3),
   status: ProfessorProfileStatusSchema.default("active"),
   schemaVersion: z.literal(SCHEMA_VERSION).default(SCHEMA_VERSION),
   createdAt: z.string().datetime(),
@@ -90,8 +87,6 @@ const professorProfileWritableFields = {
   recurringThemes: textList(40, 120),
   contactableTopics: textList(40, 120),
   doNotContactTopics: textList(40, 120),
-  participationStatus: ProfessorParticipationStatusSchema.default("available"),
-  maxOpenRequests: z.coerce.number().int().min(0).max(20).default(3),
   status: ProfessorProfileStatusSchema.default("active"),
 } satisfies z.ZodRawShape;
 

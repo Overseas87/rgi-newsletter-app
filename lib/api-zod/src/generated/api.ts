@@ -45,7 +45,12 @@ export const GetProfessorLibraryConfigResponse = zod.object({
  * @summary List professor profiles
  */
 export const ListProfessorProfilesQueryParams = zod.object({
-  status: zod.enum(["active", "paused", "inactive"]).optional(),
+  status: zod
+    .enum(["active", "inactive"])
+    .optional()
+    .describe(
+      "Filter by whether a professor is included in future article matching.",
+    ),
 });
 
 export const listProfessorProfilesResponseItemsItemFullNameMax = 160;
@@ -93,9 +98,6 @@ export const listProfessorProfilesResponseItemsItemContactableTopicsMax = 40;
 export const listProfessorProfilesResponseItemsItemDoNotContactTopicsItemMax = 120;
 
 export const listProfessorProfilesResponseItemsItemDoNotContactTopicsMax = 40;
-
-export const listProfessorProfilesResponseItemsItemMaxOpenRequestsMin = 0;
-export const listProfessorProfilesResponseItemsItemMaxOpenRequestsMax = 20;
 
 export const ListProfessorProfilesResponse = zod.object({
   items: zod.array(
@@ -188,12 +190,11 @@ export const ListProfessorProfilesResponse = zod.object({
             ),
         )
         .max(listProfessorProfilesResponseItemsItemDoNotContactTopicsMax),
-      participationStatus: zod.enum(["available", "limited", "unavailable"]),
-      maxOpenRequests: zod
-        .number()
-        .min(listProfessorProfilesResponseItemsItemMaxOpenRequestsMin)
-        .max(listProfessorProfilesResponseItemsItemMaxOpenRequestsMax),
-      status: zod.enum(["active", "paused", "inactive"]),
+      status: zod
+        .enum(["active", "inactive"])
+        .describe(
+          "Active profiles are included in future article matching; inactive profiles are retained but excluded.",
+        ),
       schemaVersion: zod.number().min(1),
       createdAt: zod.string(),
       updatedAt: zod.string(),
@@ -211,9 +212,6 @@ export const createProfessorProfileBodyFullNameMax = 160;
 export const createProfessorProfileBodyAcademicTitleMax = 160;
 
 export const createProfessorProfileBodyDepartmentMax = 160;
-
-export const createProfessorProfileBodyMaxOpenRequestsMin = 0;
-export const createProfessorProfileBodyMaxOpenRequestsMax = 20;
 
 export const CreateProfessorProfileBody = zod.object({
   fullName: zod.string().min(1).max(createProfessorProfileBodyFullNameMax),
@@ -233,15 +231,12 @@ export const CreateProfessorProfileBody = zod.object({
   recurringThemes: zod.array(zod.string()).optional(),
   contactableTopics: zod.array(zod.string()).optional(),
   doNotContactTopics: zod.array(zod.string()).optional(),
-  participationStatus: zod
-    .enum(["available", "limited", "unavailable"])
-    .optional(),
-  maxOpenRequests: zod
-    .number()
-    .min(createProfessorProfileBodyMaxOpenRequestsMin)
-    .max(createProfessorProfileBodyMaxOpenRequestsMax)
-    .optional(),
-  status: zod.enum(["active", "paused", "inactive"]).optional(),
+  status: zod
+    .enum(["active", "inactive"])
+    .optional()
+    .describe(
+      "Active profiles are included in future article matching; inactive profiles are retained but excluded.",
+    ),
 });
 
 /**
@@ -300,9 +295,6 @@ export const getProfessorProfileResponseProfileContactableTopicsMax = 40;
 export const getProfessorProfileResponseProfileDoNotContactTopicsItemMax = 120;
 
 export const getProfessorProfileResponseProfileDoNotContactTopicsMax = 40;
-
-export const getProfessorProfileResponseProfileMaxOpenRequestsMin = 0;
-export const getProfessorProfileResponseProfileMaxOpenRequestsMax = 20;
 
 export const GetProfessorProfileResponse = zod.object({
   profile: zod.object({
@@ -380,12 +372,11 @@ export const GetProfessorProfileResponse = zod.object({
           .max(getProfessorProfileResponseProfileDoNotContactTopicsItemMax),
       )
       .max(getProfessorProfileResponseProfileDoNotContactTopicsMax),
-    participationStatus: zod.enum(["available", "limited", "unavailable"]),
-    maxOpenRequests: zod
-      .number()
-      .min(getProfessorProfileResponseProfileMaxOpenRequestsMin)
-      .max(getProfessorProfileResponseProfileMaxOpenRequestsMax),
-    status: zod.enum(["active", "paused", "inactive"]),
+    status: zod
+      .enum(["active", "inactive"])
+      .describe(
+        "Active profiles are included in future article matching; inactive profiles are retained but excluded.",
+      ),
     schemaVersion: zod.number().min(1),
     createdAt: zod.string(),
     updatedAt: zod.string(),
@@ -409,9 +400,6 @@ export const updateProfessorProfileBodyFullNameMax = 160;
 export const updateProfessorProfileBodyAcademicTitleMax = 160;
 
 export const updateProfessorProfileBodyDepartmentMax = 160;
-
-export const updateProfessorProfileBodyMaxOpenRequestsMin = 0;
-export const updateProfessorProfileBodyMaxOpenRequestsMax = 20;
 
 export const UpdateProfessorProfileBody = zod.object({
   fullName: zod
@@ -440,15 +428,12 @@ export const UpdateProfessorProfileBody = zod.object({
   recurringThemes: zod.array(zod.string()).optional(),
   contactableTopics: zod.array(zod.string()).optional(),
   doNotContactTopics: zod.array(zod.string()).optional(),
-  participationStatus: zod
-    .enum(["available", "limited", "unavailable"])
-    .optional(),
-  maxOpenRequests: zod
-    .number()
-    .min(updateProfessorProfileBodyMaxOpenRequestsMin)
-    .max(updateProfessorProfileBodyMaxOpenRequestsMax)
-    .optional(),
-  status: zod.enum(["active", "paused", "inactive"]).optional(),
+  status: zod
+    .enum(["active", "inactive"])
+    .optional()
+    .describe(
+      "Active profiles are included in future article matching; inactive profiles are retained but excluded.",
+    ),
 });
 
 export const updateProfessorProfileResponseProfileFullNameMax = 160;
@@ -496,9 +481,6 @@ export const updateProfessorProfileResponseProfileContactableTopicsMax = 40;
 export const updateProfessorProfileResponseProfileDoNotContactTopicsItemMax = 120;
 
 export const updateProfessorProfileResponseProfileDoNotContactTopicsMax = 40;
-
-export const updateProfessorProfileResponseProfileMaxOpenRequestsMin = 0;
-export const updateProfessorProfileResponseProfileMaxOpenRequestsMax = 20;
 
 export const UpdateProfessorProfileResponse = zod.object({
   profile: zod.object({
@@ -582,12 +564,11 @@ export const UpdateProfessorProfileResponse = zod.object({
           .max(updateProfessorProfileResponseProfileDoNotContactTopicsItemMax),
       )
       .max(updateProfessorProfileResponseProfileDoNotContactTopicsMax),
-    participationStatus: zod.enum(["available", "limited", "unavailable"]),
-    maxOpenRequests: zod
-      .number()
-      .min(updateProfessorProfileResponseProfileMaxOpenRequestsMin)
-      .max(updateProfessorProfileResponseProfileMaxOpenRequestsMax),
-    status: zod.enum(["active", "paused", "inactive"]),
+    status: zod
+      .enum(["active", "inactive"])
+      .describe(
+        "Active profiles are included in future article matching; inactive profiles are retained but excluded.",
+      ),
     schemaVersion: zod.number().min(1),
     createdAt: zod.string(),
     updatedAt: zod.string(),

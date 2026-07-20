@@ -2,13 +2,17 @@
 
 The RGI Newsletter Generator is moving from autonomous newsletter generation toward a human-in-the-loop expert commentary workflow:
 
-`news ingestion -> daily article shortlist -> professor matching -> professor questionnaire -> grounded RGI article`
+`news ingestion -> priority scoring -> daily story opportunities -> ranked professor matching -> administrator selection -> professor questionnaire -> grounded RGI article`
+
+The daily workflow will present approximately 15 high-priority story opportunities using an RGI Article Priority Score. Each story will receive ranked professor recommendations using a separate Professor Match Score. An RGI administrator decides whether to initiate outreach; the application will not automatically contact every matched professor.
 
 ## Professor Library
 
 The first foundation is the Professor Library. It stores structured professor expertise profiles in the `professor_profiles` Firestore collection so future milestones can match shortlisted articles to relevant faculty expertise.
 
 Professor profiles intentionally exclude private contact fields. Email delivery, professor authentication, matching, questionnaires, and grounded article generation are deferred.
+
+Profile matching status has one purpose: `active` profiles are included in future article matching, while `inactive` profiles are retained but excluded. Future professor responses will become evidence for grounded article generation alongside source facts, RGI editorial guidance, and approved professor background information.
 
 ## Write Safety
 

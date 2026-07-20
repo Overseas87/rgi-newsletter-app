@@ -11,7 +11,6 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Check, GraduationCap, Loader2, Pencil, Plus, Search, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,8 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { userSafeErrorMessage } from "@/lib/api-error";
 import { asArray } from "@/lib/arrays";
 
-type ProfileStatus = "active" | "paused" | "inactive";
-type ParticipationStatus = "available" | "limited" | "unavailable";
+type ProfileStatus = "active" | "inactive";
 
 type ProfessorFormState = {
   fullName: string;
@@ -41,8 +39,6 @@ type ProfessorFormState = {
   recurringThemes: string;
   contactableTopics: string;
   doNotContactTopics: string;
-  participationStatus: ParticipationStatus;
-  maxOpenRequests: string;
   status: ProfileStatus;
 };
 
@@ -61,8 +57,6 @@ const EMPTY_FORM: ProfessorFormState = {
   recurringThemes: "",
   contactableTopics: "",
   doNotContactTopics: "",
-  participationStatus: "available",
-  maxOpenRequests: "3",
   status: "active",
 };
 
@@ -101,8 +95,6 @@ function formFromProfile(profile?: ProfessorProfile): ProfessorFormState {
     recurringThemes: join(profile.recurringThemes),
     contactableTopics: join(profile.contactableTopics),
     doNotContactTopics: join(profile.doNotContactTopics),
-    participationStatus: profile.participationStatus,
-    maxOpenRequests: String(profile.maxOpenRequests),
     status: profile.status,
   };
 }
@@ -123,22 +115,17 @@ function payloadFromForm(form: ProfessorFormState): CreateProfessorProfileBody {
     recurringThemes: split(form.recurringThemes),
     contactableTopics: split(form.contactableTopics),
     doNotContactTopics: split(form.doNotContactTopics),
-    participationStatus: form.participationStatus,
-    maxOpenRequests: Number(form.maxOpenRequests),
     status: form.status,
   };
 }
 
 function statusBadgeClass(status: ProfileStatus): string {
   if (status === "active") return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  if (status === "paused") return "bg-amber-50 text-amber-700 border-amber-200";
   return "bg-slate-50 text-slate-600 border-slate-200";
 }
 
-function participationLabel(status: ParticipationStatus): string {
-  if (status === "available") return "Available";
-  if (status === "limited") return "Limited";
-  return "Unavailable";
+function matchingStatusLabel(status: ProfileStatus): string {
+  return status === "active" ? "Included in matching" : "Excluded from matching";
 }
 
 function tagPreview(values: string[]): string {
@@ -174,9 +161,6 @@ function ProfessorForm({
     fullName: form.fullName.trim() ? undefined : "Full name is required.",
     academicTitle: form.academicTitle.trim() ? undefined : "Academic title is required.",
     department: form.department.trim() ? undefined : "Department is required.",
-    maxOpenRequests: Number.isInteger(Number(form.maxOpenRequests)) && Number(form.maxOpenRequests) >= 0 && Number(form.maxOpenRequests) <= 20
-      ? undefined
-      : "Use a whole number from 0 to 20.",
   };
   const hasErrors = Object.values(errors).some(Boolean);
 
@@ -228,7 +212,7 @@ function ProfessorForm({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold">{profile ? "Edit Professor Profile" : "Add Professor Profile"}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">Profile details are used for editorial coordination, not public contact disclosure.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Profile details support article matching and approved editorial context, not public contact disclosure.</p>
           </div>
           <Button variant="ghost" size="icon" onClick={handleCancel} aria-label="Close professor form">
             <X className="h-4 w-4" />
@@ -260,33 +244,16 @@ function ProfessorForm({
           </div>
         </section>
 
-        <section className="grid gap-3 md:grid-cols-3">
+        <section className="max-w-sm">
           <div>
-            <Label>Participation</Label>
-            <Select value={form.participationStatus} onValueChange={(value) => updateField("participationStatus", value as ParticipationStatus)} disabled={!writesEnabled || saving}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="limited">Limited</SelectItem>
-                <SelectItem value="unavailable">Unavailable</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Status</Label>
+            <Label>Matching status</Label>
             <Select value={form.status} onValueChange={(value) => updateField("status", value as ProfileStatus)} disabled={!writesEnabled || saving}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="paused">Paused</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="active">Included in matching</SelectItem>
+                <SelectItem value="inactive">Excluded from matching</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label htmlFor="professor-max-requests">Max open requests</Label>
-            <Input id="professor-max-requests" type="number" min={0} max={20} value={form.maxOpenRequests} onChange={(event) => updateField("maxOpenRequests", event.target.value)} disabled={!writesEnabled || saving} />
-            {attempted ? <FieldError message={errors.maxOpenRequests} /> : null}
           </div>
         </section>
 
@@ -361,16 +328,13 @@ export default function Professors() {
       ...profile.regions,
     ].join(" ").toLowerCase().includes(q);
   });
-  const activeCount = profiles.filter((profile) => profile.status === "active").length;
-  const limitedCount = profiles.filter((profile) => profile.participationStatus === "limited").length;
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-3xl font-serif tracking-tight text-foreground">Professor Library</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Manage faculty expertise and participation preferences for article matching and expert commentary.
+            Manage faculty expertise profiles used to match RGI news stories with the right professor.
           </p>
         </div>
         <Button onClick={() => { setAdding(true); setEditing(null); }} disabled={!writesEnabled} data-testid="btn-add-professor">
@@ -385,11 +349,11 @@ export default function Professors() {
         </div>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Profiles</p><p className="mt-1 text-2xl font-semibold">{profiles.length}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Active</p><p className="mt-1 text-2xl font-semibold">{activeCount}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Limited availability</p><p className="mt-1 text-2xl font-semibold">{limitedCount}</p></CardContent></Card>
-      </div>
+      {!isLoading && !isError && !config.isLoading && !config.isError ? (
+        <p className="text-sm font-medium text-muted-foreground">
+          {profiles.length} professor {profiles.length === 1 ? "profile" : "profiles"}
+        </p>
+      ) : null}
 
       {(adding || editing) ? (
         <ProfessorForm
@@ -408,10 +372,9 @@ export default function Professors() {
         <Select value={status} onValueChange={(value) => setStatus(value as "all" | ProfileStatus)}>
           <SelectTrigger className="w-full md:w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="paused">Paused</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="all">All matching statuses</SelectItem>
+            <SelectItem value="active">Included in matching</SelectItem>
+            <SelectItem value="inactive">Excluded from matching</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -436,7 +399,7 @@ export default function Professors() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-lg border border-border bg-white py-12 text-center text-sm text-muted-foreground">
-          No professor profiles match the current search or status filter.
+          No professor profiles match the current search or matching-status filter.
         </div>
       ) : (
         <div className="space-y-3">
@@ -448,9 +411,8 @@ export default function Professors() {
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="font-semibold text-foreground">{profile.fullName}</h2>
                       <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusBadgeClass(profile.status)}`}>
-                        {profile.status}
+                        {matchingStatusLabel(profile.status)}
                       </span>
-                      <Badge variant="outline">{participationLabel(profile.participationStatus)}</Badge>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{profile.academicTitle} · {profile.department}</p>
                     <p className="mt-2 text-xs text-muted-foreground">
@@ -461,7 +423,6 @@ export default function Professors() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Max open requests: {profile.maxOpenRequests}</span>
                     <Button variant="ghost" size="sm" onClick={() => { setEditing(profile); setAdding(false); }} disabled={!writesEnabled}>
                       <Pencil className="mr-2 h-3.5 w-3.5" />
                       Edit

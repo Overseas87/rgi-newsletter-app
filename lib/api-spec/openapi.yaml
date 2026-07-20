@@ -85,9 +85,10 @@ paths:
       parameters:
         - name: status
           in: query
+          description: Filter by whether a professor is included in future article matching.
           schema:
             type: string
-            enum: [active, paused, inactive]
+            enum: [active, inactive]
       responses:
         "200":
           description: Professor profile list
@@ -680,16 +681,10 @@ components:
           items:
             type: string
             maxLength: 120
-        participationStatus:
-          type: string
-          enum: [available, limited, unavailable]
-        maxOpenRequests:
-          type: integer
-          minimum: 0
-          maximum: 20
         status:
           type: string
-          enum: [active, paused, inactive]
+          description: Active profiles are included in future article matching; inactive profiles are retained but excluded.
+          enum: [active, inactive]
         schemaVersion:
           type: integer
           minimum: 1
@@ -713,8 +708,6 @@ components:
         - recurringThemes
         - contactableTopics
         - doNotContactTopics
-        - participationStatus
-        - maxOpenRequests
         - status
         - schemaVersion
         - createdAt
@@ -811,16 +804,10 @@ components:
           type: array
           items:
             type: string
-        participationStatus:
-          type: string
-          enum: [available, limited, unavailable]
-        maxOpenRequests:
-          type: integer
-          minimum: 0
-          maximum: 20
         status:
           type: string
-          enum: [active, paused, inactive]
+          description: Active profiles are included in future article matching; inactive profiles are retained but excluded.
+          enum: [active, inactive]
       required:
         - fullName
         - academicTitle
@@ -883,16 +870,10 @@ components:
           type: array
           items:
             type: string
-        participationStatus:
-          type: string
-          enum: [available, limited, unavailable]
-        maxOpenRequests:
-          type: integer
-          minimum: 0
-          maximum: 20
         status:
           type: string
-          enum: [active, paused, inactive]
+          description: Active profiles are included in future article matching; inactive profiles are retained but excluded.
+          enum: [active, inactive]
 
     Article:
       type: object

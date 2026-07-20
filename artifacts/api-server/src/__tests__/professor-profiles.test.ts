@@ -89,8 +89,6 @@ const validBody = {
   recurringThemes: ["Institutional trust"],
   contactableTopics: ["AI governance"],
   doNotContactTopics: ["Personal matters"],
-  participationStatus: "available" as const,
-  maxOpenRequests: 2,
   status: "active" as const,
 };
 
@@ -103,7 +101,7 @@ test("valid professor profile create body trims strings and deduplicates arrays"
   assert.deepEqual(parsed.expertiseTags, ["governance", "ai policy"]);
 });
 
-test("professor profile schema validates status enums and timestamps", () => {
+test("professor profile schema supports matching inclusion status and timestamps", () => {
   const parsed = ProfessorProfileSchema.parse({
     ...CreateProfessorProfileBodySchema.parse(validBody),
     id: "prof_auto_generated_01",
@@ -112,20 +110,24 @@ test("professor profile schema validates status enums and timestamps", () => {
     updatedAt: now.toISOString(),
   });
   assert.equal(parsed.status, "active");
-  assert.throws(() => ProfessorProfileSchema.parse({ ...parsed, status: "archived" }), /Invalid enum value/);
+  assert.equal(ProfessorProfileSchema.parse({ ...parsed, status: "inactive" }).status, "inactive");
+  assert.throws(() => ProfessorProfileSchema.parse({ ...parsed, status: "paused" }), /Invalid enum value/);
 });
 
 test("invalid required fields fail and update allows partial status changes", () => {
   assert.throws(() => CreateProfessorProfileBodySchema.parse({ ...validBody, fullName: " " }), /String must contain/);
   assert.throws(() => UpdateProfessorProfileBodySchema.parse({}), /At least one professor profile field/);
-  assert.deepEqual(UpdateProfessorProfileBodySchema.parse({ status: "paused" }), { status: "paused" });
+  assert.deepEqual(UpdateProfessorProfileBodySchema.parse({ status: "inactive" }), { status: "inactive" });
   assert.throws(() => CreateProfessorProfileBodySchema.parse({ ...validBody, id: "prof_forbidden_01" }), /Unrecognized key/);
   assert.throws(() => CreateProfessorProfileBodySchema.parse({ ...validBody, createdAt: now.toISOString() }), /Unrecognized key/);
   assert.throws(() => UpdateProfessorProfileBodySchema.parse({ id: "prof_forbidden_01" }), /Unrecognized key/);
   assert.throws(() => UpdateProfessorProfileBodySchema.parse({ createdAt: now.toISOString() }), /Unrecognized key/);
-  assert.throws(() => CreateProfessorProfileBodySchema.parse({ ...validBody, participationStatus: "unknown" }), /Invalid enum value/);
-  assert.throws(() => CreateProfessorProfileBodySchema.parse({ ...validBody, maxOpenRequests: -1 }), /greater than or equal to 0/);
-  assert.throws(() => CreateProfessorProfileBodySchema.parse({ ...validBody, maxOpenRequests: 21 }), /less than or equal to 20/);
+  assert.throws(() => CreateProfessorProfileBodySchema.parse({ ...validBody, participationStatus: "available" }), /Unrecognized key/);
+  assert.throws(() => CreateProfessorProfileBodySchema.parse({ ...validBody, maxOpenRequests: 2 }), /Unrecognized key/);
+  assert.throws(() => UpdateProfessorProfileBodySchema.parse({ participationStatus: "available" }), /Unrecognized key/);
+  assert.throws(() => UpdateProfessorProfileBodySchema.parse({ maxOpenRequests: 2 }), /Unrecognized key/);
+  assert.throws(() => CreateProfessorProfileBodySchema.parse({ ...validBody, status: "paused" }), /Invalid enum value/);
+  assert.throws(() => UpdateProfessorProfileBodySchema.parse({ status: "paused" }), /Invalid enum value/);
 });
 
 test("professor library writes require the exact true flag value", () => {
@@ -177,7 +179,7 @@ test("professor repository uses mocked Firestore auto ids and status updates", a
   assert.equal(inactive[0].id, created.id);
   assert.equal((await getProfessorProfileFromDb(db, created.id))?.id, created.id);
   assert.equal(await getProfessorProfileFromDb(db, "prof_missing_01"), null);
-  assert.equal(await updateProfessorProfileInDb(db, FieldValue, "prof_missing_01", { status: "paused" }), null);
+  assert.equal(await updateProfessorProfileInDb(db, FieldValue, "prof_missing_01", { status: "inactive" }), null);
 });
 
 test("professor routes do not expose a hard-delete endpoint", () => {
