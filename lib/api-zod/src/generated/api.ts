@@ -622,6 +622,28 @@ export const ListArticlesResponseItem = zod.object({
   content: zod.string().nullish(),
   status: zod.enum(["pending", "selected", "dismissed"]),
   disciplineAlignment: zod.string().nullish(),
+  scoreExplanation: zod.string().nullish(),
+  scoreBreakdown: zod.record(zod.string(), zod.number()).nullish(),
+  recencyScore: zod.number().nullish(),
+  sourceAuthorityScore: zod.number().nullish(),
+  strategicImpactScore: zod.number().nullish(),
+  executiveRelevanceScore: zod.number().nullish(),
+  recommendedUse: zod
+    .union([
+      zod.literal("feed"),
+      zod.literal("dashboard"),
+      zod.literal("daily_brief"),
+      zod.literal("reject"),
+      zod.literal("needs_review"),
+      zod.literal(null),
+    ])
+    .nullish(),
+  reasonForAcceptance: zod.string().nullish(),
+  reasonForRejection: zod.string().nullish(),
+  rgiProfileVersion: zod.string().nullish(),
+  moderationNote: zod.string().nullish(),
+  moderatedAt: zod.string().nullish(),
+  moderatedBy: zod.string().nullish(),
 });
 export const ListArticlesResponse = zod.array(ListArticlesResponseItem);
 
@@ -663,6 +685,28 @@ export const GetArticleResponse = zod.object({
   content: zod.string().nullish(),
   status: zod.enum(["pending", "selected", "dismissed"]),
   disciplineAlignment: zod.string().nullish(),
+  scoreExplanation: zod.string().nullish(),
+  scoreBreakdown: zod.record(zod.string(), zod.number()).nullish(),
+  recencyScore: zod.number().nullish(),
+  sourceAuthorityScore: zod.number().nullish(),
+  strategicImpactScore: zod.number().nullish(),
+  executiveRelevanceScore: zod.number().nullish(),
+  recommendedUse: zod
+    .union([
+      zod.literal("feed"),
+      zod.literal("dashboard"),
+      zod.literal("daily_brief"),
+      zod.literal("reject"),
+      zod.literal("needs_review"),
+      zod.literal(null),
+    ])
+    .nullish(),
+  reasonForAcceptance: zod.string().nullish(),
+  reasonForRejection: zod.string().nullish(),
+  rgiProfileVersion: zod.string().nullish(),
+  moderationNote: zod.string().nullish(),
+  moderatedAt: zod.string().nullish(),
+  moderatedBy: zod.string().nullish(),
 });
 
 /**
@@ -684,6 +728,8 @@ export const ListDigestArticlesQueryParams = zod.object({
   limit: zod.coerce.number().default(listDigestArticlesQueryLimitDefault),
 });
 
+export const listDigestArticlesResponseNewsletterSentCountMin = 0;
+
 export const ListDigestArticlesResponseItem = zod.object({
   id: zod.number(),
   articleType: zod.enum(["daily_brief", "topic_article"]),
@@ -693,7 +739,12 @@ export const ListDigestArticlesResponseItem = zod.object({
   rgiTake: zod.string(),
   keyTakeaways: zod.array(zod.string()),
   implificationsForLeaders: zod.array(zod.string()),
+  whatMostAreMissing: zod.string().nullish(),
+  mechanism: zod.array(zod.string()),
+  constraintsAndRisks: zod.array(zod.string()),
+  whatChangedSinceYesterday: zod.array(zod.string()),
   whatToWatch: zod.array(zod.string()),
+  summaryTakeaways: zod.array(zod.string()),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
   sourceArticles: zod
@@ -729,6 +780,28 @@ export const ListDigestArticlesResponseItem = zod.object({
         content: zod.string().nullish(),
         status: zod.enum(["pending", "selected", "dismissed"]),
         disciplineAlignment: zod.string().nullish(),
+        scoreExplanation: zod.string().nullish(),
+        scoreBreakdown: zod.record(zod.string(), zod.number()).nullish(),
+        recencyScore: zod.number().nullish(),
+        sourceAuthorityScore: zod.number().nullish(),
+        strategicImpactScore: zod.number().nullish(),
+        executiveRelevanceScore: zod.number().nullish(),
+        recommendedUse: zod
+          .union([
+            zod.literal("feed"),
+            zod.literal("dashboard"),
+            zod.literal("daily_brief"),
+            zod.literal("reject"),
+            zod.literal("needs_review"),
+            zod.literal(null),
+          ])
+          .nullish(),
+        reasonForAcceptance: zod.string().nullish(),
+        reasonForRejection: zod.string().nullish(),
+        rgiProfileVersion: zod.string().nullish(),
+        moderationNote: zod.string().nullish(),
+        moderatedAt: zod.string().nullish(),
+        moderatedBy: zod.string().nullish(),
       }),
     )
     .optional(),
@@ -745,6 +818,16 @@ export const ListDigestArticlesResponseItem = zod.object({
   createdAt: zod.string(),
   updatedAt: zod.string(),
   discipline: zod.string().nullish(),
+  newsletterSentAt: zod.string().nullish(),
+  newsletterSentCount: zod
+    .number()
+    .min(listDigestArticlesResponseNewsletterSentCountMin)
+    .nullish(),
+  approvedAt: zod.string().nullish(),
+  rejectedAt: zod.string().nullish(),
+  generationMode: zod.enum(["ai", "fallback"]).optional(),
+  fallbackReason: zod.string().nullish(),
+  strategicPlan: zod.record(zod.string(), zod.unknown()).nullish(),
 });
 export const ListDigestArticlesResponse = zod.array(
   ListDigestArticlesResponseItem,
@@ -766,6 +849,8 @@ export const GetDigestArticleParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const getDigestArticleResponseNewsletterSentCountMin = 0;
+
 export const GetDigestArticleResponse = zod.object({
   id: zod.number(),
   articleType: zod.enum(["daily_brief", "topic_article"]),
@@ -775,7 +860,12 @@ export const GetDigestArticleResponse = zod.object({
   rgiTake: zod.string(),
   keyTakeaways: zod.array(zod.string()),
   implificationsForLeaders: zod.array(zod.string()),
+  whatMostAreMissing: zod.string().nullish(),
+  mechanism: zod.array(zod.string()),
+  constraintsAndRisks: zod.array(zod.string()),
+  whatChangedSinceYesterday: zod.array(zod.string()),
   whatToWatch: zod.array(zod.string()),
+  summaryTakeaways: zod.array(zod.string()),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
   sourceArticles: zod
@@ -811,6 +901,28 @@ export const GetDigestArticleResponse = zod.object({
         content: zod.string().nullish(),
         status: zod.enum(["pending", "selected", "dismissed"]),
         disciplineAlignment: zod.string().nullish(),
+        scoreExplanation: zod.string().nullish(),
+        scoreBreakdown: zod.record(zod.string(), zod.number()).nullish(),
+        recencyScore: zod.number().nullish(),
+        sourceAuthorityScore: zod.number().nullish(),
+        strategicImpactScore: zod.number().nullish(),
+        executiveRelevanceScore: zod.number().nullish(),
+        recommendedUse: zod
+          .union([
+            zod.literal("feed"),
+            zod.literal("dashboard"),
+            zod.literal("daily_brief"),
+            zod.literal("reject"),
+            zod.literal("needs_review"),
+            zod.literal(null),
+          ])
+          .nullish(),
+        reasonForAcceptance: zod.string().nullish(),
+        reasonForRejection: zod.string().nullish(),
+        rgiProfileVersion: zod.string().nullish(),
+        moderationNote: zod.string().nullish(),
+        moderatedAt: zod.string().nullish(),
+        moderatedBy: zod.string().nullish(),
       }),
     )
     .optional(),
@@ -827,6 +939,16 @@ export const GetDigestArticleResponse = zod.object({
   createdAt: zod.string(),
   updatedAt: zod.string(),
   discipline: zod.string().nullish(),
+  newsletterSentAt: zod.string().nullish(),
+  newsletterSentCount: zod
+    .number()
+    .min(getDigestArticleResponseNewsletterSentCountMin)
+    .nullish(),
+  approvedAt: zod.string().nullish(),
+  rejectedAt: zod.string().nullish(),
+  generationMode: zod.enum(["ai", "fallback"]).optional(),
+  fallbackReason: zod.string().nullish(),
+  strategicPlan: zod.record(zod.string(), zod.unknown()).nullish(),
 });
 
 /**
@@ -839,8 +961,8 @@ export const UpdateDigestArticleParams = zod.object({
 export const UpdateDigestArticleBody = zod.object({
   headline: zod.string().optional(),
   body: zod.string().optional(),
-  rgiTake: zod.string().optional(),
   executiveSummary: zod.array(zod.string()).optional(),
+  rgiTake: zod.string().optional(),
   keyTakeaways: zod.array(zod.string()).optional(),
   implificationsForLeaders: zod.array(zod.string()).optional(),
   topicTags: zod.array(zod.string()).optional(),
@@ -849,6 +971,8 @@ export const UpdateDigestArticleBody = zod.object({
     .enum(["draft", "pending_review", "approved", "rejected", "regenerating"])
     .optional(),
 });
+
+export const updateDigestArticleResponseNewsletterSentCountMin = 0;
 
 export const UpdateDigestArticleResponse = zod.object({
   id: zod.number(),
@@ -859,7 +983,12 @@ export const UpdateDigestArticleResponse = zod.object({
   rgiTake: zod.string(),
   keyTakeaways: zod.array(zod.string()),
   implificationsForLeaders: zod.array(zod.string()),
+  whatMostAreMissing: zod.string().nullish(),
+  mechanism: zod.array(zod.string()),
+  constraintsAndRisks: zod.array(zod.string()),
+  whatChangedSinceYesterday: zod.array(zod.string()),
   whatToWatch: zod.array(zod.string()),
+  summaryTakeaways: zod.array(zod.string()),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
   sourceArticles: zod
@@ -895,6 +1024,28 @@ export const UpdateDigestArticleResponse = zod.object({
         content: zod.string().nullish(),
         status: zod.enum(["pending", "selected", "dismissed"]),
         disciplineAlignment: zod.string().nullish(),
+        scoreExplanation: zod.string().nullish(),
+        scoreBreakdown: zod.record(zod.string(), zod.number()).nullish(),
+        recencyScore: zod.number().nullish(),
+        sourceAuthorityScore: zod.number().nullish(),
+        strategicImpactScore: zod.number().nullish(),
+        executiveRelevanceScore: zod.number().nullish(),
+        recommendedUse: zod
+          .union([
+            zod.literal("feed"),
+            zod.literal("dashboard"),
+            zod.literal("daily_brief"),
+            zod.literal("reject"),
+            zod.literal("needs_review"),
+            zod.literal(null),
+          ])
+          .nullish(),
+        reasonForAcceptance: zod.string().nullish(),
+        reasonForRejection: zod.string().nullish(),
+        rgiProfileVersion: zod.string().nullish(),
+        moderationNote: zod.string().nullish(),
+        moderatedAt: zod.string().nullish(),
+        moderatedBy: zod.string().nullish(),
       }),
     )
     .optional(),
@@ -911,6 +1062,16 @@ export const UpdateDigestArticleResponse = zod.object({
   createdAt: zod.string(),
   updatedAt: zod.string(),
   discipline: zod.string().nullish(),
+  newsletterSentAt: zod.string().nullish(),
+  newsletterSentCount: zod
+    .number()
+    .min(updateDigestArticleResponseNewsletterSentCountMin)
+    .nullish(),
+  approvedAt: zod.string().nullish(),
+  rejectedAt: zod.string().nullish(),
+  generationMode: zod.enum(["ai", "fallback"]).optional(),
+  fallbackReason: zod.string().nullish(),
+  strategicPlan: zod.record(zod.string(), zod.unknown()).nullish(),
 });
 
 /**
@@ -927,6 +1088,8 @@ export const ApproveDigestArticleParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const approveDigestArticleResponseNewsletterSentCountMin = 0;
+
 export const ApproveDigestArticleResponse = zod.object({
   id: zod.number(),
   articleType: zod.enum(["daily_brief", "topic_article"]),
@@ -936,7 +1099,12 @@ export const ApproveDigestArticleResponse = zod.object({
   rgiTake: zod.string(),
   keyTakeaways: zod.array(zod.string()),
   implificationsForLeaders: zod.array(zod.string()),
+  whatMostAreMissing: zod.string().nullish(),
+  mechanism: zod.array(zod.string()),
+  constraintsAndRisks: zod.array(zod.string()),
+  whatChangedSinceYesterday: zod.array(zod.string()),
   whatToWatch: zod.array(zod.string()),
+  summaryTakeaways: zod.array(zod.string()),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
   sourceArticles: zod
@@ -972,6 +1140,28 @@ export const ApproveDigestArticleResponse = zod.object({
         content: zod.string().nullish(),
         status: zod.enum(["pending", "selected", "dismissed"]),
         disciplineAlignment: zod.string().nullish(),
+        scoreExplanation: zod.string().nullish(),
+        scoreBreakdown: zod.record(zod.string(), zod.number()).nullish(),
+        recencyScore: zod.number().nullish(),
+        sourceAuthorityScore: zod.number().nullish(),
+        strategicImpactScore: zod.number().nullish(),
+        executiveRelevanceScore: zod.number().nullish(),
+        recommendedUse: zod
+          .union([
+            zod.literal("feed"),
+            zod.literal("dashboard"),
+            zod.literal("daily_brief"),
+            zod.literal("reject"),
+            zod.literal("needs_review"),
+            zod.literal(null),
+          ])
+          .nullish(),
+        reasonForAcceptance: zod.string().nullish(),
+        reasonForRejection: zod.string().nullish(),
+        rgiProfileVersion: zod.string().nullish(),
+        moderationNote: zod.string().nullish(),
+        moderatedAt: zod.string().nullish(),
+        moderatedBy: zod.string().nullish(),
       }),
     )
     .optional(),
@@ -988,6 +1178,16 @@ export const ApproveDigestArticleResponse = zod.object({
   createdAt: zod.string(),
   updatedAt: zod.string(),
   discipline: zod.string().nullish(),
+  newsletterSentAt: zod.string().nullish(),
+  newsletterSentCount: zod
+    .number()
+    .min(approveDigestArticleResponseNewsletterSentCountMin)
+    .nullish(),
+  approvedAt: zod.string().nullish(),
+  rejectedAt: zod.string().nullish(),
+  generationMode: zod.enum(["ai", "fallback"]).optional(),
+  fallbackReason: zod.string().nullish(),
+  strategicPlan: zod.record(zod.string(), zod.unknown()).nullish(),
 });
 
 /**
@@ -1001,6 +1201,8 @@ export const RejectDigestArticleBody = zod.object({
   reason: zod.string().nullish(),
 });
 
+export const rejectDigestArticleResponseNewsletterSentCountMin = 0;
+
 export const RejectDigestArticleResponse = zod.object({
   id: zod.number(),
   articleType: zod.enum(["daily_brief", "topic_article"]),
@@ -1010,7 +1212,12 @@ export const RejectDigestArticleResponse = zod.object({
   rgiTake: zod.string(),
   keyTakeaways: zod.array(zod.string()),
   implificationsForLeaders: zod.array(zod.string()),
+  whatMostAreMissing: zod.string().nullish(),
+  mechanism: zod.array(zod.string()),
+  constraintsAndRisks: zod.array(zod.string()),
+  whatChangedSinceYesterday: zod.array(zod.string()),
   whatToWatch: zod.array(zod.string()),
+  summaryTakeaways: zod.array(zod.string()),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
   sourceArticles: zod
@@ -1046,6 +1253,28 @@ export const RejectDigestArticleResponse = zod.object({
         content: zod.string().nullish(),
         status: zod.enum(["pending", "selected", "dismissed"]),
         disciplineAlignment: zod.string().nullish(),
+        scoreExplanation: zod.string().nullish(),
+        scoreBreakdown: zod.record(zod.string(), zod.number()).nullish(),
+        recencyScore: zod.number().nullish(),
+        sourceAuthorityScore: zod.number().nullish(),
+        strategicImpactScore: zod.number().nullish(),
+        executiveRelevanceScore: zod.number().nullish(),
+        recommendedUse: zod
+          .union([
+            zod.literal("feed"),
+            zod.literal("dashboard"),
+            zod.literal("daily_brief"),
+            zod.literal("reject"),
+            zod.literal("needs_review"),
+            zod.literal(null),
+          ])
+          .nullish(),
+        reasonForAcceptance: zod.string().nullish(),
+        reasonForRejection: zod.string().nullish(),
+        rgiProfileVersion: zod.string().nullish(),
+        moderationNote: zod.string().nullish(),
+        moderatedAt: zod.string().nullish(),
+        moderatedBy: zod.string().nullish(),
       }),
     )
     .optional(),
@@ -1062,6 +1291,16 @@ export const RejectDigestArticleResponse = zod.object({
   createdAt: zod.string(),
   updatedAt: zod.string(),
   discipline: zod.string().nullish(),
+  newsletterSentAt: zod.string().nullish(),
+  newsletterSentCount: zod
+    .number()
+    .min(rejectDigestArticleResponseNewsletterSentCountMin)
+    .nullish(),
+  approvedAt: zod.string().nullish(),
+  rejectedAt: zod.string().nullish(),
+  generationMode: zod.enum(["ai", "fallback"]).optional(),
+  fallbackReason: zod.string().nullish(),
+  strategicPlan: zod.record(zod.string(), zod.unknown()).nullish(),
 });
 
 /**
@@ -1075,6 +1314,8 @@ export const RegenerateDigestArticleBody = zod.object({
   editorNotes: zod.string().nullish(),
 });
 
+export const regenerateDigestArticleResponseNewsletterSentCountMin = 0;
+
 export const RegenerateDigestArticleResponse = zod.object({
   id: zod.number(),
   articleType: zod.enum(["daily_brief", "topic_article"]),
@@ -1084,7 +1325,12 @@ export const RegenerateDigestArticleResponse = zod.object({
   rgiTake: zod.string(),
   keyTakeaways: zod.array(zod.string()),
   implificationsForLeaders: zod.array(zod.string()),
+  whatMostAreMissing: zod.string().nullish(),
+  mechanism: zod.array(zod.string()),
+  constraintsAndRisks: zod.array(zod.string()),
+  whatChangedSinceYesterday: zod.array(zod.string()),
   whatToWatch: zod.array(zod.string()),
+  summaryTakeaways: zod.array(zod.string()),
   topicTags: zod.array(zod.string()),
   sourceArticleIds: zod.array(zod.number()),
   sourceArticles: zod
@@ -1120,6 +1366,28 @@ export const RegenerateDigestArticleResponse = zod.object({
         content: zod.string().nullish(),
         status: zod.enum(["pending", "selected", "dismissed"]),
         disciplineAlignment: zod.string().nullish(),
+        scoreExplanation: zod.string().nullish(),
+        scoreBreakdown: zod.record(zod.string(), zod.number()).nullish(),
+        recencyScore: zod.number().nullish(),
+        sourceAuthorityScore: zod.number().nullish(),
+        strategicImpactScore: zod.number().nullish(),
+        executiveRelevanceScore: zod.number().nullish(),
+        recommendedUse: zod
+          .union([
+            zod.literal("feed"),
+            zod.literal("dashboard"),
+            zod.literal("daily_brief"),
+            zod.literal("reject"),
+            zod.literal("needs_review"),
+            zod.literal(null),
+          ])
+          .nullish(),
+        reasonForAcceptance: zod.string().nullish(),
+        reasonForRejection: zod.string().nullish(),
+        rgiProfileVersion: zod.string().nullish(),
+        moderationNote: zod.string().nullish(),
+        moderatedAt: zod.string().nullish(),
+        moderatedBy: zod.string().nullish(),
       }),
     )
     .optional(),
@@ -1136,13 +1404,27 @@ export const RegenerateDigestArticleResponse = zod.object({
   createdAt: zod.string(),
   updatedAt: zod.string(),
   discipline: zod.string().nullish(),
+  newsletterSentAt: zod.string().nullish(),
+  newsletterSentCount: zod
+    .number()
+    .min(regenerateDigestArticleResponseNewsletterSentCountMin)
+    .nullish(),
+  approvedAt: zod.string().nullish(),
+  rejectedAt: zod.string().nullish(),
+  generationMode: zod.enum(["ai", "fallback"]).optional(),
+  fallbackReason: zod.string().nullish(),
+  strategicPlan: zod.record(zod.string(), zod.unknown()).nullish(),
 });
 
 /**
  * @summary List all sources
  */
+export const listSourcesResponseWeightDefault = 1;
+export const listSourcesResponseWeightMin = 0.5;
+export const listSourcesResponseWeightMax = 2;
+
 export const ListSourcesResponseItem = zod.object({
-  id: zod.number(),
+  id: zod.string(),
   name: zod.string(),
   url: zod.string(),
   type: zod.enum([
@@ -1160,6 +1442,11 @@ export const ListSourcesResponseItem = zod.object({
   authorType: zod.string().nullish(),
   authorityLevel: zod.number().nullish(),
   description: zod.string().nullish(),
+  weight: zod
+    .number()
+    .min(listSourcesResponseWeightMin)
+    .max(listSourcesResponseWeightMax)
+    .default(listSourcesResponseWeightDefault),
   createdAt: zod.string(),
 });
 export const ListSourcesResponse = zod.array(ListSourcesResponseItem);
@@ -1190,7 +1477,7 @@ export const CreateSourceBody = zod.object({
  * @summary Update a source (enable/disable, change tier, authority level)
  */
 export const UpdateSourceParams = zod.object({
-  id: zod.coerce.number(),
+  id: zod.coerce.string(),
 });
 
 export const updateSourceBodyWeightMin = 0.5;
@@ -1212,8 +1499,12 @@ export const UpdateSourceBody = zod.object({
     .optional(),
 });
 
+export const updateSourceResponseWeightDefault = 1;
+export const updateSourceResponseWeightMin = 0.5;
+export const updateSourceResponseWeightMax = 2;
+
 export const UpdateSourceResponse = zod.object({
-  id: zod.number(),
+  id: zod.string(),
   name: zod.string(),
   url: zod.string(),
   type: zod.enum([
@@ -1231,6 +1522,11 @@ export const UpdateSourceResponse = zod.object({
   authorType: zod.string().nullish(),
   authorityLevel: zod.number().nullish(),
   description: zod.string().nullish(),
+  weight: zod
+    .number()
+    .min(updateSourceResponseWeightMin)
+    .max(updateSourceResponseWeightMax)
+    .default(updateSourceResponseWeightDefault),
   createdAt: zod.string(),
 });
 
@@ -1238,7 +1534,7 @@ export const UpdateSourceResponse = zod.object({
  * @summary Remove a source
  */
 export const DeleteSourceParams = zod.object({
-  id: zod.coerce.number(),
+  id: zod.coerce.string(),
 });
 
 /**
@@ -1281,44 +1577,31 @@ export const GetDashboardSummaryResponse = zod.object({
       content: zod.string().nullish(),
       status: zod.enum(["pending", "selected", "dismissed"]),
       disciplineAlignment: zod.string().nullish(),
-    }),
-  ),
-  topPicks: zod.array(
-    zod.object({
-      id: zod.number(),
-      headline: zod.string(),
-      url: zod.string(),
-      sourceName: zod.string(),
-      sourceUrl: zod.string().nullish(),
-      author: zod.string().nullish(),
-      authorType: zod.string().nullish(),
-      platform: zod.string().nullish(),
-      isEmergingSignal: zod.boolean(),
-      isPrimarySignal: zod.boolean(),
-      relevancyScore: zod.number(),
-      authenticityScore: zod
-        .number()
-        .nullish()
-        .describe(
-          "Credibility score 1-10 based on source reputation, primary vs secondary reporting, author authority, and cross-source validation",
-        ),
-      viewpoint: zod
-        .string()
-        .nullish()
-        .describe(
-          "One-sentence summary of the position or perspective the article takes",
-        ),
-      topicTags: zod.array(zod.string()),
-      teaserSummary: zod.string().nullish(),
-      publishedAt: zod.string().nullish(),
-      scrapedAt: zod.string(),
-      content: zod.string().nullish(),
-      status: zod.enum(["pending", "selected", "dismissed"]),
-      disciplineAlignment: zod.string().nullish(),
+      scoreExplanation: zod.string().nullish(),
+      scoreBreakdown: zod.record(zod.string(), zod.number()).nullish(),
+      recencyScore: zod.number().nullish(),
+      sourceAuthorityScore: zod.number().nullish(),
+      strategicImpactScore: zod.number().nullish(),
+      executiveRelevanceScore: zod.number().nullish(),
+      recommendedUse: zod
+        .union([
+          zod.literal("feed"),
+          zod.literal("dashboard"),
+          zod.literal("daily_brief"),
+          zod.literal("reject"),
+          zod.literal("needs_review"),
+          zod.literal(null),
+        ])
+        .nullish(),
+      reasonForAcceptance: zod.string().nullish(),
+      reasonForRejection: zod.string().nullish(),
+      rgiProfileVersion: zod.string().nullish(),
+      moderationNote: zod.string().nullish(),
+      moderatedAt: zod.string().nullish(),
+      moderatedBy: zod.string().nullish(),
     }),
   ),
   lastScrapeAt: zod.string().nullish(),
-  contentWindowStart: zod.string().optional(),
   articlesByTag: zod.array(
     zod.object({
       tag: zod.string(),
@@ -1329,8 +1612,8 @@ export const GetDashboardSummaryResponse = zod.object({
     zod.object({
       topic: zod.string(),
       articleCount: zod.number(),
-      importanceScore: zod.number(),
       avgRelevancyScore: zod.number(),
+      importanceScore: zod.number(),
       significance: zod.string(),
       discipline: zod.string(),
       hasEmergingSignal: zod.boolean(),
@@ -1340,6 +1623,42 @@ export const GetDashboardSummaryResponse = zod.object({
   activeSources: zod.number(),
   socialSignalsCount: zod.number(),
   emergingSignalsCount: zod.number(),
+  contentWindowStart: zod
+    .string()
+    .optional()
+    .describe("ISO date string for the start of the dashboard content window."),
+  minTopicScore: zod
+    .number()
+    .optional()
+    .describe(
+      "Minimum relevancy score used to build dashboard topic intelligence.",
+    ),
+  signalClusters: zod
+    .array(
+      zod.object({
+        topic: zod.string(),
+        articleCount: zod.number(),
+        sourceCount: zod.number(),
+        avgRelevancyScore: zod.number(),
+        strategicImpactScore: zod.number(),
+        momentumScore: zod.number(),
+        convergenceScore: zod.number(),
+        institutionalRiskScore: zod.number(),
+        contradictionSignal: zod.boolean(),
+        signalStrength: zod.number(),
+        narrative: zod.string(),
+      }),
+    )
+    .optional(),
+  sectionErrors: zod
+    .array(
+      zod.object({
+        section: zod.string(),
+        message: zod.string(),
+      }),
+    )
+    .optional(),
+  degraded: zod.boolean().optional(),
 });
 
 /**

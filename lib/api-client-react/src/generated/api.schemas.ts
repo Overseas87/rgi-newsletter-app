@@ -192,6 +192,26 @@ export const ArticleStatus = {
   dismissed: "dismissed",
 } as const;
 
+/**
+ * @nullable
+ */
+export type ArticleScoreBreakdown = { [key: string]: number } | null;
+
+/**
+ * @nullable
+ */
+export type ArticleRecommendedUse =
+  | (typeof ArticleRecommendedUse)[keyof typeof ArticleRecommendedUse]
+  | null;
+
+export const ArticleRecommendedUse = {
+  feed: "feed",
+  dashboard: "dashboard",
+  daily_brief: "daily_brief",
+  reject: "reject",
+  needs_review: "needs_review",
+} as const;
+
 export interface Article {
   id: number;
   headline: string;
@@ -229,6 +249,32 @@ export interface Article {
   status: ArticleStatus;
   /** @nullable */
   disciplineAlignment?: string | null;
+  /** @nullable */
+  scoreExplanation?: string | null;
+  /** @nullable */
+  scoreBreakdown?: ArticleScoreBreakdown;
+  /** @nullable */
+  recencyScore?: number | null;
+  /** @nullable */
+  sourceAuthorityScore?: number | null;
+  /** @nullable */
+  strategicImpactScore?: number | null;
+  /** @nullable */
+  executiveRelevanceScore?: number | null;
+  /** @nullable */
+  recommendedUse?: ArticleRecommendedUse;
+  /** @nullable */
+  reasonForAcceptance?: string | null;
+  /** @nullable */
+  reasonForRejection?: string | null;
+  /** @nullable */
+  rgiProfileVersion?: string | null;
+  /** @nullable */
+  moderationNote?: string | null;
+  /** @nullable */
+  moderatedAt?: string | null;
+  /** @nullable */
+  moderatedBy?: string | null;
 }
 
 export type DigestArticleArticleType =
@@ -250,6 +296,19 @@ export const DigestArticleStatus = {
   regenerating: "regenerating",
 } as const;
 
+export type DigestArticleGenerationMode =
+  (typeof DigestArticleGenerationMode)[keyof typeof DigestArticleGenerationMode];
+
+export const DigestArticleGenerationMode = {
+  ai: "ai",
+  fallback: "fallback",
+} as const;
+
+/**
+ * @nullable
+ */
+export type DigestArticleStrategicPlan = { [key: string]: unknown } | null;
+
 export interface DigestArticle {
   id: number;
   articleType: DigestArticleArticleType;
@@ -259,7 +318,13 @@ export interface DigestArticle {
   rgiTake: string;
   keyTakeaways: string[];
   implificationsForLeaders: string[];
+  /** @nullable */
+  whatMostAreMissing?: string | null;
+  mechanism: string[];
+  constraintsAndRisks: string[];
+  whatChangedSinceYesterday: string[];
   whatToWatch: string[];
+  summaryTakeaways: string[];
   topicTags: string[];
   sourceArticleIds: number[];
   sourceArticles?: Article[];
@@ -274,6 +339,22 @@ export interface DigestArticle {
   updatedAt: string;
   /** @nullable */
   discipline?: string | null;
+  /** @nullable */
+  newsletterSentAt?: string | null;
+  /**
+   * @minimum 0
+   * @nullable
+   */
+  newsletterSentCount?: number | null;
+  /** @nullable */
+  approvedAt?: string | null;
+  /** @nullable */
+  rejectedAt?: string | null;
+  generationMode?: DigestArticleGenerationMode;
+  /** @nullable */
+  fallbackReason?: string | null;
+  /** @nullable */
+  strategicPlan?: DigestArticleStrategicPlan;
 }
 
 export interface GenerateDigestBody {
@@ -297,8 +378,8 @@ export const UpdateDigestArticleBodyStatus = {
 export interface UpdateDigestArticleBody {
   headline?: string;
   body?: string;
-  rgiTake?: string;
   executiveSummary?: string[];
+  rgiTake?: string;
   keyTakeaways?: string[];
   implificationsForLeaders?: string[];
   topicTags?: string[];
@@ -338,7 +419,7 @@ export const SourceTier = {
 } as const;
 
 export interface Source {
-  id: number;
+  id: string;
   name: string;
   url: string;
   type: SourceType;
@@ -352,6 +433,11 @@ export interface Source {
   authorityLevel?: number | null;
   /** @nullable */
   description?: string | null;
+  /**
+   * @minimum 0.5
+   * @maximum 2
+   */
+  weight: number;
   createdAt: string;
 }
 
@@ -429,11 +515,30 @@ export interface TagCount {
 export interface TopicIntelligence {
   topic: string;
   articleCount: number;
-  importanceScore: number;
   avgRelevancyScore: number;
+  importanceScore: number;
   significance: string;
   discipline: string;
   hasEmergingSignal: boolean;
+}
+
+export interface SignalCluster {
+  topic: string;
+  articleCount: number;
+  sourceCount: number;
+  avgRelevancyScore: number;
+  strategicImpactScore: number;
+  momentumScore: number;
+  convergenceScore: number;
+  institutionalRiskScore: number;
+  contradictionSignal: boolean;
+  signalStrength: number;
+  narrative: string;
+}
+
+export interface DashboardSectionError {
+  section: string;
+  message: string;
 }
 
 export interface DashboardSummary {
@@ -442,16 +547,21 @@ export interface DashboardSummary {
   approvedToday: number;
   rejectedToday: number;
   topArticles: Article[];
-  topPicks: Article[];
   /** @nullable */
   lastScrapeAt?: string | null;
-  contentWindowStart?: string;
   articlesByTag: TagCount[];
   topicIntelligence: TopicIntelligence[];
   totalSources: number;
   activeSources: number;
   socialSignalsCount: number;
   emergingSignalsCount: number;
+  /** ISO date string for the start of the dashboard content window. */
+  contentWindowStart?: string;
+  /** Minimum relevancy score used to build dashboard topic intelligence. */
+  minTopicScore?: number;
+  signalClusters?: SignalCluster[];
+  sectionErrors?: DashboardSectionError[];
+  degraded?: boolean;
 }
 
 export interface Settings {

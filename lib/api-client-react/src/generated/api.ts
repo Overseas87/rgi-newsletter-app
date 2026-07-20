@@ -45,6 +45,9 @@ import type {
 
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
+import { arrayResponseFetch } from "../api-response-adapters";
+import { sourceListFetch } from "../api-response-adapters";
+import { dashboardSummaryFetch } from "../api-response-adapters";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -761,7 +764,7 @@ export const listArticles = async (
   params?: ListArticlesParams,
   options?: RequestInit,
 ): Promise<Article[]> => {
-  return customFetch<Article[]>(getListArticlesUrl(params), {
+  return arrayResponseFetch<Article[]>(getListArticlesUrl(params), {
     ...options,
     method: "GET",
   });
@@ -782,7 +785,7 @@ export const getListArticlesQueryOptions = <
       TError,
       TData
     >;
-    request?: SecondParameter<typeof customFetch>;
+    request?: SecondParameter<typeof arrayResponseFetch>;
   },
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
@@ -820,7 +823,7 @@ export function useListArticles<
       TError,
       TData
     >;
-    request?: SecondParameter<typeof customFetch>;
+    request?: SecondParameter<typeof arrayResponseFetch>;
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListArticlesQueryOptions(params, options);
@@ -1026,7 +1029,7 @@ export const listDigestArticles = async (
   params?: ListDigestArticlesParams,
   options?: RequestInit,
 ): Promise<DigestArticle[]> => {
-  return customFetch<DigestArticle[]>(getListDigestArticlesUrl(params), {
+  return arrayResponseFetch<DigestArticle[]>(getListDigestArticlesUrl(params), {
     ...options,
     method: "GET",
   });
@@ -1049,7 +1052,7 @@ export const getListDigestArticlesQueryOptions = <
       TError,
       TData
     >;
-    request?: SecondParameter<typeof customFetch>;
+    request?: SecondParameter<typeof arrayResponseFetch>;
   },
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
@@ -1088,7 +1091,7 @@ export function useListDigestArticles<
       TError,
       TData
     >;
-    request?: SecondParameter<typeof customFetch>;
+    request?: SecondParameter<typeof arrayResponseFetch>;
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListDigestArticlesQueryOptions(params, options);
@@ -1711,7 +1714,7 @@ export const getListSourcesUrl = () => {
 };
 
 export const listSources = async (options?: RequestInit): Promise<Source[]> => {
-  return customFetch<Source[]>(getListSourcesUrl(), {
+  return sourceListFetch<Source[]>(getListSourcesUrl(), {
     ...options,
     method: "GET",
   });
@@ -1730,7 +1733,7 @@ export const getListSourcesQueryOptions = <
     TError,
     TData
   >;
-  request?: SecondParameter<typeof customFetch>;
+  request?: SecondParameter<typeof sourceListFetch>;
 }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
@@ -1765,7 +1768,7 @@ export function useListSources<
     TError,
     TData
   >;
-  request?: SecondParameter<typeof customFetch>;
+  request?: SecondParameter<typeof sourceListFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListSourcesQueryOptions(options);
 
@@ -1865,12 +1868,12 @@ export const useCreateSource = <
 /**
  * @summary Update a source (enable/disable, change tier, authority level)
  */
-export const getUpdateSourceUrl = (id: number) => {
+export const getUpdateSourceUrl = (id: string) => {
   return `/api/sources/${id}`;
 };
 
 export const updateSource = async (
-  id: number,
+  id: string,
   updateSourceBody: UpdateSourceBody,
   options?: RequestInit,
 ): Promise<Source> => {
@@ -1889,14 +1892,14 @@ export const getUpdateSourceMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateSource>>,
     TError,
-    { id: number; data: BodyType<UpdateSourceBody> },
+    { id: string; data: BodyType<UpdateSourceBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateSource>>,
   TError,
-  { id: number; data: BodyType<UpdateSourceBody> },
+  { id: string; data: BodyType<UpdateSourceBody> },
   TContext
 > => {
   const mutationKey = ["updateSource"];
@@ -1910,7 +1913,7 @@ export const getUpdateSourceMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateSource>>,
-    { id: number; data: BodyType<UpdateSourceBody> }
+    { id: string; data: BodyType<UpdateSourceBody> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -1936,14 +1939,14 @@ export const useUpdateSource = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateSource>>,
     TError,
-    { id: number; data: BodyType<UpdateSourceBody> },
+    { id: string; data: BodyType<UpdateSourceBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof updateSource>>,
   TError,
-  { id: number; data: BodyType<UpdateSourceBody> },
+  { id: string; data: BodyType<UpdateSourceBody> },
   TContext
 > => {
   return useMutation(getUpdateSourceMutationOptions(options));
@@ -1952,12 +1955,12 @@ export const useUpdateSource = <
 /**
  * @summary Remove a source
  */
-export const getDeleteSourceUrl = (id: number) => {
+export const getDeleteSourceUrl = (id: string) => {
   return `/api/sources/${id}`;
 };
 
 export const deleteSource = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<void> => {
   return customFetch<void>(getDeleteSourceUrl(id), {
@@ -1973,14 +1976,14 @@ export const getDeleteSourceMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteSource>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteSource>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   const mutationKey = ["deleteSource"];
@@ -1994,7 +1997,7 @@ export const getDeleteSourceMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteSource>>,
-    { id: number }
+    { id: string }
   > = (props) => {
     const { id } = props ?? {};
 
@@ -2020,14 +2023,14 @@ export const useDeleteSource = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteSource>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof deleteSource>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   return useMutation(getDeleteSourceMutationOptions(options));
@@ -2043,7 +2046,7 @@ export const getGetDashboardSummaryUrl = () => {
 export const getDashboardSummary = async (
   options?: RequestInit,
 ): Promise<DashboardSummary> => {
-  return customFetch<DashboardSummary>(getGetDashboardSummaryUrl(), {
+  return dashboardSummaryFetch<DashboardSummary>(getGetDashboardSummaryUrl(), {
     ...options,
     method: "GET",
   });
@@ -2062,7 +2065,7 @@ export const getGetDashboardSummaryQueryOptions = <
     TError,
     TData
   >;
-  request?: SecondParameter<typeof customFetch>;
+  request?: SecondParameter<typeof dashboardSummaryFetch>;
 }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
@@ -2097,7 +2100,7 @@ export function useGetDashboardSummary<
     TError,
     TData
   >;
-  request?: SecondParameter<typeof customFetch>;
+  request?: SecondParameter<typeof dashboardSummaryFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetDashboardSummaryQueryOptions(options);
 
