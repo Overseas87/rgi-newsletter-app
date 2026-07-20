@@ -369,7 +369,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
       requestBody:
         required: true
         content:
@@ -392,7 +392,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
       responses:
         "204":
           description: Deleted
@@ -532,6 +532,35 @@ components:
           enum: [pending, selected, dismissed]
         disciplineAlignment:
           type: ["string", "null"]
+        scoreExplanation:
+          type: ["string", "null"]
+        scoreBreakdown:
+          type: ["object", "null"]
+          additionalProperties:
+            type: number
+        recencyScore:
+          type: ["number", "null"]
+        sourceAuthorityScore:
+          type: ["number", "null"]
+        strategicImpactScore:
+          type: ["number", "null"]
+        executiveRelevanceScore:
+          type: ["number", "null"]
+        recommendedUse:
+          type: ["string", "null"]
+          enum: [feed, dashboard, daily_brief, reject, needs_review, null]
+        reasonForAcceptance:
+          type: ["string", "null"]
+        reasonForRejection:
+          type: ["string", "null"]
+        rgiProfileVersion:
+          type: ["string", "null"]
+        moderationNote:
+          type: ["string", "null"]
+        moderatedAt:
+          type: ["string", "null"]
+        moderatedBy:
+          type: ["string", "null"]
       required:
         - id
         - headline
@@ -566,6 +595,32 @@ components:
           type: array
           items:
             type: string
+        implificationsForLeaders:
+          type: array
+          items:
+            type: string
+        whatMostAreMissing:
+          type: ["string", "null"]
+        mechanism:
+          type: array
+          items:
+            type: string
+        constraintsAndRisks:
+          type: array
+          items:
+            type: string
+        whatChangedSinceYesterday:
+          type: array
+          items:
+            type: string
+        whatToWatch:
+          type: array
+          items:
+            type: string
+        summaryTakeaways:
+          type: array
+          items:
+            type: string
         topicTags:
           type: array
           items:
@@ -593,6 +648,23 @@ components:
           type: string
         discipline:
           type: ["string", "null"]
+        newsletterSentAt:
+          type: ["string", "null"]
+        newsletterSentCount:
+          type: ["integer", "null"]
+          minimum: 0
+        approvedAt:
+          type: ["string", "null"]
+        rejectedAt:
+          type: ["string", "null"]
+        generationMode:
+          type: string
+          enum: [ai, fallback]
+        fallbackReason:
+          type: ["string", "null"]
+        strategicPlan:
+          type: ["object", "null"]
+          additionalProperties: true
       required:
         - id
         - articleType
@@ -601,6 +673,12 @@ components:
         - executiveSummary
         - rgiTake
         - keyTakeaways
+        - implificationsForLeaders
+        - mechanism
+        - constraintsAndRisks
+        - whatChangedSinceYesterday
+        - whatToWatch
+        - summaryTakeaways
         - topicTags
         - sourceArticleIds
         - status
@@ -627,8 +705,20 @@ components:
           type: string
         body:
           type: string
+        executiveSummary:
+          type: array
+          items:
+            type: string
         rgiTake:
           type: string
+        keyTakeaways:
+          type: array
+          items:
+            type: string
+        implificationsForLeaders:
+          type: array
+          items:
+            type: string
         topicTags:
           type: array
           items:
@@ -655,7 +745,7 @@ components:
       type: object
       properties:
         id:
-          type: integer
+          type: string
         name:
           type: string
         url:
@@ -676,6 +766,11 @@ components:
           type: ["integer", "null"]
         description:
           type: ["string", "null"]
+        weight:
+          type: number
+          minimum: 0.5
+          maximum: 2
+          default: 1
         createdAt:
           type: string
       required:
@@ -685,6 +780,7 @@ components:
         - type
         - tier
         - isActive
+        - weight
         - createdAt
 
     CreateSourceBody:
@@ -734,6 +830,10 @@ components:
           type: ["integer", "null"]
         description:
           type: ["string", "null"]
+        weight:
+          type: number
+          minimum: 0.5
+          maximum: 2
 
     DashboardSummary:
       type: object
@@ -747,10 +847,6 @@ components:
         rejectedToday:
           type: integer
         topArticles:
-          type: array
-          items:
-            $ref: "#/components/schemas/Article"
-        topPicks:
           type: array
           items:
             $ref: "#/components/schemas/Article"
@@ -772,13 +868,28 @@ components:
           type: integer
         emergingSignalsCount:
           type: integer
+        contentWindowStart:
+          type: string
+          description: ISO date string for the start of the dashboard content window.
+        minTopicScore:
+          type: number
+          description: Minimum relevancy score used to build dashboard topic intelligence.
+        signalClusters:
+          type: array
+          items:
+            $ref: "#/components/schemas/SignalCluster"
+        sectionErrors:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardSectionError"
+        degraded:
+          type: boolean
       required:
         - totalArticlesToday
         - pendingReview
         - approvedToday
         - rejectedToday
         - topArticles
-        - topPicks
         - articlesByTag
         - topicIntelligence
         - totalSources
@@ -804,6 +915,8 @@ components:
           type: string
         articleCount:
           type: integer
+        avgRelevancyScore:
+          type: number
         importanceScore:
           type: number
         significance:
@@ -815,10 +928,60 @@ components:
       required:
         - topic
         - articleCount
+        - avgRelevancyScore
         - importanceScore
         - significance
         - discipline
         - hasEmergingSignal
+
+    SignalCluster:
+      type: object
+      properties:
+        topic:
+          type: string
+        articleCount:
+          type: integer
+        sourceCount:
+          type: integer
+        avgRelevancyScore:
+          type: number
+        strategicImpactScore:
+          type: number
+        momentumScore:
+          type: number
+        convergenceScore:
+          type: number
+        institutionalRiskScore:
+          type: number
+        contradictionSignal:
+          type: boolean
+        signalStrength:
+          type: number
+        narrative:
+          type: string
+      required:
+        - topic
+        - articleCount
+        - sourceCount
+        - avgRelevancyScore
+        - strategicImpactScore
+        - momentumScore
+        - convergenceScore
+        - institutionalRiskScore
+        - contradictionSignal
+        - signalStrength
+        - narrative
+
+    DashboardSectionError:
+      type: object
+      properties:
+        section:
+          type: string
+        message:
+          type: string
+      required:
+        - section
+        - message
 
     Settings:
       type: object
