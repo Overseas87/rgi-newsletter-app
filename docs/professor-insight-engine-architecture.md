@@ -60,7 +60,7 @@ The system should help an RGI editor identify a timely story, find a relevant pr
 ## 3. End-to-End Product Workflow
 
 1. The existing ingestion process collects stories in a defined previous-24-hour window.
-2. The system deduplicates articles and, where appropriate, clusters coverage of the same underlying event.
+2. The system deduplicates articles and identifies related coverage that an editor may confirm as supporting evidence for one opportunity.
 3. The system scores RGI relevance and constructs a shortlist of approximately 15 strong Story Opportunities.
 4. An editor reviews each opportunity’s evidence, relevance score, reasoning, topics, proposed angle, and workflow state.
 5. The deterministic match engine compares each opportunity with eligible Professor Profiles and explains each score.
@@ -79,12 +79,12 @@ Each milestone below implements only its stated portion of this workflow.
 
 ## 4. Daily Story Opportunities
 
-A **Story Opportunity** is an editorially actionable representation of a timely development. It may reference one source article or a cluster of related articles covering the same underlying event.
+A **Story Opportunity** is an editorially actionable representation of a timely development. It references one source article by default and may reference related supporting articles after an editor-confirmed merge.
 
 Once per day, the system should:
 
 1. process stories from an explicitly defined previous-24-hour window;
-2. deduplicate or cluster related coverage where appropriate;
+2. deduplicate records and identify related coverage for optional editor-confirmed merging;
 3. score each candidate for relevance to RGI;
 4. produce approximately 15 strong opportunities;
 5. return fewer than 15 rather than pad the list with weak stories;
@@ -93,7 +93,7 @@ Once per day, the system should:
 
 An opportunity should retain enough context to explain why it was shortlisted even if its source article or scoring configuration later changes. It should not copy unlimited source material.
 
-The daily shortlist is a previous-24-hour editorial view over the existing ingestion system, not a redesign of scraper or scheduler cadence. Exact duplicates remain a deduplication concern; several articles should form one opportunity only when they cover the same underlying development and add materially useful evidence.
+The daily shortlist is a previous-24-hour editorial view over the existing ingestion system, not a redesign of scraper or scheduler cadence. Exact duplicates remain a deduplication concern; several articles should form one opportunity only when they cover the same underlying development, add materially useful evidence, and an editor confirms the merge.
 
 ### Independent scores
 
@@ -195,7 +195,7 @@ Restrictions may exclude a professor or produce a visible warning according to t
 
 The editor always selects the professor manually. Selecting a lower-ranked professor preserves the calculated ranking and records an override reason; it does not rewrite the score.
 
-The Milestone 1 implementation brief must define the exact component weights, normalization, thresholds, and exclusion precedence for its matching-algorithm version. This architecture intentionally does not set those values.
+The authoritative initial weights, normalization, thresholds, and exclusion precedence appear in the Milestone 1 Decision Parameters below. Any later configuration must retain an explicit algorithm version.
 
 ## 8. Flexible Professor Contribution
 
@@ -479,7 +479,127 @@ OpenAPI remains the source of truth for API contracts. Generated React and Zod c
 
 The end-to-end acceptance path must be executable with a written response, guided-question response, voice response, or hybrid response. Voice is never required. An approved Voice Profile may be consumed in Milestone 3, but creating one is not required in Milestones 1 or 2 and must be separately scoped if undertaken.
 
-## 17. Definitive First-Version Non-Goals
+## 17. Milestone 1 Decision Parameters
+
+The following parameters are authoritative for the first implementation of Milestone 1.
+
+### Daily Window
+
+- The operational timezone is `America/New_York`.
+- The daily cutoff is `06:00` Eastern Time.
+- Each daily window covers the preceding 24 elapsed hours.
+- Window membership uses an inclusive start and exclusive end: `[windowStart, windowEnd)`.
+- At daylight-saving transitions, calculate `windowEnd` from the local `06:00` cutoff and calculate `windowStart` as exactly 24 elapsed hours before `windowEnd`; do not substitute the prior local cutoff for that calculation.
+- Persist UTC `windowStart` and `windowEnd`, the operational timezone, local cutoff, calculation timestamp, and configuration version.
+- Use `publishedAt` to determine eligibility.
+- When `publishedAt` is absent, `ingestedAt` may be used only with a visible fallback indicator.
+- In current Article contracts, the ingestion timestamp is named `scrapedAt`. Milestone 1 treats that existing value as `ingestedAt` for this eligibility rule without rewriting historical source records.
+- Exclude records with neither usable timestamp.
+- Exclude future-dated records outside the window.
+- Treat a completed daily window as a frozen snapshot. Recalculation must be an explicit, versioned action rather than a silent mutation.
+
+### RGI Relevance and Shortlist
+
+- Reuse the canonical existing RGI relevance score rather than create another relevance model.
+- Normalize or expose the score on a `0–100` scale.
+- For the current canonical `1–10` score, the initial normalized value is the existing score multiplied by `10`; this is a scale conversion, not rescoring.
+- The initial eligibility threshold is `60`.
+- The maximum shortlist size is `15`.
+- Return fewer than 15 opportunities rather than pad the shortlist with stories below 60.
+- Keep RGI relevance separate from professor fit.
+- Do not use an overall opportunity score in Milestone 1.
+
+Apply these diversity constraints:
+
+- no more than two opportunities from one source; and
+- no more than three opportunities with the same primary topic.
+
+Apply this stable deterministic ordering:
+
+1. RGI relevance descending;
+2. publication timestamp descending, using the visibly flagged ingestion fallback when `publishedAt` is absent;
+3. source-authority scoring component descending; and
+4. stable article ID ascending.
+
+Treat a missing source-authority scoring component as zero for the ordering tie-breaker. Sort eligible candidates once using this ordering, then accept them in order when doing so does not violate either diversity cap, stopping at 15 accepted opportunities or the end of the eligible candidates.
+
+Persist the shortlist threshold, diversity rules, scoring version, and selection algorithm version with the daily window.
+
+The shortlist consumes the existing canonical article relevance score as its input. Supporting-source quantity must not add or reapply a Milestone 1 relevance boost.
+
+One eligible article is one Story Opportunity by default. Related articles may become supporting evidence only through an editor-confirmed merge. Broadly related articles remain separate.
+
+### Professor-Fit Dimensions and Weights
+
+Use a deterministic `0–100` professor-fit score with these dimensions:
+
+| Dimension                                          | Weight |
+| -------------------------------------------------- | -----: |
+| Core expertise                                     |    30% |
+| Research interests and teaching                    |    15% |
+| Professional or academic experience and industries |    15% |
+| Topic interests and contactable topics             |    15% |
+| Past-publication topics and recurring themes       |    15% |
+| Regions and affiliations                           |    10% |
+
+For each dimension, use the strongest distinct approved match:
+
+- exact normalized match: `100`;
+- approved alias: `80`;
+- approved parent or child topic: `50`; and
+- no match: `0`.
+
+Do not increase a dimension score merely because a Professor Profile contains many tags.
+
+The final professor-fit score is the weighted sum of all six dimensions.
+
+Missing profile information contributes zero in its dimension. The UI must display a separate profile-coverage indicator so missing data is not confused with contrary evidence.
+
+Persist:
+
+- total fit score;
+- all dimension scores;
+- matched opportunity concept;
+- exact professor field and value;
+- match type;
+- Professor Profile revision;
+- taxonomy version;
+- algorithm version;
+- warnings and exclusions; and
+- human-readable rationale.
+
+### Match Labels
+
+- score greater than or equal to `70`: strong match;
+- score greater than or equal to `50` and below `70`: plausible match; and
+- score below `50`: weak match.
+
+These labels assist editorial judgment and must not trigger automatic assignment.
+
+The editor may select a weak or lower-ranked professor but must record an override reason. The original calculated ranking remains unchanged.
+
+### Exclusion Precedence
+
+Apply exclusions and warnings in this order:
+
+1. An inactive Professor Profile is excluded.
+2. An exact or approved-alias match to a hard restricted or do-not-contact topic is excluded.
+3. An explicit hard institutional conflict is excluded.
+4. A soft affiliation or conflict concern produces a warning only.
+5. Low profile coverage produces a warning only.
+6. A weak fit score remains selectable with an override reason.
+
+A hard exclusion cannot be bypassed through an ordinary selection override. The approved Professor Profile must first be corrected or updated by an authorized editor.
+
+### Versioning Principle
+
+All thresholds, weights, aliases, taxonomy relationships, exclusion rules, and algorithm identifiers must be versioned.
+
+Historical Story Opportunities and Professor Matches retain the configuration that produced them. Later tuning must not silently recalculate historical scores.
+
+These decision parameters do not expand Milestone 1. Intake, professor responses, audio, transcription, `CommentaryAnalysis`, article generation, outreach, embeddings, availability, and workload remain excluded.
+
+## 18. Definitive First-Version Non-Goals
 
 Do not include:
 
@@ -496,7 +616,7 @@ Do not include:
 
 Manual intake-link sharing and manual publication on the RGI website are acceptable for the first usable version.
 
-## 18. Manual Acceptance Scenario
+## 19. Manual Acceptance Scenario
 
 Use one defined 24-hour ingestion window to produce a quality-filtered shortlist of approximately 15 opportunities, with fewer allowed when the threshold is not met. Load three to five approved Professor Profiles, inspect transparent matches, and manually select one professor for one opportunity.
 
@@ -504,7 +624,7 @@ Collect and preserve one substantive professor contribution through any one of t
 
 Mode-parity checks must also confirm that free writing, guided questions, voice, and hybrid submissions can each reach the drafting-ready boundary without a preferred input method. A separate editor-import check must preserve channel, original artifact, verbatim status, attribution evidence, and unresolved approval requirements.
 
-## 19. Implementation Guardrails
+## 20. Implementation Guardrails
 
 Before beginning a milestone, its implementation brief should:
 
