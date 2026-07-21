@@ -11,6 +11,7 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "worker": "node --enable-source-maps ./dist/worker.mjs",
     "test:professors": "tsx --test src/__tests__/professor-profiles.test.ts",
+    "test:opportunities": "tsx --test src/__tests__/story-opportunities.test.ts src/__tests__/story-opportunities-api.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

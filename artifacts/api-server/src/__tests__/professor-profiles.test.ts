@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
+import type { AddressInfo } from "node:net";
 import { resolve } from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
+import express from "express";
 import {
   CreateProfessorProfileBodySchema,
   ProfessorProfileSchema,
@@ -16,7 +18,7 @@ import {
   professorWritesDisabledPayload,
   updateProfessorProfileInDb,
 } from "../lib/professor-profiles";
-import { writesDisabled } from "../routes/professors";
+import professorRouter, { writesDisabled } from "../routes/professors";
 
 const now = new Date("2026-07-10T00:00:00.000Z");
 
@@ -67,6 +69,28 @@ function makeDb() {
         assert.equal(name, PROFESSOR_PROFILES_COLLECTION);
         return collection;
       },
+      async runTransaction(
+        callback: (transaction: {
+          get: (ref: { get: () => Promise<unknown> }) => Promise<unknown>;
+          set: (
+            ref: {
+              set: (data: Record<string, unknown>, options?: { merge?: boolean }) => Promise<void>;
+            },
+            data: Record<string, unknown>,
+            options?: { merge?: boolean },
+          ) => void;
+        }) => Promise<unknown>,
+      ) {
+        const pending: Promise<void>[] = [];
+        const result = await callback({
+          get: (ref) => ref.get(),
+          set: (ref, data, options) => {
+            pending.push(ref.set(data, options));
+          },
+        });
+        await Promise.all(pending);
+        return result;
+      },
     },
     FieldValue: {
       serverTimestamp: () => now,
@@ -81,14 +105,22 @@ const validBody = {
   coursesTaught: [" Global Strategy ", "Global Strategy", "Leadership"],
   expertiseTags: ["Governance", "governance", "AI Policy"],
   researchInterests: ["Boards", "Responsible AI"],
+  professionalExperienceTags: ["board advisory"],
+  academicExperienceTags: ["business education"],
   industries: ["Higher Education"],
+  topicInterests: ["corporate governance"],
   regions: ["North America"],
+  affiliations: ["RGI University"],
   professionalBackground: " Works with boards. ",
   approvedBio: " Approved public bio. ",
   publications: ["Journal article"],
+  publicationTopicTags: ["corporate governance"],
   recurringThemes: ["Institutional trust"],
   contactableTopics: ["AI governance"],
+  restrictedTopics: ["Active litigation"],
   doNotContactTopics: ["Personal matters"],
+  institutionalConflicts: ["Example Corporation"],
+  affiliationConcerns: ["Example Foundation"],
   status: "active" as const,
 };
 
@@ -105,11 +137,13 @@ test("professor profile schema supports matching inclusion status and timestamps
   const parsed = ProfessorProfileSchema.parse({
     ...CreateProfessorProfileBodySchema.parse(validBody),
     id: "prof_auto_generated_01",
-    schemaVersion: 1,
+    schemaVersion: 2,
+    profileRevision: 1,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
   });
   assert.equal(parsed.status, "active");
+  assert.equal(parsed.profileRevision, 1);
   assert.equal(ProfessorProfileSchema.parse({ ...parsed, status: "inactive" }).status, "inactive");
   assert.throws(() => ProfessorProfileSchema.parse({ ...parsed, status: "paused" }), /Invalid enum value/);
 });
@@ -173,6 +207,7 @@ test("professor repository uses mocked Firestore auto ids and status updates", a
 
   const updated = await updateProfessorProfileInDb(db, FieldValue, created.id, { status: "inactive" });
   assert.equal(updated?.status, "inactive");
+  assert.equal(updated?.profileRevision, 2);
 
   const inactive = await listProfessorProfilesFromDb(db, { status: "inactive" });
   assert.equal(inactive.length, 1);
@@ -186,4 +221,38 @@ test("professor routes do not expose a hard-delete endpoint", () => {
   const routeSource = readFileSync(resolve(process.cwd(), "src/routes/professors.ts"), "utf8");
   assert.equal(routeSource.includes("router.delete"), false);
   assert.equal(routeSource.includes("deleteProfessor"), false);
+});
+
+test("professor profile reads fail closed behind internal-editor authorization", async () => {
+  const previousAdminKey = process.env.ADMIN_API_KEY;
+  const previousNodeEnv = process.env.NODE_ENV;
+  const app = express();
+  app.use("/api", professorRouter);
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolveListening, reject) => {
+    server.once("listening", resolveListening);
+    server.once("error", reject);
+  });
+  const port = (server.address() as AddressInfo).port;
+
+  try {
+    delete process.env.ADMIN_API_KEY;
+    process.env.NODE_ENV = "development";
+    let response = await fetch(`http://127.0.0.1:${port}/api/professors`);
+    assert.equal(response.status, 503);
+    const unconfigured = (await response.json()) as { code?: unknown };
+    assert.equal(unconfigured.code, "INTERNAL_EDITOR_AUTH_UNCONFIGURED");
+
+    process.env.ADMIN_API_KEY = "professor-integration-secret";
+    response = await fetch(`http://127.0.0.1:${port}/api/professors`, {
+      headers: { authorization: "Bearer wrong" },
+    });
+    assert.equal(response.status, 401);
+  } finally {
+    await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
+    if (previousAdminKey === undefined) delete process.env.ADMIN_API_KEY;
+    else process.env.ADMIN_API_KEY = previousAdminKey;
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+  }
 });

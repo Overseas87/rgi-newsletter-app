@@ -22,6 +22,8 @@ tags:
     description: Scraping operations
   - name: professors
     description: Professor Library operations
+  - name: opportunities
+    description: Internal frozen Story Opportunity and deterministic professor-matching operations
 paths:
   /healthz:
     get:
@@ -69,6 +71,8 @@ paths:
       operationId: getProfessorLibraryConfig
       tags: [professors]
       summary: Get Professor Library configuration
+      security:
+        - InternalEditorAuth: []
       responses:
         "200":
           description: Professor Library configuration
@@ -82,6 +86,8 @@ paths:
       operationId: listProfessorProfiles
       tags: [professors]
       summary: List professor profiles
+      security:
+        - InternalEditorAuth: []
       parameters:
         - name: status
           in: query
@@ -100,6 +106,8 @@ paths:
       operationId: createProfessorProfile
       tags: [professors]
       summary: Create a professor profile
+      security:
+        - InternalEditorAuth: []
       requestBody:
         required: true
         content:
@@ -125,6 +133,8 @@ paths:
       operationId: getProfessorProfile
       tags: [professors]
       summary: Get a professor profile
+      security:
+        - InternalEditorAuth: []
       parameters:
         - name: id
           in: path
@@ -149,6 +159,8 @@ paths:
       operationId: updateProfessorProfile
       tags: [professors]
       summary: Update a professor profile
+      security:
+        - InternalEditorAuth: []
       parameters:
         - name: id
           in: path
@@ -181,6 +193,316 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /opportunity-windows/config:
+    get:
+      operationId: getStoryOpportunityConfig
+      tags: [opportunities]
+      summary: Get internal Story Opportunity feature configuration
+      security:
+        - InternalEditorAuth: []
+      responses:
+        "200":
+          description: Feature configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryOpportunityConfigResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /opportunity-windows:
+    get:
+      operationId: listStoryOpportunityWindows
+      tags: [opportunities]
+      summary: List completed frozen Story Opportunity windows
+      security:
+        - InternalEditorAuth: []
+      responses:
+        "200":
+          description: Frozen window list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListStoryOpportunityWindowsResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Reads disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /opportunity-windows/current:
+    get:
+      operationId: getCurrentStoryOpportunityWindow
+      tags: [opportunities]
+      summary: Get the latest completed frozen window and its shortlist
+      security:
+        - InternalEditorAuth: []
+      responses:
+        "200":
+          description: Current window or an explicit no-window response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryOpportunityListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Reads disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /opportunity-windows/calculate:
+    post:
+      operationId: calculateStoryOpportunityWindow
+      tags: [opportunities]
+      summary: Explicitly and idempotently calculate one frozen daily window
+      security:
+        - InternalEditorAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalculateStoryOpportunityWindowBody"
+      responses:
+        "200":
+          description: Existing frozen window returned unchanged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalculateStoryOpportunityWindowResponse"
+        "201":
+          description: Frozen window created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalculateStoryOpportunityWindowResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Writes disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /opportunity-windows/{windowId}/opportunities:
+    get:
+      operationId: listStoryOpportunitiesForWindow
+      tags: [opportunities]
+      summary: List the frozen shortlist for one window
+      security:
+        - InternalEditorAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoryOpportunityWindowId"
+      responses:
+        "200":
+          description: Frozen opportunity shortlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryOpportunityListResponse"
+        "404":
+          description: Window not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /story-opportunities/{id}:
+    get:
+      operationId: getStoryOpportunity
+      tags: [opportunities]
+      summary: Get one Story Opportunity workbench record
+      security:
+        - InternalEditorAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoryOpportunityId"
+      responses:
+        "200":
+          description: Story Opportunity detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryOpportunityDetailResponse"
+        "404":
+          description: Opportunity not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /story-opportunities/{id}/matches:
+    get:
+      operationId: listStoryOpportunityProfessorMatches
+      tags: [opportunities]
+      summary: List persisted deterministic Professor Matches
+      security:
+        - InternalEditorAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoryOpportunityId"
+      responses:
+        "200":
+          description: Professor Match list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfessorMatchListResponse"
+        "404":
+          description: Opportunity not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /story-opportunities/{id}/select-professor:
+    post:
+      operationId: selectStoryOpportunityProfessor
+      tags: [opportunities]
+      summary: Manually select or change the professor for an opportunity
+      security:
+        - InternalEditorAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoryOpportunityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SelectStoryOpportunityProfessorBody"
+      responses:
+        "200":
+          description: Updated opportunity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryOpportunityDetailResponse"
+        "400":
+          description: Override reason required or invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Revision conflict or professor excluded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /story-opportunities/{id}/clear-professor:
+    post:
+      operationId: clearStoryOpportunityProfessor
+      tags: [opportunities]
+      summary: Clear the current manual professor selection
+      security:
+        - InternalEditorAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoryOpportunityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClearStoryOpportunityProfessorBody"
+      responses:
+        "200":
+          description: Updated opportunity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryOpportunityDetailResponse"
+
+  /story-opportunities/{id}/update-angle:
+    post:
+      operationId: updateStoryOpportunityAngle
+      tags: [opportunities]
+      summary: Update the editor-controlled recommended angle
+      security:
+        - InternalEditorAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoryOpportunityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStoryOpportunityAngleBody"
+      responses:
+        "200":
+          description: Updated opportunity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryOpportunityDetailResponse"
+
+  /story-opportunities/{id}/close:
+    post:
+      operationId: closeStoryOpportunity
+      tags: [opportunities]
+      summary: Close a Story Opportunity
+      security:
+        - InternalEditorAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoryOpportunityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoryOpportunityRevisionCommandBody"
+      responses:
+        "200":
+          description: Updated opportunity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryOpportunityDetailResponse"
+
+  /story-opportunities/{id}/reopen:
+    post:
+      operationId: reopenStoryOpportunity
+      tags: [opportunities]
+      summary: Reopen a closed Story Opportunity
+      security:
+        - InternalEditorAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoryOpportunityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoryOpportunityRevisionCommandBody"
+      responses:
+        "200":
+          description: Updated opportunity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryOpportunityDetailResponse"
 
   /articles:
     get:
@@ -561,6 +883,26 @@ paths:
                 $ref: "#/components/schemas/Settings"
 
 components:
+  securitySchemes:
+    InternalEditorAuth:
+      type: http
+      scheme: bearer
+      description: Internal editor credential. Opportunity routes fail closed when server authorization is unconfigured.
+  parameters:
+    StoryOpportunityId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]{8,160}$'
+    StoryOpportunityWindowId:
+      name: windowId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]{8,160}$'
   schemas:
     HealthStatus:
       type: object
@@ -574,6 +916,12 @@ components:
       type: object
       properties:
         error:
+          type: string
+        code:
+          type: string
+        retryable:
+          type: boolean
+        userMessage:
           type: string
       required:
         - error
@@ -639,18 +987,42 @@ components:
           items:
             type: string
             maxLength: 160
+        professionalExperienceTags:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 120
+        academicExperienceTags:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 120
         industries:
           type: array
           maxItems: 30
           items:
             type: string
             maxLength: 80
+        topicInterests:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 120
         regions:
           type: array
           maxItems: 30
           items:
             type: string
             maxLength: 80
+        affiliations:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 160
         professionalBackground:
           type: string
           maxLength: 2000
@@ -663,6 +1035,12 @@ components:
           items:
             type: string
             maxLength: 240
+        publicationTopicTags:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 120
         recurringThemes:
           type: array
           maxItems: 40
@@ -675,17 +1053,38 @@ components:
           items:
             type: string
             maxLength: 120
+        restrictedTopics:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 120
         doNotContactTopics:
           type: array
           maxItems: 40
           items:
             type: string
             maxLength: 120
+        institutionalConflicts:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 160
+        affiliationConcerns:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            maxLength: 160
         status:
           type: string
           description: Active profiles are included in future article matching; inactive profiles are retained but excluded.
           enum: [active, inactive]
         schemaVersion:
+          type: integer
+          minimum: 1
+        profileRevision:
           type: integer
           minimum: 1
         createdAt:
@@ -700,16 +1099,25 @@ components:
         - coursesTaught
         - expertiseTags
         - researchInterests
+        - professionalExperienceTags
+        - academicExperienceTags
         - industries
+        - topicInterests
         - regions
+        - affiliations
         - professionalBackground
         - approvedBio
         - publications
+        - publicationTopicTags
         - recurringThemes
         - contactableTopics
+        - restrictedTopics
         - doNotContactTopics
+        - institutionalConflicts
+        - affiliationConcerns
         - status
         - schemaVersion
+        - profileRevision
         - createdAt
         - updatedAt
 
@@ -776,11 +1184,27 @@ components:
           type: array
           items:
             type: string
+        professionalExperienceTags:
+          type: array
+          items:
+            type: string
+        academicExperienceTags:
+          type: array
+          items:
+            type: string
         industries:
           type: array
           items:
             type: string
+        topicInterests:
+          type: array
+          items:
+            type: string
         regions:
+          type: array
+          items:
+            type: string
+        affiliations:
           type: array
           items:
             type: string
@@ -792,6 +1216,10 @@ components:
           type: array
           items:
             type: string
+        publicationTopicTags:
+          type: array
+          items:
+            type: string
         recurringThemes:
           type: array
           items:
@@ -800,7 +1228,19 @@ components:
           type: array
           items:
             type: string
+        restrictedTopics:
+          type: array
+          items:
+            type: string
         doNotContactTopics:
+          type: array
+          items:
+            type: string
+        institutionalConflicts:
+          type: array
+          items:
+            type: string
+        affiliationConcerns:
           type: array
           items:
             type: string
@@ -842,11 +1282,27 @@ components:
           type: array
           items:
             type: string
+        professionalExperienceTags:
+          type: array
+          items:
+            type: string
+        academicExperienceTags:
+          type: array
+          items:
+            type: string
         industries:
           type: array
           items:
             type: string
+        topicInterests:
+          type: array
+          items:
+            type: string
         regions:
+          type: array
+          items:
+            type: string
+        affiliations:
           type: array
           items:
             type: string
@@ -858,6 +1314,10 @@ components:
           type: array
           items:
             type: string
+        publicationTopicTags:
+          type: array
+          items:
+            type: string
         recurringThemes:
           type: array
           items:
@@ -866,7 +1326,19 @@ components:
           type: array
           items:
             type: string
+        restrictedTopics:
+          type: array
+          items:
+            type: string
         doNotContactTopics:
+          type: array
+          items:
+            type: string
+        institutionalConflicts:
+          type: array
+          items:
+            type: string
+        affiliationConcerns:
           type: array
           items:
             type: string
@@ -874,6 +1346,448 @@ components:
           type: string
           description: Active profiles are included in future article matching; inactive profiles are retained but excluded.
           enum: [active, inactive]
+
+    StoryOpportunityConfigResponse:
+      type: object
+      properties:
+        readsEnabled:
+          type: boolean
+        writesEnabled:
+          type: boolean
+      required: [readsEnabled, writesEnabled]
+
+    StoryOpportunityWindow:
+      type: object
+      properties:
+        id: { type: string }
+        snapshotRevision: { type: integer, minimum: 1 }
+        asOf: { type: string, format: date-time }
+        windowStart: { type: string, format: date-time }
+        windowEnd: { type: string, format: date-time }
+        operationalTimezone: { type: string }
+        localCutoff: { type: string }
+        calculatedAt: { type: string, format: date-time }
+        status: { type: string, enum: [completed] }
+        configurationVersion: { type: string }
+        windowAlgorithmVersion: { type: string }
+        selectionAlgorithmVersion: { type: string }
+        scoringVersion: { type: string }
+        normalizationVersion: { type: string }
+        taxonomyVersion: { type: string }
+        matchingAlgorithmVersion: { type: string }
+        coverageCalculationVersion: { type: string }
+        minimumNormalizedRelevance: { type: number }
+        maximumOpportunities: { type: integer }
+        maximumPerSource: { type: integer }
+        maximumPerPrimaryTopic: { type: integer }
+        lowCoverageWarningThreshold: { type: number }
+        totalArticlesConsidered: { type: integer }
+        eligibleArticleCount: { type: integer }
+        qualifyingArticleCount: { type: integer }
+        opportunityCount: { type: integer }
+        fallbackTimestampCount: { type: integer }
+      required:
+        - id
+        - snapshotRevision
+        - asOf
+        - windowStart
+        - windowEnd
+        - operationalTimezone
+        - localCutoff
+        - calculatedAt
+        - status
+        - configurationVersion
+        - windowAlgorithmVersion
+        - selectionAlgorithmVersion
+        - scoringVersion
+        - normalizationVersion
+        - taxonomyVersion
+        - matchingAlgorithmVersion
+        - coverageCalculationVersion
+        - minimumNormalizedRelevance
+        - maximumOpportunities
+        - maximumPerSource
+        - maximumPerPrimaryTopic
+        - lowCoverageWarningThreshold
+        - totalArticlesConsidered
+        - eligibleArticleCount
+        - qualifyingArticleCount
+        - opportunityCount
+        - fallbackTimestampCount
+
+    StoryOpportunityEvidence:
+      type: object
+      properties:
+        articleId: { type: integer }
+        headline: { type: string }
+        canonicalUrl: { type: string }
+        sourceName: { type: string }
+        sourceUrl: { type: [string, "null"] }
+        author: { type: [string, "null"] }
+        excerpt: { type: [string, "null"] }
+        publishedAt: { type: [string, "null"], format: date-time }
+        scrapedAt: { type: [string, "null"], format: date-time }
+        effectivePublishedAt: { type: string, format: date-time }
+        timestampSource: { type: string, enum: [publishedAt, scrapedAt] }
+        timestampFallback: { type: boolean }
+        capturedAt: { type: string, format: date-time }
+        contentHash: { type: string }
+      required:
+        - articleId
+        - headline
+        - canonicalUrl
+        - sourceName
+        - sourceUrl
+        - author
+        - excerpt
+        - publishedAt
+        - scrapedAt
+        - effectivePublishedAt
+        - timestampSource
+        - timestampFallback
+        - capturedAt
+        - contentHash
+
+    ProfessorDimensionMatch:
+      type: object
+      properties:
+        dimension:
+          type: string
+          enum: [core_expertise, research_and_teaching, experience_and_industries, topic_interests, publications_and_themes, regions_and_affiliations]
+        label: { type: string }
+        weight: { type: number }
+        dimensionScore: { type: number }
+        weightedContribution: { type: number }
+        matchType: { type: string, enum: [exact, alias, parent_child, none] }
+        opportunityConcept: { type: [string, "null"] }
+        opportunityLabel: { type: [string, "null"] }
+        professorField: { type: [string, "null"] }
+        professorValue: { type: [string, "null"] }
+      required:
+        - dimension
+        - label
+        - weight
+        - dimensionScore
+        - weightedContribution
+        - matchType
+        - opportunityConcept
+        - opportunityLabel
+        - professorField
+        - professorValue
+
+    ProfessorMatch:
+      type: object
+      properties:
+        professorId: { type: string }
+        professorName: { type: string }
+        profileRevision: { type: integer }
+        rank: { type: [integer, "null"] }
+        totalFitScore: { type: number }
+        label: { type: string, enum: [strong, plausible, weak] }
+        dimensions:
+          type: array
+          minItems: 6
+          maxItems: 6
+          items: { $ref: "#/components/schemas/ProfessorDimensionMatch" }
+        profileCoverage: { type: number }
+        coveredDimensions:
+          type: array
+          items:
+            type: string
+            enum: [core_expertise, research_and_teaching, experience_and_industries, topic_interests, publications_and_themes, regions_and_affiliations]
+        missingDimensions:
+          type: array
+          items:
+            type: string
+            enum: [core_expertise, research_and_teaching, experience_and_industries, topic_interests, publications_and_themes, regions_and_affiliations]
+        taxonomyVersion: { type: string }
+        matchingAlgorithmVersion: { type: string }
+        coverageCalculationVersion: { type: string }
+        exclusions:
+          type: array
+          items: { type: string }
+        warnings:
+          type: array
+          items: { type: string }
+        rationale: { type: string }
+      required:
+        - professorId
+        - professorName
+        - profileRevision
+        - rank
+        - totalFitScore
+        - label
+        - dimensions
+        - profileCoverage
+        - coveredDimensions
+        - missingDimensions
+        - taxonomyVersion
+        - matchingAlgorithmVersion
+        - coverageCalculationVersion
+        - exclusions
+        - warnings
+        - rationale
+
+    ProfessorSelection:
+      type: object
+      properties:
+        professorId: { type: string }
+        professorName: { type: string }
+        selectedProfileRevision: { type: integer }
+        selectedMatchRank: { type: integer }
+        selectedFitScore: { type: number }
+        reason: { type: [string, "null"] }
+        selectedBy: { type: string }
+        selectedAt: { type: string, format: date-time }
+      required: [professorId, professorName, selectedProfileRevision, selectedMatchRank, selectedFitScore, reason, selectedBy, selectedAt]
+
+    ProfessorSelectionHistoryEntry:
+      type: object
+      properties:
+        id: { type: string }
+        action: { type: string, enum: [selected, changed, cleared] }
+        professorId: { type: [string, "null"] }
+        professorName: { type: [string, "null"] }
+        previousProfessorId: { type: [string, "null"] }
+        selectedProfileRevision: { type: [integer, "null"] }
+        reason: { type: [string, "null"] }
+        actorId: { type: string }
+        occurredAt: { type: string, format: date-time }
+      required: [id, action, professorId, professorName, previousProfessorId, selectedProfileRevision, reason, actorId, occurredAt]
+
+    StoryOpportunitySelectionConfiguration:
+      type: object
+      properties:
+        minimumNormalizedRelevance: { type: number }
+        maximumOpportunities: { type: integer }
+        maximumPerSource: { type: integer }
+        maximumPerPrimaryTopic: { type: integer }
+        selectionAlgorithmVersion: { type: string }
+      required: [minimumNormalizedRelevance, maximumOpportunities, maximumPerSource, maximumPerPrimaryTopic, selectionAlgorithmVersion]
+
+    StoryOpportunity:
+      type: object
+      properties:
+        id: { type: string }
+        revision: { type: integer }
+        windowId: { type: string }
+        windowStart: { type: string, format: date-time }
+        windowEnd: { type: string, format: date-time }
+        operationalTimezone: { type: string }
+        primaryArticleId: { type: integer }
+        primaryEvidence: { $ref: "#/components/schemas/StoryOpportunityEvidence" }
+        supportingEvidence:
+          type: array
+          items: { $ref: "#/components/schemas/StoryOpportunityEvidence" }
+        sourceName: { type: string }
+        canonicalUrl: { type: string }
+        effectivePublishedAt: { type: string, format: date-time }
+        timestampSource: { type: string, enum: [publishedAt, scrapedAt] }
+        timestampFallback: { type: boolean }
+        originalRgiRelevanceScore: { type: number }
+        originalRgiRelevanceScale: { type: string, enum: [1-10] }
+        originalRgiRelevanceField: { type: string, enum: [relevancyScore] }
+        normalizedRgiRelevanceScore: { type: number, minimum: 0, maximum: 100 }
+        relevanceExplanation: { type: [string, "null"] }
+        relevanceComponents:
+          type: [object, "null"]
+          additionalProperties: true
+        relevanceScoringVersion: { type: string }
+        relevanceNormalizationVersion: { type: string }
+        sourceAuthorityScore: { type: number }
+        primaryTopic: { type: string }
+        primaryTopicLabel: { type: string }
+        normalizedTopics:
+          type: array
+          items: { type: string }
+        unknownTaxonomyTerms:
+          type: array
+          items: { type: string }
+        discipline: { type: [string, "null"] }
+        industries:
+          type: array
+          items: { type: string }
+        regions:
+          type: array
+          items: { type: string }
+        entities:
+          type: array
+          items: { type: string }
+        recommendedAngle: { type: string, maxLength: 500 }
+        shortlistPosition: { type: integer, minimum: 1 }
+        selectionConfiguration: { $ref: "#/components/schemas/StoryOpportunitySelectionConfiguration" }
+        professorMatches:
+          type: array
+          items: { $ref: "#/components/schemas/ProfessorMatch" }
+        selectedProfessor:
+          anyOf:
+            - $ref: "#/components/schemas/ProfessorSelection"
+            - type: "null"
+        selectionHistory:
+          type: array
+          items: { $ref: "#/components/schemas/ProfessorSelectionHistoryEntry" }
+        workflowState: { type: string, enum: [shortlisted, professor_selected, closed] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        configurationVersion: { type: string }
+        taxonomyVersion: { type: string }
+        matchingAlgorithmVersion: { type: string }
+      required:
+        - id
+        - revision
+        - windowId
+        - windowStart
+        - windowEnd
+        - operationalTimezone
+        - primaryArticleId
+        - primaryEvidence
+        - supportingEvidence
+        - sourceName
+        - canonicalUrl
+        - effectivePublishedAt
+        - timestampSource
+        - timestampFallback
+        - originalRgiRelevanceScore
+        - originalRgiRelevanceScale
+        - originalRgiRelevanceField
+        - normalizedRgiRelevanceScore
+        - relevanceExplanation
+        - relevanceComponents
+        - relevanceScoringVersion
+        - relevanceNormalizationVersion
+        - sourceAuthorityScore
+        - primaryTopic
+        - primaryTopicLabel
+        - normalizedTopics
+        - unknownTaxonomyTerms
+        - discipline
+        - industries
+        - regions
+        - entities
+        - recommendedAngle
+        - shortlistPosition
+        - selectionConfiguration
+        - professorMatches
+        - selectedProfessor
+        - selectionHistory
+        - workflowState
+        - createdAt
+        - updatedAt
+        - configurationVersion
+        - taxonomyVersion
+        - matchingAlgorithmVersion
+
+    ListStoryOpportunityWindowsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/StoryOpportunityWindow" }
+        total: { type: integer }
+        readsEnabled: { type: boolean }
+        writesEnabled: { type: boolean }
+      required: [items, total, readsEnabled, writesEnabled]
+
+    StoryOpportunityListResponse:
+      type: object
+      properties:
+        window:
+          anyOf:
+            - $ref: "#/components/schemas/StoryOpportunityWindow"
+            - type: "null"
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/StoryOpportunity" }
+        total: { type: integer }
+        readsEnabled: { type: boolean }
+        writesEnabled: { type: boolean }
+      required: [window, items, total, readsEnabled, writesEnabled]
+
+    StoryOpportunityDetailResponse:
+      type: object
+      properties:
+        opportunity: { $ref: "#/components/schemas/StoryOpportunity" }
+        readsEnabled: { type: boolean }
+        writesEnabled: { type: boolean }
+      required: [opportunity, readsEnabled, writesEnabled]
+
+    ProfessorMatchListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ProfessorMatch" }
+        total: { type: integer }
+      required: [items, total]
+
+    CalculateStoryOpportunityWindowBody:
+      type: object
+      additionalProperties: false
+      properties:
+        asOf: { type: string, format: date-time }
+        snapshotRevision: { type: integer, minimum: 1, default: 1 }
+      required: [asOf]
+
+    CalculateStoryOpportunityWindowResponse:
+      type: object
+      properties:
+        created: { type: boolean }
+        window: { $ref: "#/components/schemas/StoryOpportunityWindow" }
+        opportunities:
+          type: array
+          items: { $ref: "#/components/schemas/StoryOpportunity" }
+        readsEnabled: { type: boolean }
+        writesEnabled: { type: boolean }
+      required: [created, window, opportunities, readsEnabled, writesEnabled]
+
+    SelectStoryOpportunityProfessorBody:
+      type: object
+      additionalProperties: false
+      properties:
+        professorId:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{8,128}$'
+        reason:
+          type: string
+          maxLength: 1000
+        expectedRevision:
+          type: integer
+          minimum: 1
+      required: [professorId, expectedRevision]
+
+    StoryOpportunityRevisionCommandBody:
+      type: object
+      additionalProperties: false
+      properties:
+        expectedRevision:
+          type: integer
+          minimum: 1
+      required: [expectedRevision]
+
+    ClearStoryOpportunityProfessorBody:
+      type: object
+      additionalProperties: false
+      properties:
+        expectedRevision:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          maxLength: 1000
+      required: [expectedRevision]
+
+    UpdateStoryOpportunityAngleBody:
+      type: object
+      additionalProperties: false
+      properties:
+        expectedRevision:
+          type: integer
+          minimum: 1
+        angle:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required: [expectedRevision, angle]
 
     Article:
       type: object

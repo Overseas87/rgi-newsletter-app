@@ -71,13 +71,29 @@ export const listProfessorProfilesResponseItemsItemResearchInterestsItemMax = 16
 
 export const listProfessorProfilesResponseItemsItemResearchInterestsMax = 40;
 
+export const listProfessorProfilesResponseItemsItemProfessionalExperienceTagsItemMax = 120;
+
+export const listProfessorProfilesResponseItemsItemProfessionalExperienceTagsMax = 40;
+
+export const listProfessorProfilesResponseItemsItemAcademicExperienceTagsItemMax = 120;
+
+export const listProfessorProfilesResponseItemsItemAcademicExperienceTagsMax = 40;
+
 export const listProfessorProfilesResponseItemsItemIndustriesItemMax = 80;
 
 export const listProfessorProfilesResponseItemsItemIndustriesMax = 30;
 
+export const listProfessorProfilesResponseItemsItemTopicInterestsItemMax = 120;
+
+export const listProfessorProfilesResponseItemsItemTopicInterestsMax = 40;
+
 export const listProfessorProfilesResponseItemsItemRegionsItemMax = 80;
 
 export const listProfessorProfilesResponseItemsItemRegionsMax = 30;
+
+export const listProfessorProfilesResponseItemsItemAffiliationsItemMax = 160;
+
+export const listProfessorProfilesResponseItemsItemAffiliationsMax = 40;
 
 export const listProfessorProfilesResponseItemsItemProfessionalBackgroundMax = 2000;
 
@@ -87,6 +103,10 @@ export const listProfessorProfilesResponseItemsItemPublicationsItemMax = 240;
 
 export const listProfessorProfilesResponseItemsItemPublicationsMax = 40;
 
+export const listProfessorProfilesResponseItemsItemPublicationTopicTagsItemMax = 120;
+
+export const listProfessorProfilesResponseItemsItemPublicationTopicTagsMax = 40;
+
 export const listProfessorProfilesResponseItemsItemRecurringThemesItemMax = 120;
 
 export const listProfessorProfilesResponseItemsItemRecurringThemesMax = 40;
@@ -95,9 +115,21 @@ export const listProfessorProfilesResponseItemsItemContactableTopicsItemMax = 12
 
 export const listProfessorProfilesResponseItemsItemContactableTopicsMax = 40;
 
+export const listProfessorProfilesResponseItemsItemRestrictedTopicsItemMax = 120;
+
+export const listProfessorProfilesResponseItemsItemRestrictedTopicsMax = 40;
+
 export const listProfessorProfilesResponseItemsItemDoNotContactTopicsItemMax = 120;
 
 export const listProfessorProfilesResponseItemsItemDoNotContactTopicsMax = 40;
+
+export const listProfessorProfilesResponseItemsItemInstitutionalConflictsItemMax = 160;
+
+export const listProfessorProfilesResponseItemsItemInstitutionalConflictsMax = 40;
+
+export const listProfessorProfilesResponseItemsItemAffiliationConcernsItemMax = 160;
+
+export const listProfessorProfilesResponseItemsItemAffiliationConcernsMax = 40;
 
 export const ListProfessorProfilesResponse = zod.object({
   items: zod.array(
@@ -138,6 +170,26 @@ export const ListProfessorProfilesResponse = zod.object({
             ),
         )
         .max(listProfessorProfilesResponseItemsItemResearchInterestsMax),
+      professionalExperienceTags: zod
+        .array(
+          zod
+            .string()
+            .max(
+              listProfessorProfilesResponseItemsItemProfessionalExperienceTagsItemMax,
+            ),
+        )
+        .max(
+          listProfessorProfilesResponseItemsItemProfessionalExperienceTagsMax,
+        ),
+      academicExperienceTags: zod
+        .array(
+          zod
+            .string()
+            .max(
+              listProfessorProfilesResponseItemsItemAcademicExperienceTagsItemMax,
+            ),
+        )
+        .max(listProfessorProfilesResponseItemsItemAcademicExperienceTagsMax),
       industries: zod
         .array(
           zod
@@ -145,6 +197,13 @@ export const ListProfessorProfilesResponse = zod.object({
             .max(listProfessorProfilesResponseItemsItemIndustriesItemMax),
         )
         .max(listProfessorProfilesResponseItemsItemIndustriesMax),
+      topicInterests: zod
+        .array(
+          zod
+            .string()
+            .max(listProfessorProfilesResponseItemsItemTopicInterestsItemMax),
+        )
+        .max(listProfessorProfilesResponseItemsItemTopicInterestsMax),
       regions: zod
         .array(
           zod
@@ -152,6 +211,13 @@ export const ListProfessorProfilesResponse = zod.object({
             .max(listProfessorProfilesResponseItemsItemRegionsItemMax),
         )
         .max(listProfessorProfilesResponseItemsItemRegionsMax),
+      affiliations: zod
+        .array(
+          zod
+            .string()
+            .max(listProfessorProfilesResponseItemsItemAffiliationsItemMax),
+        )
+        .max(listProfessorProfilesResponseItemsItemAffiliationsMax),
       professionalBackground: zod
         .string()
         .max(listProfessorProfilesResponseItemsItemProfessionalBackgroundMax),
@@ -165,6 +231,15 @@ export const ListProfessorProfilesResponse = zod.object({
             .max(listProfessorProfilesResponseItemsItemPublicationsItemMax),
         )
         .max(listProfessorProfilesResponseItemsItemPublicationsMax),
+      publicationTopicTags: zod
+        .array(
+          zod
+            .string()
+            .max(
+              listProfessorProfilesResponseItemsItemPublicationTopicTagsItemMax,
+            ),
+        )
+        .max(listProfessorProfilesResponseItemsItemPublicationTopicTagsMax),
       recurringThemes: zod
         .array(
           zod
@@ -181,6 +256,13 @@ export const ListProfessorProfilesResponse = zod.object({
             ),
         )
         .max(listProfessorProfilesResponseItemsItemContactableTopicsMax),
+      restrictedTopics: zod
+        .array(
+          zod
+            .string()
+            .max(listProfessorProfilesResponseItemsItemRestrictedTopicsItemMax),
+        )
+        .max(listProfessorProfilesResponseItemsItemRestrictedTopicsMax),
       doNotContactTopics: zod
         .array(
           zod
@@ -190,12 +272,31 @@ export const ListProfessorProfilesResponse = zod.object({
             ),
         )
         .max(listProfessorProfilesResponseItemsItemDoNotContactTopicsMax),
+      institutionalConflicts: zod
+        .array(
+          zod
+            .string()
+            .max(
+              listProfessorProfilesResponseItemsItemInstitutionalConflictsItemMax,
+            ),
+        )
+        .max(listProfessorProfilesResponseItemsItemInstitutionalConflictsMax),
+      affiliationConcerns: zod
+        .array(
+          zod
+            .string()
+            .max(
+              listProfessorProfilesResponseItemsItemAffiliationConcernsItemMax,
+            ),
+        )
+        .max(listProfessorProfilesResponseItemsItemAffiliationConcernsMax),
       status: zod
         .enum(["active", "inactive"])
         .describe(
           "Active profiles are included in future article matching; inactive profiles are retained but excluded.",
         ),
       schemaVersion: zod.number().min(1),
+      profileRevision: zod.number().min(1),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -223,14 +324,22 @@ export const CreateProfessorProfileBody = zod.object({
   coursesTaught: zod.array(zod.string()).optional(),
   expertiseTags: zod.array(zod.string()).optional(),
   researchInterests: zod.array(zod.string()).optional(),
+  professionalExperienceTags: zod.array(zod.string()).optional(),
+  academicExperienceTags: zod.array(zod.string()).optional(),
   industries: zod.array(zod.string()).optional(),
+  topicInterests: zod.array(zod.string()).optional(),
   regions: zod.array(zod.string()).optional(),
+  affiliations: zod.array(zod.string()).optional(),
   professionalBackground: zod.string().optional(),
   approvedBio: zod.string().optional(),
   publications: zod.array(zod.string()).optional(),
+  publicationTopicTags: zod.array(zod.string()).optional(),
   recurringThemes: zod.array(zod.string()).optional(),
   contactableTopics: zod.array(zod.string()).optional(),
+  restrictedTopics: zod.array(zod.string()).optional(),
   doNotContactTopics: zod.array(zod.string()).optional(),
+  institutionalConflicts: zod.array(zod.string()).optional(),
+  affiliationConcerns: zod.array(zod.string()).optional(),
   status: zod
     .enum(["active", "inactive"])
     .optional()
@@ -268,13 +377,29 @@ export const getProfessorProfileResponseProfileResearchInterestsItemMax = 160;
 
 export const getProfessorProfileResponseProfileResearchInterestsMax = 40;
 
+export const getProfessorProfileResponseProfileProfessionalExperienceTagsItemMax = 120;
+
+export const getProfessorProfileResponseProfileProfessionalExperienceTagsMax = 40;
+
+export const getProfessorProfileResponseProfileAcademicExperienceTagsItemMax = 120;
+
+export const getProfessorProfileResponseProfileAcademicExperienceTagsMax = 40;
+
 export const getProfessorProfileResponseProfileIndustriesItemMax = 80;
 
 export const getProfessorProfileResponseProfileIndustriesMax = 30;
 
+export const getProfessorProfileResponseProfileTopicInterestsItemMax = 120;
+
+export const getProfessorProfileResponseProfileTopicInterestsMax = 40;
+
 export const getProfessorProfileResponseProfileRegionsItemMax = 80;
 
 export const getProfessorProfileResponseProfileRegionsMax = 30;
+
+export const getProfessorProfileResponseProfileAffiliationsItemMax = 160;
+
+export const getProfessorProfileResponseProfileAffiliationsMax = 40;
 
 export const getProfessorProfileResponseProfileProfessionalBackgroundMax = 2000;
 
@@ -284,6 +409,10 @@ export const getProfessorProfileResponseProfilePublicationsItemMax = 240;
 
 export const getProfessorProfileResponseProfilePublicationsMax = 40;
 
+export const getProfessorProfileResponseProfilePublicationTopicTagsItemMax = 120;
+
+export const getProfessorProfileResponseProfilePublicationTopicTagsMax = 40;
+
 export const getProfessorProfileResponseProfileRecurringThemesItemMax = 120;
 
 export const getProfessorProfileResponseProfileRecurringThemesMax = 40;
@@ -292,9 +421,21 @@ export const getProfessorProfileResponseProfileContactableTopicsItemMax = 120;
 
 export const getProfessorProfileResponseProfileContactableTopicsMax = 40;
 
+export const getProfessorProfileResponseProfileRestrictedTopicsItemMax = 120;
+
+export const getProfessorProfileResponseProfileRestrictedTopicsMax = 40;
+
 export const getProfessorProfileResponseProfileDoNotContactTopicsItemMax = 120;
 
 export const getProfessorProfileResponseProfileDoNotContactTopicsMax = 40;
+
+export const getProfessorProfileResponseProfileInstitutionalConflictsItemMax = 160;
+
+export const getProfessorProfileResponseProfileInstitutionalConflictsMax = 40;
+
+export const getProfessorProfileResponseProfileAffiliationConcernsItemMax = 160;
+
+export const getProfessorProfileResponseProfileAffiliationConcernsMax = 40;
 
 export const GetProfessorProfileResponse = zod.object({
   profile: zod.object({
@@ -332,14 +473,42 @@ export const GetProfessorProfileResponse = zod.object({
           .max(getProfessorProfileResponseProfileResearchInterestsItemMax),
       )
       .max(getProfessorProfileResponseProfileResearchInterestsMax),
+    professionalExperienceTags: zod
+      .array(
+        zod
+          .string()
+          .max(
+            getProfessorProfileResponseProfileProfessionalExperienceTagsItemMax,
+          ),
+      )
+      .max(getProfessorProfileResponseProfileProfessionalExperienceTagsMax),
+    academicExperienceTags: zod
+      .array(
+        zod
+          .string()
+          .max(getProfessorProfileResponseProfileAcademicExperienceTagsItemMax),
+      )
+      .max(getProfessorProfileResponseProfileAcademicExperienceTagsMax),
     industries: zod
       .array(
         zod.string().max(getProfessorProfileResponseProfileIndustriesItemMax),
       )
       .max(getProfessorProfileResponseProfileIndustriesMax),
+    topicInterests: zod
+      .array(
+        zod
+          .string()
+          .max(getProfessorProfileResponseProfileTopicInterestsItemMax),
+      )
+      .max(getProfessorProfileResponseProfileTopicInterestsMax),
     regions: zod
       .array(zod.string().max(getProfessorProfileResponseProfileRegionsItemMax))
       .max(getProfessorProfileResponseProfileRegionsMax),
+    affiliations: zod
+      .array(
+        zod.string().max(getProfessorProfileResponseProfileAffiliationsItemMax),
+      )
+      .max(getProfessorProfileResponseProfileAffiliationsMax),
     professionalBackground: zod
       .string()
       .max(getProfessorProfileResponseProfileProfessionalBackgroundMax),
@@ -351,6 +520,13 @@ export const GetProfessorProfileResponse = zod.object({
         zod.string().max(getProfessorProfileResponseProfilePublicationsItemMax),
       )
       .max(getProfessorProfileResponseProfilePublicationsMax),
+    publicationTopicTags: zod
+      .array(
+        zod
+          .string()
+          .max(getProfessorProfileResponseProfilePublicationTopicTagsItemMax),
+      )
+      .max(getProfessorProfileResponseProfilePublicationTopicTagsMax),
     recurringThemes: zod
       .array(
         zod
@@ -365,6 +541,13 @@ export const GetProfessorProfileResponse = zod.object({
           .max(getProfessorProfileResponseProfileContactableTopicsItemMax),
       )
       .max(getProfessorProfileResponseProfileContactableTopicsMax),
+    restrictedTopics: zod
+      .array(
+        zod
+          .string()
+          .max(getProfessorProfileResponseProfileRestrictedTopicsItemMax),
+      )
+      .max(getProfessorProfileResponseProfileRestrictedTopicsMax),
     doNotContactTopics: zod
       .array(
         zod
@@ -372,12 +555,27 @@ export const GetProfessorProfileResponse = zod.object({
           .max(getProfessorProfileResponseProfileDoNotContactTopicsItemMax),
       )
       .max(getProfessorProfileResponseProfileDoNotContactTopicsMax),
+    institutionalConflicts: zod
+      .array(
+        zod
+          .string()
+          .max(getProfessorProfileResponseProfileInstitutionalConflictsItemMax),
+      )
+      .max(getProfessorProfileResponseProfileInstitutionalConflictsMax),
+    affiliationConcerns: zod
+      .array(
+        zod
+          .string()
+          .max(getProfessorProfileResponseProfileAffiliationConcernsItemMax),
+      )
+      .max(getProfessorProfileResponseProfileAffiliationConcernsMax),
     status: zod
       .enum(["active", "inactive"])
       .describe(
         "Active profiles are included in future article matching; inactive profiles are retained but excluded.",
       ),
     schemaVersion: zod.number().min(1),
+    profileRevision: zod.number().min(1),
     createdAt: zod.string(),
     updatedAt: zod.string(),
   }),
@@ -420,14 +618,22 @@ export const UpdateProfessorProfileBody = zod.object({
   coursesTaught: zod.array(zod.string()).optional(),
   expertiseTags: zod.array(zod.string()).optional(),
   researchInterests: zod.array(zod.string()).optional(),
+  professionalExperienceTags: zod.array(zod.string()).optional(),
+  academicExperienceTags: zod.array(zod.string()).optional(),
   industries: zod.array(zod.string()).optional(),
+  topicInterests: zod.array(zod.string()).optional(),
   regions: zod.array(zod.string()).optional(),
+  affiliations: zod.array(zod.string()).optional(),
   professionalBackground: zod.string().optional(),
   approvedBio: zod.string().optional(),
   publications: zod.array(zod.string()).optional(),
+  publicationTopicTags: zod.array(zod.string()).optional(),
   recurringThemes: zod.array(zod.string()).optional(),
   contactableTopics: zod.array(zod.string()).optional(),
+  restrictedTopics: zod.array(zod.string()).optional(),
   doNotContactTopics: zod.array(zod.string()).optional(),
+  institutionalConflicts: zod.array(zod.string()).optional(),
+  affiliationConcerns: zod.array(zod.string()).optional(),
   status: zod
     .enum(["active", "inactive"])
     .optional()
@@ -454,13 +660,29 @@ export const updateProfessorProfileResponseProfileResearchInterestsItemMax = 160
 
 export const updateProfessorProfileResponseProfileResearchInterestsMax = 40;
 
+export const updateProfessorProfileResponseProfileProfessionalExperienceTagsItemMax = 120;
+
+export const updateProfessorProfileResponseProfileProfessionalExperienceTagsMax = 40;
+
+export const updateProfessorProfileResponseProfileAcademicExperienceTagsItemMax = 120;
+
+export const updateProfessorProfileResponseProfileAcademicExperienceTagsMax = 40;
+
 export const updateProfessorProfileResponseProfileIndustriesItemMax = 80;
 
 export const updateProfessorProfileResponseProfileIndustriesMax = 30;
 
+export const updateProfessorProfileResponseProfileTopicInterestsItemMax = 120;
+
+export const updateProfessorProfileResponseProfileTopicInterestsMax = 40;
+
 export const updateProfessorProfileResponseProfileRegionsItemMax = 80;
 
 export const updateProfessorProfileResponseProfileRegionsMax = 30;
+
+export const updateProfessorProfileResponseProfileAffiliationsItemMax = 160;
+
+export const updateProfessorProfileResponseProfileAffiliationsMax = 40;
 
 export const updateProfessorProfileResponseProfileProfessionalBackgroundMax = 2000;
 
@@ -470,6 +692,10 @@ export const updateProfessorProfileResponseProfilePublicationsItemMax = 240;
 
 export const updateProfessorProfileResponseProfilePublicationsMax = 40;
 
+export const updateProfessorProfileResponseProfilePublicationTopicTagsItemMax = 120;
+
+export const updateProfessorProfileResponseProfilePublicationTopicTagsMax = 40;
+
 export const updateProfessorProfileResponseProfileRecurringThemesItemMax = 120;
 
 export const updateProfessorProfileResponseProfileRecurringThemesMax = 40;
@@ -478,9 +704,21 @@ export const updateProfessorProfileResponseProfileContactableTopicsItemMax = 120
 
 export const updateProfessorProfileResponseProfileContactableTopicsMax = 40;
 
+export const updateProfessorProfileResponseProfileRestrictedTopicsItemMax = 120;
+
+export const updateProfessorProfileResponseProfileRestrictedTopicsMax = 40;
+
 export const updateProfessorProfileResponseProfileDoNotContactTopicsItemMax = 120;
 
 export const updateProfessorProfileResponseProfileDoNotContactTopicsMax = 40;
+
+export const updateProfessorProfileResponseProfileInstitutionalConflictsItemMax = 160;
+
+export const updateProfessorProfileResponseProfileInstitutionalConflictsMax = 40;
+
+export const updateProfessorProfileResponseProfileAffiliationConcernsItemMax = 160;
+
+export const updateProfessorProfileResponseProfileAffiliationConcernsMax = 40;
 
 export const UpdateProfessorProfileResponse = zod.object({
   profile: zod.object({
@@ -518,6 +756,24 @@ export const UpdateProfessorProfileResponse = zod.object({
           .max(updateProfessorProfileResponseProfileResearchInterestsItemMax),
       )
       .max(updateProfessorProfileResponseProfileResearchInterestsMax),
+    professionalExperienceTags: zod
+      .array(
+        zod
+          .string()
+          .max(
+            updateProfessorProfileResponseProfileProfessionalExperienceTagsItemMax,
+          ),
+      )
+      .max(updateProfessorProfileResponseProfileProfessionalExperienceTagsMax),
+    academicExperienceTags: zod
+      .array(
+        zod
+          .string()
+          .max(
+            updateProfessorProfileResponseProfileAcademicExperienceTagsItemMax,
+          ),
+      )
+      .max(updateProfessorProfileResponseProfileAcademicExperienceTagsMax),
     industries: zod
       .array(
         zod
@@ -525,11 +781,25 @@ export const UpdateProfessorProfileResponse = zod.object({
           .max(updateProfessorProfileResponseProfileIndustriesItemMax),
       )
       .max(updateProfessorProfileResponseProfileIndustriesMax),
+    topicInterests: zod
+      .array(
+        zod
+          .string()
+          .max(updateProfessorProfileResponseProfileTopicInterestsItemMax),
+      )
+      .max(updateProfessorProfileResponseProfileTopicInterestsMax),
     regions: zod
       .array(
         zod.string().max(updateProfessorProfileResponseProfileRegionsItemMax),
       )
       .max(updateProfessorProfileResponseProfileRegionsMax),
+    affiliations: zod
+      .array(
+        zod
+          .string()
+          .max(updateProfessorProfileResponseProfileAffiliationsItemMax),
+      )
+      .max(updateProfessorProfileResponseProfileAffiliationsMax),
     professionalBackground: zod
       .string()
       .max(updateProfessorProfileResponseProfileProfessionalBackgroundMax),
@@ -543,6 +813,15 @@ export const UpdateProfessorProfileResponse = zod.object({
           .max(updateProfessorProfileResponseProfilePublicationsItemMax),
       )
       .max(updateProfessorProfileResponseProfilePublicationsMax),
+    publicationTopicTags: zod
+      .array(
+        zod
+          .string()
+          .max(
+            updateProfessorProfileResponseProfilePublicationTopicTagsItemMax,
+          ),
+      )
+      .max(updateProfessorProfileResponseProfilePublicationTopicTagsMax),
     recurringThemes: zod
       .array(
         zod
@@ -557,6 +836,13 @@ export const UpdateProfessorProfileResponse = zod.object({
           .max(updateProfessorProfileResponseProfileContactableTopicsItemMax),
       )
       .max(updateProfessorProfileResponseProfileContactableTopicsMax),
+    restrictedTopics: zod
+      .array(
+        zod
+          .string()
+          .max(updateProfessorProfileResponseProfileRestrictedTopicsItemMax),
+      )
+      .max(updateProfessorProfileResponseProfileRestrictedTopicsMax),
     doNotContactTopics: zod
       .array(
         zod
@@ -564,15 +850,2148 @@ export const UpdateProfessorProfileResponse = zod.object({
           .max(updateProfessorProfileResponseProfileDoNotContactTopicsItemMax),
       )
       .max(updateProfessorProfileResponseProfileDoNotContactTopicsMax),
+    institutionalConflicts: zod
+      .array(
+        zod
+          .string()
+          .max(
+            updateProfessorProfileResponseProfileInstitutionalConflictsItemMax,
+          ),
+      )
+      .max(updateProfessorProfileResponseProfileInstitutionalConflictsMax),
+    affiliationConcerns: zod
+      .array(
+        zod
+          .string()
+          .max(updateProfessorProfileResponseProfileAffiliationConcernsItemMax),
+      )
+      .max(updateProfessorProfileResponseProfileAffiliationConcernsMax),
     status: zod
       .enum(["active", "inactive"])
       .describe(
         "Active profiles are included in future article matching; inactive profiles are retained but excluded.",
       ),
     schemaVersion: zod.number().min(1),
+    profileRevision: zod.number().min(1),
     createdAt: zod.string(),
     updatedAt: zod.string(),
   }),
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary Get internal Story Opportunity feature configuration
+ */
+export const GetStoryOpportunityConfigResponse = zod.object({
+  readsEnabled: zod.boolean(),
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary List completed frozen Story Opportunity windows
+ */
+
+export const ListStoryOpportunityWindowsResponse: zod.ZodTypeAny = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.string(),
+      snapshotRevision: zod.number().min(1),
+      asOf: zod.coerce.date(),
+      windowStart: zod.coerce.date(),
+      windowEnd: zod.coerce.date(),
+      operationalTimezone: zod.string(),
+      localCutoff: zod.string(),
+      calculatedAt: zod.coerce.date(),
+      status: zod.enum(["completed"]),
+      configurationVersion: zod.string(),
+      windowAlgorithmVersion: zod.string(),
+      selectionAlgorithmVersion: zod.string(),
+      scoringVersion: zod.string(),
+      normalizationVersion: zod.string(),
+      taxonomyVersion: zod.string(),
+      matchingAlgorithmVersion: zod.string(),
+      coverageCalculationVersion: zod.string(),
+      minimumNormalizedRelevance: zod.number(),
+      maximumOpportunities: zod.number(),
+      maximumPerSource: zod.number(),
+      maximumPerPrimaryTopic: zod.number(),
+      lowCoverageWarningThreshold: zod.number(),
+      totalArticlesConsidered: zod.number(),
+      eligibleArticleCount: zod.number(),
+      qualifyingArticleCount: zod.number(),
+      opportunityCount: zod.number(),
+      fallbackTimestampCount: zod.number(),
+    }),
+  ),
+  total: zod.number(),
+  readsEnabled: zod.boolean(),
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary Get the latest completed frozen window and its shortlist
+ */
+
+export const getCurrentStoryOpportunityWindowResponseItemsItemNormalizedRgiRelevanceScoreMin = 0;
+export const getCurrentStoryOpportunityWindowResponseItemsItemNormalizedRgiRelevanceScoreMax = 100;
+
+export const getCurrentStoryOpportunityWindowResponseItemsItemRecommendedAngleMax = 500;
+
+export const getCurrentStoryOpportunityWindowResponseItemsItemProfessorMatchesItemDimensionsMin = 6;
+export const getCurrentStoryOpportunityWindowResponseItemsItemProfessorMatchesItemDimensionsMax = 6;
+
+export const GetCurrentStoryOpportunityWindowResponse: zod.ZodTypeAny = zod.object({
+  window: zod.union([
+    zod.object({
+      id: zod.string(),
+      snapshotRevision: zod.number().min(1),
+      asOf: zod.coerce.date(),
+      windowStart: zod.coerce.date(),
+      windowEnd: zod.coerce.date(),
+      operationalTimezone: zod.string(),
+      localCutoff: zod.string(),
+      calculatedAt: zod.coerce.date(),
+      status: zod.enum(["completed"]),
+      configurationVersion: zod.string(),
+      windowAlgorithmVersion: zod.string(),
+      selectionAlgorithmVersion: zod.string(),
+      scoringVersion: zod.string(),
+      normalizationVersion: zod.string(),
+      taxonomyVersion: zod.string(),
+      matchingAlgorithmVersion: zod.string(),
+      coverageCalculationVersion: zod.string(),
+      minimumNormalizedRelevance: zod.number(),
+      maximumOpportunities: zod.number(),
+      maximumPerSource: zod.number(),
+      maximumPerPrimaryTopic: zod.number(),
+      lowCoverageWarningThreshold: zod.number(),
+      totalArticlesConsidered: zod.number(),
+      eligibleArticleCount: zod.number(),
+      qualifyingArticleCount: zod.number(),
+      opportunityCount: zod.number(),
+      fallbackTimestampCount: zod.number(),
+    }),
+    zod.null(),
+  ]),
+  items: zod.array(
+    zod.object({
+      id: zod.string(),
+      revision: zod.number(),
+      windowId: zod.string(),
+      windowStart: zod.coerce.date(),
+      windowEnd: zod.coerce.date(),
+      operationalTimezone: zod.string(),
+      primaryArticleId: zod.number(),
+      primaryEvidence: zod.object({
+        articleId: zod.number(),
+        headline: zod.string(),
+        canonicalUrl: zod.string(),
+        sourceName: zod.string(),
+        sourceUrl: zod.string().nullable(),
+        author: zod.string().nullable(),
+        excerpt: zod.string().nullable(),
+        publishedAt: zod.coerce.date().nullable(),
+        scrapedAt: zod.coerce.date().nullable(),
+        effectivePublishedAt: zod.coerce.date(),
+        timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+        timestampFallback: zod.boolean(),
+        capturedAt: zod.coerce.date(),
+        contentHash: zod.string(),
+      }),
+      supportingEvidence: zod.array(
+        zod.object({
+          articleId: zod.number(),
+          headline: zod.string(),
+          canonicalUrl: zod.string(),
+          sourceName: zod.string(),
+          sourceUrl: zod.string().nullable(),
+          author: zod.string().nullable(),
+          excerpt: zod.string().nullable(),
+          publishedAt: zod.coerce.date().nullable(),
+          scrapedAt: zod.coerce.date().nullable(),
+          effectivePublishedAt: zod.coerce.date(),
+          timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+          timestampFallback: zod.boolean(),
+          capturedAt: zod.coerce.date(),
+          contentHash: zod.string(),
+        }),
+      ),
+      sourceName: zod.string(),
+      canonicalUrl: zod.string(),
+      effectivePublishedAt: zod.coerce.date(),
+      timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+      timestampFallback: zod.boolean(),
+      originalRgiRelevanceScore: zod.number(),
+      originalRgiRelevanceScale: zod.enum(["1-10"]),
+      originalRgiRelevanceField: zod.enum(["relevancyScore"]),
+      normalizedRgiRelevanceScore: zod
+        .number()
+        .min(
+          getCurrentStoryOpportunityWindowResponseItemsItemNormalizedRgiRelevanceScoreMin,
+        )
+        .max(
+          getCurrentStoryOpportunityWindowResponseItemsItemNormalizedRgiRelevanceScoreMax,
+        ),
+      relevanceExplanation: zod.string().nullable(),
+      relevanceComponents: zod.record(zod.string(), zod.unknown()).nullable(),
+      relevanceScoringVersion: zod.string(),
+      relevanceNormalizationVersion: zod.string(),
+      sourceAuthorityScore: zod.number(),
+      primaryTopic: zod.string(),
+      primaryTopicLabel: zod.string(),
+      normalizedTopics: zod.array(zod.string()),
+      unknownTaxonomyTerms: zod.array(zod.string()),
+      discipline: zod.string().nullable(),
+      industries: zod.array(zod.string()),
+      regions: zod.array(zod.string()),
+      entities: zod.array(zod.string()),
+      recommendedAngle: zod
+        .string()
+        .max(
+          getCurrentStoryOpportunityWindowResponseItemsItemRecommendedAngleMax,
+        ),
+      shortlistPosition: zod.number().min(1),
+      selectionConfiguration: zod.object({
+        minimumNormalizedRelevance: zod.number(),
+        maximumOpportunities: zod.number(),
+        maximumPerSource: zod.number(),
+        maximumPerPrimaryTopic: zod.number(),
+        selectionAlgorithmVersion: zod.string(),
+      }),
+      professorMatches: zod.array(
+        zod.object({
+          professorId: zod.string(),
+          professorName: zod.string(),
+          profileRevision: zod.number(),
+          rank: zod.number().nullable(),
+          totalFitScore: zod.number(),
+          label: zod.enum(["strong", "plausible", "weak"]),
+          dimensions: zod
+            .array(
+              zod.object({
+                dimension: zod.enum([
+                  "core_expertise",
+                  "research_and_teaching",
+                  "experience_and_industries",
+                  "topic_interests",
+                  "publications_and_themes",
+                  "regions_and_affiliations",
+                ]),
+                label: zod.string(),
+                weight: zod.number(),
+                dimensionScore: zod.number(),
+                weightedContribution: zod.number(),
+                matchType: zod.enum(["exact", "alias", "parent_child", "none"]),
+                opportunityConcept: zod.string().nullable(),
+                opportunityLabel: zod.string().nullable(),
+                professorField: zod.string().nullable(),
+                professorValue: zod.string().nullable(),
+              }),
+            )
+            .min(
+              getCurrentStoryOpportunityWindowResponseItemsItemProfessorMatchesItemDimensionsMin,
+            )
+            .max(
+              getCurrentStoryOpportunityWindowResponseItemsItemProfessorMatchesItemDimensionsMax,
+            ),
+          profileCoverage: zod.number(),
+          coveredDimensions: zod.array(
+            zod.enum([
+              "core_expertise",
+              "research_and_teaching",
+              "experience_and_industries",
+              "topic_interests",
+              "publications_and_themes",
+              "regions_and_affiliations",
+            ]),
+          ),
+          missingDimensions: zod.array(
+            zod.enum([
+              "core_expertise",
+              "research_and_teaching",
+              "experience_and_industries",
+              "topic_interests",
+              "publications_and_themes",
+              "regions_and_affiliations",
+            ]),
+          ),
+          taxonomyVersion: zod.string(),
+          matchingAlgorithmVersion: zod.string(),
+          coverageCalculationVersion: zod.string(),
+          exclusions: zod.array(zod.string()),
+          warnings: zod.array(zod.string()),
+          rationale: zod.string(),
+        }),
+      ),
+      selectedProfessor: zod.union([
+        zod.object({
+          professorId: zod.string(),
+          professorName: zod.string(),
+          selectedProfileRevision: zod.number(),
+          selectedMatchRank: zod.number(),
+          selectedFitScore: zod.number(),
+          reason: zod.string().nullable(),
+          selectedBy: zod.string(),
+          selectedAt: zod.coerce.date(),
+        }),
+        zod.null(),
+      ]),
+      selectionHistory: zod.array(
+        zod.object({
+          id: zod.string(),
+          action: zod.enum(["selected", "changed", "cleared"]),
+          professorId: zod.string().nullable(),
+          professorName: zod.string().nullable(),
+          previousProfessorId: zod.string().nullable(),
+          selectedProfileRevision: zod.number().nullable(),
+          reason: zod.string().nullable(),
+          actorId: zod.string(),
+          occurredAt: zod.coerce.date(),
+        }),
+      ),
+      workflowState: zod.enum(["shortlisted", "professor_selected", "closed"]),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+      configurationVersion: zod.string(),
+      taxonomyVersion: zod.string(),
+      matchingAlgorithmVersion: zod.string(),
+    }),
+  ),
+  total: zod.number(),
+  readsEnabled: zod.boolean(),
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary Explicitly and idempotently calculate one frozen daily window
+ */
+export const calculateStoryOpportunityWindowBodySnapshotRevisionDefault = 1;
+
+export const CalculateStoryOpportunityWindowBody = zod.object({
+  asOf: zod.coerce.date(),
+  snapshotRevision: zod
+    .number()
+    .min(1)
+    .default(calculateStoryOpportunityWindowBodySnapshotRevisionDefault),
+});
+
+export const calculateStoryOpportunityWindowResponseOpportunitiesItemNormalizedRgiRelevanceScoreMin = 0;
+export const calculateStoryOpportunityWindowResponseOpportunitiesItemNormalizedRgiRelevanceScoreMax = 100;
+
+export const calculateStoryOpportunityWindowResponseOpportunitiesItemRecommendedAngleMax = 500;
+
+export const calculateStoryOpportunityWindowResponseOpportunitiesItemProfessorMatchesItemDimensionsMin = 6;
+export const calculateStoryOpportunityWindowResponseOpportunitiesItemProfessorMatchesItemDimensionsMax = 6;
+
+export const CalculateStoryOpportunityWindowResponse: zod.ZodTypeAny = zod.object({
+  created: zod.boolean(),
+  window: zod.object({
+    id: zod.string(),
+    snapshotRevision: zod.number().min(1),
+    asOf: zod.coerce.date(),
+    windowStart: zod.coerce.date(),
+    windowEnd: zod.coerce.date(),
+    operationalTimezone: zod.string(),
+    localCutoff: zod.string(),
+    calculatedAt: zod.coerce.date(),
+    status: zod.enum(["completed"]),
+    configurationVersion: zod.string(),
+    windowAlgorithmVersion: zod.string(),
+    selectionAlgorithmVersion: zod.string(),
+    scoringVersion: zod.string(),
+    normalizationVersion: zod.string(),
+    taxonomyVersion: zod.string(),
+    matchingAlgorithmVersion: zod.string(),
+    coverageCalculationVersion: zod.string(),
+    minimumNormalizedRelevance: zod.number(),
+    maximumOpportunities: zod.number(),
+    maximumPerSource: zod.number(),
+    maximumPerPrimaryTopic: zod.number(),
+    lowCoverageWarningThreshold: zod.number(),
+    totalArticlesConsidered: zod.number(),
+    eligibleArticleCount: zod.number(),
+    qualifyingArticleCount: zod.number(),
+    opportunityCount: zod.number(),
+    fallbackTimestampCount: zod.number(),
+  }),
+  opportunities: zod.array(
+    zod.object({
+      id: zod.string(),
+      revision: zod.number(),
+      windowId: zod.string(),
+      windowStart: zod.coerce.date(),
+      windowEnd: zod.coerce.date(),
+      operationalTimezone: zod.string(),
+      primaryArticleId: zod.number(),
+      primaryEvidence: zod.object({
+        articleId: zod.number(),
+        headline: zod.string(),
+        canonicalUrl: zod.string(),
+        sourceName: zod.string(),
+        sourceUrl: zod.string().nullable(),
+        author: zod.string().nullable(),
+        excerpt: zod.string().nullable(),
+        publishedAt: zod.coerce.date().nullable(),
+        scrapedAt: zod.coerce.date().nullable(),
+        effectivePublishedAt: zod.coerce.date(),
+        timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+        timestampFallback: zod.boolean(),
+        capturedAt: zod.coerce.date(),
+        contentHash: zod.string(),
+      }),
+      supportingEvidence: zod.array(
+        zod.object({
+          articleId: zod.number(),
+          headline: zod.string(),
+          canonicalUrl: zod.string(),
+          sourceName: zod.string(),
+          sourceUrl: zod.string().nullable(),
+          author: zod.string().nullable(),
+          excerpt: zod.string().nullable(),
+          publishedAt: zod.coerce.date().nullable(),
+          scrapedAt: zod.coerce.date().nullable(),
+          effectivePublishedAt: zod.coerce.date(),
+          timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+          timestampFallback: zod.boolean(),
+          capturedAt: zod.coerce.date(),
+          contentHash: zod.string(),
+        }),
+      ),
+      sourceName: zod.string(),
+      canonicalUrl: zod.string(),
+      effectivePublishedAt: zod.coerce.date(),
+      timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+      timestampFallback: zod.boolean(),
+      originalRgiRelevanceScore: zod.number(),
+      originalRgiRelevanceScale: zod.enum(["1-10"]),
+      originalRgiRelevanceField: zod.enum(["relevancyScore"]),
+      normalizedRgiRelevanceScore: zod
+        .number()
+        .min(
+          calculateStoryOpportunityWindowResponseOpportunitiesItemNormalizedRgiRelevanceScoreMin,
+        )
+        .max(
+          calculateStoryOpportunityWindowResponseOpportunitiesItemNormalizedRgiRelevanceScoreMax,
+        ),
+      relevanceExplanation: zod.string().nullable(),
+      relevanceComponents: zod.record(zod.string(), zod.unknown()).nullable(),
+      relevanceScoringVersion: zod.string(),
+      relevanceNormalizationVersion: zod.string(),
+      sourceAuthorityScore: zod.number(),
+      primaryTopic: zod.string(),
+      primaryTopicLabel: zod.string(),
+      normalizedTopics: zod.array(zod.string()),
+      unknownTaxonomyTerms: zod.array(zod.string()),
+      discipline: zod.string().nullable(),
+      industries: zod.array(zod.string()),
+      regions: zod.array(zod.string()),
+      entities: zod.array(zod.string()),
+      recommendedAngle: zod
+        .string()
+        .max(
+          calculateStoryOpportunityWindowResponseOpportunitiesItemRecommendedAngleMax,
+        ),
+      shortlistPosition: zod.number().min(1),
+      selectionConfiguration: zod.object({
+        minimumNormalizedRelevance: zod.number(),
+        maximumOpportunities: zod.number(),
+        maximumPerSource: zod.number(),
+        maximumPerPrimaryTopic: zod.number(),
+        selectionAlgorithmVersion: zod.string(),
+      }),
+      professorMatches: zod.array(
+        zod.object({
+          professorId: zod.string(),
+          professorName: zod.string(),
+          profileRevision: zod.number(),
+          rank: zod.number().nullable(),
+          totalFitScore: zod.number(),
+          label: zod.enum(["strong", "plausible", "weak"]),
+          dimensions: zod
+            .array(
+              zod.object({
+                dimension: zod.enum([
+                  "core_expertise",
+                  "research_and_teaching",
+                  "experience_and_industries",
+                  "topic_interests",
+                  "publications_and_themes",
+                  "regions_and_affiliations",
+                ]),
+                label: zod.string(),
+                weight: zod.number(),
+                dimensionScore: zod.number(),
+                weightedContribution: zod.number(),
+                matchType: zod.enum(["exact", "alias", "parent_child", "none"]),
+                opportunityConcept: zod.string().nullable(),
+                opportunityLabel: zod.string().nullable(),
+                professorField: zod.string().nullable(),
+                professorValue: zod.string().nullable(),
+              }),
+            )
+            .min(
+              calculateStoryOpportunityWindowResponseOpportunitiesItemProfessorMatchesItemDimensionsMin,
+            )
+            .max(
+              calculateStoryOpportunityWindowResponseOpportunitiesItemProfessorMatchesItemDimensionsMax,
+            ),
+          profileCoverage: zod.number(),
+          coveredDimensions: zod.array(
+            zod.enum([
+              "core_expertise",
+              "research_and_teaching",
+              "experience_and_industries",
+              "topic_interests",
+              "publications_and_themes",
+              "regions_and_affiliations",
+            ]),
+          ),
+          missingDimensions: zod.array(
+            zod.enum([
+              "core_expertise",
+              "research_and_teaching",
+              "experience_and_industries",
+              "topic_interests",
+              "publications_and_themes",
+              "regions_and_affiliations",
+            ]),
+          ),
+          taxonomyVersion: zod.string(),
+          matchingAlgorithmVersion: zod.string(),
+          coverageCalculationVersion: zod.string(),
+          exclusions: zod.array(zod.string()),
+          warnings: zod.array(zod.string()),
+          rationale: zod.string(),
+        }),
+      ),
+      selectedProfessor: zod.union([
+        zod.object({
+          professorId: zod.string(),
+          professorName: zod.string(),
+          selectedProfileRevision: zod.number(),
+          selectedMatchRank: zod.number(),
+          selectedFitScore: zod.number(),
+          reason: zod.string().nullable(),
+          selectedBy: zod.string(),
+          selectedAt: zod.coerce.date(),
+        }),
+        zod.null(),
+      ]),
+      selectionHistory: zod.array(
+        zod.object({
+          id: zod.string(),
+          action: zod.enum(["selected", "changed", "cleared"]),
+          professorId: zod.string().nullable(),
+          professorName: zod.string().nullable(),
+          previousProfessorId: zod.string().nullable(),
+          selectedProfileRevision: zod.number().nullable(),
+          reason: zod.string().nullable(),
+          actorId: zod.string(),
+          occurredAt: zod.coerce.date(),
+        }),
+      ),
+      workflowState: zod.enum(["shortlisted", "professor_selected", "closed"]),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+      configurationVersion: zod.string(),
+      taxonomyVersion: zod.string(),
+      matchingAlgorithmVersion: zod.string(),
+    }),
+  ),
+  readsEnabled: zod.boolean(),
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary List the frozen shortlist for one window
+ */
+export const listStoryOpportunitiesForWindowPathWindowIdRegExp = new RegExp(
+  "^[A-Za-z0-9_-]{8,160}$",
+);
+
+export const ListStoryOpportunitiesForWindowParams = zod.object({
+  windowId: zod.coerce
+    .string()
+    .regex(listStoryOpportunitiesForWindowPathWindowIdRegExp),
+});
+
+export const listStoryOpportunitiesForWindowResponseItemsItemNormalizedRgiRelevanceScoreMin = 0;
+export const listStoryOpportunitiesForWindowResponseItemsItemNormalizedRgiRelevanceScoreMax = 100;
+
+export const listStoryOpportunitiesForWindowResponseItemsItemRecommendedAngleMax = 500;
+
+export const listStoryOpportunitiesForWindowResponseItemsItemProfessorMatchesItemDimensionsMin = 6;
+export const listStoryOpportunitiesForWindowResponseItemsItemProfessorMatchesItemDimensionsMax = 6;
+
+export const ListStoryOpportunitiesForWindowResponse: zod.ZodTypeAny = zod.object({
+  window: zod.union([
+    zod.object({
+      id: zod.string(),
+      snapshotRevision: zod.number().min(1),
+      asOf: zod.coerce.date(),
+      windowStart: zod.coerce.date(),
+      windowEnd: zod.coerce.date(),
+      operationalTimezone: zod.string(),
+      localCutoff: zod.string(),
+      calculatedAt: zod.coerce.date(),
+      status: zod.enum(["completed"]),
+      configurationVersion: zod.string(),
+      windowAlgorithmVersion: zod.string(),
+      selectionAlgorithmVersion: zod.string(),
+      scoringVersion: zod.string(),
+      normalizationVersion: zod.string(),
+      taxonomyVersion: zod.string(),
+      matchingAlgorithmVersion: zod.string(),
+      coverageCalculationVersion: zod.string(),
+      minimumNormalizedRelevance: zod.number(),
+      maximumOpportunities: zod.number(),
+      maximumPerSource: zod.number(),
+      maximumPerPrimaryTopic: zod.number(),
+      lowCoverageWarningThreshold: zod.number(),
+      totalArticlesConsidered: zod.number(),
+      eligibleArticleCount: zod.number(),
+      qualifyingArticleCount: zod.number(),
+      opportunityCount: zod.number(),
+      fallbackTimestampCount: zod.number(),
+    }),
+    zod.null(),
+  ]),
+  items: zod.array(
+    zod.object({
+      id: zod.string(),
+      revision: zod.number(),
+      windowId: zod.string(),
+      windowStart: zod.coerce.date(),
+      windowEnd: zod.coerce.date(),
+      operationalTimezone: zod.string(),
+      primaryArticleId: zod.number(),
+      primaryEvidence: zod.object({
+        articleId: zod.number(),
+        headline: zod.string(),
+        canonicalUrl: zod.string(),
+        sourceName: zod.string(),
+        sourceUrl: zod.string().nullable(),
+        author: zod.string().nullable(),
+        excerpt: zod.string().nullable(),
+        publishedAt: zod.coerce.date().nullable(),
+        scrapedAt: zod.coerce.date().nullable(),
+        effectivePublishedAt: zod.coerce.date(),
+        timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+        timestampFallback: zod.boolean(),
+        capturedAt: zod.coerce.date(),
+        contentHash: zod.string(),
+      }),
+      supportingEvidence: zod.array(
+        zod.object({
+          articleId: zod.number(),
+          headline: zod.string(),
+          canonicalUrl: zod.string(),
+          sourceName: zod.string(),
+          sourceUrl: zod.string().nullable(),
+          author: zod.string().nullable(),
+          excerpt: zod.string().nullable(),
+          publishedAt: zod.coerce.date().nullable(),
+          scrapedAt: zod.coerce.date().nullable(),
+          effectivePublishedAt: zod.coerce.date(),
+          timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+          timestampFallback: zod.boolean(),
+          capturedAt: zod.coerce.date(),
+          contentHash: zod.string(),
+        }),
+      ),
+      sourceName: zod.string(),
+      canonicalUrl: zod.string(),
+      effectivePublishedAt: zod.coerce.date(),
+      timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+      timestampFallback: zod.boolean(),
+      originalRgiRelevanceScore: zod.number(),
+      originalRgiRelevanceScale: zod.enum(["1-10"]),
+      originalRgiRelevanceField: zod.enum(["relevancyScore"]),
+      normalizedRgiRelevanceScore: zod
+        .number()
+        .min(
+          listStoryOpportunitiesForWindowResponseItemsItemNormalizedRgiRelevanceScoreMin,
+        )
+        .max(
+          listStoryOpportunitiesForWindowResponseItemsItemNormalizedRgiRelevanceScoreMax,
+        ),
+      relevanceExplanation: zod.string().nullable(),
+      relevanceComponents: zod.record(zod.string(), zod.unknown()).nullable(),
+      relevanceScoringVersion: zod.string(),
+      relevanceNormalizationVersion: zod.string(),
+      sourceAuthorityScore: zod.number(),
+      primaryTopic: zod.string(),
+      primaryTopicLabel: zod.string(),
+      normalizedTopics: zod.array(zod.string()),
+      unknownTaxonomyTerms: zod.array(zod.string()),
+      discipline: zod.string().nullable(),
+      industries: zod.array(zod.string()),
+      regions: zod.array(zod.string()),
+      entities: zod.array(zod.string()),
+      recommendedAngle: zod
+        .string()
+        .max(
+          listStoryOpportunitiesForWindowResponseItemsItemRecommendedAngleMax,
+        ),
+      shortlistPosition: zod.number().min(1),
+      selectionConfiguration: zod.object({
+        minimumNormalizedRelevance: zod.number(),
+        maximumOpportunities: zod.number(),
+        maximumPerSource: zod.number(),
+        maximumPerPrimaryTopic: zod.number(),
+        selectionAlgorithmVersion: zod.string(),
+      }),
+      professorMatches: zod.array(
+        zod.object({
+          professorId: zod.string(),
+          professorName: zod.string(),
+          profileRevision: zod.number(),
+          rank: zod.number().nullable(),
+          totalFitScore: zod.number(),
+          label: zod.enum(["strong", "plausible", "weak"]),
+          dimensions: zod
+            .array(
+              zod.object({
+                dimension: zod.enum([
+                  "core_expertise",
+                  "research_and_teaching",
+                  "experience_and_industries",
+                  "topic_interests",
+                  "publications_and_themes",
+                  "regions_and_affiliations",
+                ]),
+                label: zod.string(),
+                weight: zod.number(),
+                dimensionScore: zod.number(),
+                weightedContribution: zod.number(),
+                matchType: zod.enum(["exact", "alias", "parent_child", "none"]),
+                opportunityConcept: zod.string().nullable(),
+                opportunityLabel: zod.string().nullable(),
+                professorField: zod.string().nullable(),
+                professorValue: zod.string().nullable(),
+              }),
+            )
+            .min(
+              listStoryOpportunitiesForWindowResponseItemsItemProfessorMatchesItemDimensionsMin,
+            )
+            .max(
+              listStoryOpportunitiesForWindowResponseItemsItemProfessorMatchesItemDimensionsMax,
+            ),
+          profileCoverage: zod.number(),
+          coveredDimensions: zod.array(
+            zod.enum([
+              "core_expertise",
+              "research_and_teaching",
+              "experience_and_industries",
+              "topic_interests",
+              "publications_and_themes",
+              "regions_and_affiliations",
+            ]),
+          ),
+          missingDimensions: zod.array(
+            zod.enum([
+              "core_expertise",
+              "research_and_teaching",
+              "experience_and_industries",
+              "topic_interests",
+              "publications_and_themes",
+              "regions_and_affiliations",
+            ]),
+          ),
+          taxonomyVersion: zod.string(),
+          matchingAlgorithmVersion: zod.string(),
+          coverageCalculationVersion: zod.string(),
+          exclusions: zod.array(zod.string()),
+          warnings: zod.array(zod.string()),
+          rationale: zod.string(),
+        }),
+      ),
+      selectedProfessor: zod.union([
+        zod.object({
+          professorId: zod.string(),
+          professorName: zod.string(),
+          selectedProfileRevision: zod.number(),
+          selectedMatchRank: zod.number(),
+          selectedFitScore: zod.number(),
+          reason: zod.string().nullable(),
+          selectedBy: zod.string(),
+          selectedAt: zod.coerce.date(),
+        }),
+        zod.null(),
+      ]),
+      selectionHistory: zod.array(
+        zod.object({
+          id: zod.string(),
+          action: zod.enum(["selected", "changed", "cleared"]),
+          professorId: zod.string().nullable(),
+          professorName: zod.string().nullable(),
+          previousProfessorId: zod.string().nullable(),
+          selectedProfileRevision: zod.number().nullable(),
+          reason: zod.string().nullable(),
+          actorId: zod.string(),
+          occurredAt: zod.coerce.date(),
+        }),
+      ),
+      workflowState: zod.enum(["shortlisted", "professor_selected", "closed"]),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+      configurationVersion: zod.string(),
+      taxonomyVersion: zod.string(),
+      matchingAlgorithmVersion: zod.string(),
+    }),
+  ),
+  total: zod.number(),
+  readsEnabled: zod.boolean(),
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary Get one Story Opportunity workbench record
+ */
+export const getStoryOpportunityPathIdRegExp = new RegExp(
+  "^[A-Za-z0-9_-]{8,160}$",
+);
+
+export const GetStoryOpportunityParams = zod.object({
+  id: zod.coerce.string().regex(getStoryOpportunityPathIdRegExp),
+});
+
+export const getStoryOpportunityResponseOpportunityNormalizedRgiRelevanceScoreMin = 0;
+export const getStoryOpportunityResponseOpportunityNormalizedRgiRelevanceScoreMax = 100;
+
+export const getStoryOpportunityResponseOpportunityRecommendedAngleMax = 500;
+
+export const getStoryOpportunityResponseOpportunityProfessorMatchesItemDimensionsMin = 6;
+export const getStoryOpportunityResponseOpportunityProfessorMatchesItemDimensionsMax = 6;
+
+export const GetStoryOpportunityResponse: zod.ZodTypeAny = zod.object({
+  opportunity: zod.object({
+    id: zod.string(),
+    revision: zod.number(),
+    windowId: zod.string(),
+    windowStart: zod.coerce.date(),
+    windowEnd: zod.coerce.date(),
+    operationalTimezone: zod.string(),
+    primaryArticleId: zod.number(),
+    primaryEvidence: zod.object({
+      articleId: zod.number(),
+      headline: zod.string(),
+      canonicalUrl: zod.string(),
+      sourceName: zod.string(),
+      sourceUrl: zod.string().nullable(),
+      author: zod.string().nullable(),
+      excerpt: zod.string().nullable(),
+      publishedAt: zod.coerce.date().nullable(),
+      scrapedAt: zod.coerce.date().nullable(),
+      effectivePublishedAt: zod.coerce.date(),
+      timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+      timestampFallback: zod.boolean(),
+      capturedAt: zod.coerce.date(),
+      contentHash: zod.string(),
+    }),
+    supportingEvidence: zod.array(
+      zod.object({
+        articleId: zod.number(),
+        headline: zod.string(),
+        canonicalUrl: zod.string(),
+        sourceName: zod.string(),
+        sourceUrl: zod.string().nullable(),
+        author: zod.string().nullable(),
+        excerpt: zod.string().nullable(),
+        publishedAt: zod.coerce.date().nullable(),
+        scrapedAt: zod.coerce.date().nullable(),
+        effectivePublishedAt: zod.coerce.date(),
+        timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+        timestampFallback: zod.boolean(),
+        capturedAt: zod.coerce.date(),
+        contentHash: zod.string(),
+      }),
+    ),
+    sourceName: zod.string(),
+    canonicalUrl: zod.string(),
+    effectivePublishedAt: zod.coerce.date(),
+    timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+    timestampFallback: zod.boolean(),
+    originalRgiRelevanceScore: zod.number(),
+    originalRgiRelevanceScale: zod.enum(["1-10"]),
+    originalRgiRelevanceField: zod.enum(["relevancyScore"]),
+    normalizedRgiRelevanceScore: zod
+      .number()
+      .min(getStoryOpportunityResponseOpportunityNormalizedRgiRelevanceScoreMin)
+      .max(
+        getStoryOpportunityResponseOpportunityNormalizedRgiRelevanceScoreMax,
+      ),
+    relevanceExplanation: zod.string().nullable(),
+    relevanceComponents: zod.record(zod.string(), zod.unknown()).nullable(),
+    relevanceScoringVersion: zod.string(),
+    relevanceNormalizationVersion: zod.string(),
+    sourceAuthorityScore: zod.number(),
+    primaryTopic: zod.string(),
+    primaryTopicLabel: zod.string(),
+    normalizedTopics: zod.array(zod.string()),
+    unknownTaxonomyTerms: zod.array(zod.string()),
+    discipline: zod.string().nullable(),
+    industries: zod.array(zod.string()),
+    regions: zod.array(zod.string()),
+    entities: zod.array(zod.string()),
+    recommendedAngle: zod
+      .string()
+      .max(getStoryOpportunityResponseOpportunityRecommendedAngleMax),
+    shortlistPosition: zod.number().min(1),
+    selectionConfiguration: zod.object({
+      minimumNormalizedRelevance: zod.number(),
+      maximumOpportunities: zod.number(),
+      maximumPerSource: zod.number(),
+      maximumPerPrimaryTopic: zod.number(),
+      selectionAlgorithmVersion: zod.string(),
+    }),
+    professorMatches: zod.array(
+      zod.object({
+        professorId: zod.string(),
+        professorName: zod.string(),
+        profileRevision: zod.number(),
+        rank: zod.number().nullable(),
+        totalFitScore: zod.number(),
+        label: zod.enum(["strong", "plausible", "weak"]),
+        dimensions: zod
+          .array(
+            zod.object({
+              dimension: zod.enum([
+                "core_expertise",
+                "research_and_teaching",
+                "experience_and_industries",
+                "topic_interests",
+                "publications_and_themes",
+                "regions_and_affiliations",
+              ]),
+              label: zod.string(),
+              weight: zod.number(),
+              dimensionScore: zod.number(),
+              weightedContribution: zod.number(),
+              matchType: zod.enum(["exact", "alias", "parent_child", "none"]),
+              opportunityConcept: zod.string().nullable(),
+              opportunityLabel: zod.string().nullable(),
+              professorField: zod.string().nullable(),
+              professorValue: zod.string().nullable(),
+            }),
+          )
+          .min(
+            getStoryOpportunityResponseOpportunityProfessorMatchesItemDimensionsMin,
+          )
+          .max(
+            getStoryOpportunityResponseOpportunityProfessorMatchesItemDimensionsMax,
+          ),
+        profileCoverage: zod.number(),
+        coveredDimensions: zod.array(
+          zod.enum([
+            "core_expertise",
+            "research_and_teaching",
+            "experience_and_industries",
+            "topic_interests",
+            "publications_and_themes",
+            "regions_and_affiliations",
+          ]),
+        ),
+        missingDimensions: zod.array(
+          zod.enum([
+            "core_expertise",
+            "research_and_teaching",
+            "experience_and_industries",
+            "topic_interests",
+            "publications_and_themes",
+            "regions_and_affiliations",
+          ]),
+        ),
+        taxonomyVersion: zod.string(),
+        matchingAlgorithmVersion: zod.string(),
+        coverageCalculationVersion: zod.string(),
+        exclusions: zod.array(zod.string()),
+        warnings: zod.array(zod.string()),
+        rationale: zod.string(),
+      }),
+    ),
+    selectedProfessor: zod.union([
+      zod.object({
+        professorId: zod.string(),
+        professorName: zod.string(),
+        selectedProfileRevision: zod.number(),
+        selectedMatchRank: zod.number(),
+        selectedFitScore: zod.number(),
+        reason: zod.string().nullable(),
+        selectedBy: zod.string(),
+        selectedAt: zod.coerce.date(),
+      }),
+      zod.null(),
+    ]),
+    selectionHistory: zod.array(
+      zod.object({
+        id: zod.string(),
+        action: zod.enum(["selected", "changed", "cleared"]),
+        professorId: zod.string().nullable(),
+        professorName: zod.string().nullable(),
+        previousProfessorId: zod.string().nullable(),
+        selectedProfileRevision: zod.number().nullable(),
+        reason: zod.string().nullable(),
+        actorId: zod.string(),
+        occurredAt: zod.coerce.date(),
+      }),
+    ),
+    workflowState: zod.enum(["shortlisted", "professor_selected", "closed"]),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+    configurationVersion: zod.string(),
+    taxonomyVersion: zod.string(),
+    matchingAlgorithmVersion: zod.string(),
+  }),
+  readsEnabled: zod.boolean(),
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary List persisted deterministic Professor Matches
+ */
+export const listStoryOpportunityProfessorMatchesPathIdRegExp = new RegExp(
+  "^[A-Za-z0-9_-]{8,160}$",
+);
+
+export const ListStoryOpportunityProfessorMatchesParams = zod.object({
+  id: zod.coerce
+    .string()
+    .regex(listStoryOpportunityProfessorMatchesPathIdRegExp),
+});
+
+export const listStoryOpportunityProfessorMatchesResponseItemsItemDimensionsMin = 6;
+export const listStoryOpportunityProfessorMatchesResponseItemsItemDimensionsMax = 6;
+
+export const ListStoryOpportunityProfessorMatchesResponse: zod.ZodTypeAny = zod.object({
+  items: zod.array(
+    zod.object({
+      professorId: zod.string(),
+      professorName: zod.string(),
+      profileRevision: zod.number(),
+      rank: zod.number().nullable(),
+      totalFitScore: zod.number(),
+      label: zod.enum(["strong", "plausible", "weak"]),
+      dimensions: zod
+        .array(
+          zod.object({
+            dimension: zod.enum([
+              "core_expertise",
+              "research_and_teaching",
+              "experience_and_industries",
+              "topic_interests",
+              "publications_and_themes",
+              "regions_and_affiliations",
+            ]),
+            label: zod.string(),
+            weight: zod.number(),
+            dimensionScore: zod.number(),
+            weightedContribution: zod.number(),
+            matchType: zod.enum(["exact", "alias", "parent_child", "none"]),
+            opportunityConcept: zod.string().nullable(),
+            opportunityLabel: zod.string().nullable(),
+            professorField: zod.string().nullable(),
+            professorValue: zod.string().nullable(),
+          }),
+        )
+        .min(listStoryOpportunityProfessorMatchesResponseItemsItemDimensionsMin)
+        .max(
+          listStoryOpportunityProfessorMatchesResponseItemsItemDimensionsMax,
+        ),
+      profileCoverage: zod.number(),
+      coveredDimensions: zod.array(
+        zod.enum([
+          "core_expertise",
+          "research_and_teaching",
+          "experience_and_industries",
+          "topic_interests",
+          "publications_and_themes",
+          "regions_and_affiliations",
+        ]),
+      ),
+      missingDimensions: zod.array(
+        zod.enum([
+          "core_expertise",
+          "research_and_teaching",
+          "experience_and_industries",
+          "topic_interests",
+          "publications_and_themes",
+          "regions_and_affiliations",
+        ]),
+      ),
+      taxonomyVersion: zod.string(),
+      matchingAlgorithmVersion: zod.string(),
+      coverageCalculationVersion: zod.string(),
+      exclusions: zod.array(zod.string()),
+      warnings: zod.array(zod.string()),
+      rationale: zod.string(),
+    }),
+  ),
+  total: zod.number(),
+});
+
+/**
+ * @summary Manually select or change the professor for an opportunity
+ */
+export const selectStoryOpportunityProfessorPathIdRegExp = new RegExp(
+  "^[A-Za-z0-9_-]{8,160}$",
+);
+
+export const SelectStoryOpportunityProfessorParams = zod.object({
+  id: zod.coerce.string().regex(selectStoryOpportunityProfessorPathIdRegExp),
+});
+
+export const selectStoryOpportunityProfessorBodyProfessorIdRegExp = new RegExp(
+  "^[A-Za-z0-9_-]{8,128}$",
+);
+export const selectStoryOpportunityProfessorBodyReasonMax = 1000;
+
+export const SelectStoryOpportunityProfessorBody = zod.object({
+  professorId: zod
+    .string()
+    .regex(selectStoryOpportunityProfessorBodyProfessorIdRegExp),
+  reason: zod
+    .string()
+    .max(selectStoryOpportunityProfessorBodyReasonMax)
+    .optional(),
+  expectedRevision: zod.number().min(1),
+});
+
+export const selectStoryOpportunityProfessorResponseOpportunityNormalizedRgiRelevanceScoreMin = 0;
+export const selectStoryOpportunityProfessorResponseOpportunityNormalizedRgiRelevanceScoreMax = 100;
+
+export const selectStoryOpportunityProfessorResponseOpportunityRecommendedAngleMax = 500;
+
+export const selectStoryOpportunityProfessorResponseOpportunityProfessorMatchesItemDimensionsMin = 6;
+export const selectStoryOpportunityProfessorResponseOpportunityProfessorMatchesItemDimensionsMax = 6;
+
+export const SelectStoryOpportunityProfessorResponse: zod.ZodTypeAny = zod.object({
+  opportunity: zod.object({
+    id: zod.string(),
+    revision: zod.number(),
+    windowId: zod.string(),
+    windowStart: zod.coerce.date(),
+    windowEnd: zod.coerce.date(),
+    operationalTimezone: zod.string(),
+    primaryArticleId: zod.number(),
+    primaryEvidence: zod.object({
+      articleId: zod.number(),
+      headline: zod.string(),
+      canonicalUrl: zod.string(),
+      sourceName: zod.string(),
+      sourceUrl: zod.string().nullable(),
+      author: zod.string().nullable(),
+      excerpt: zod.string().nullable(),
+      publishedAt: zod.coerce.date().nullable(),
+      scrapedAt: zod.coerce.date().nullable(),
+      effectivePublishedAt: zod.coerce.date(),
+      timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+      timestampFallback: zod.boolean(),
+      capturedAt: zod.coerce.date(),
+      contentHash: zod.string(),
+    }),
+    supportingEvidence: zod.array(
+      zod.object({
+        articleId: zod.number(),
+        headline: zod.string(),
+        canonicalUrl: zod.string(),
+        sourceName: zod.string(),
+        sourceUrl: zod.string().nullable(),
+        author: zod.string().nullable(),
+        excerpt: zod.string().nullable(),
+        publishedAt: zod.coerce.date().nullable(),
+        scrapedAt: zod.coerce.date().nullable(),
+        effectivePublishedAt: zod.coerce.date(),
+        timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+        timestampFallback: zod.boolean(),
+        capturedAt: zod.coerce.date(),
+        contentHash: zod.string(),
+      }),
+    ),
+    sourceName: zod.string(),
+    canonicalUrl: zod.string(),
+    effectivePublishedAt: zod.coerce.date(),
+    timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+    timestampFallback: zod.boolean(),
+    originalRgiRelevanceScore: zod.number(),
+    originalRgiRelevanceScale: zod.enum(["1-10"]),
+    originalRgiRelevanceField: zod.enum(["relevancyScore"]),
+    normalizedRgiRelevanceScore: zod
+      .number()
+      .min(
+        selectStoryOpportunityProfessorResponseOpportunityNormalizedRgiRelevanceScoreMin,
+      )
+      .max(
+        selectStoryOpportunityProfessorResponseOpportunityNormalizedRgiRelevanceScoreMax,
+      ),
+    relevanceExplanation: zod.string().nullable(),
+    relevanceComponents: zod.record(zod.string(), zod.unknown()).nullable(),
+    relevanceScoringVersion: zod.string(),
+    relevanceNormalizationVersion: zod.string(),
+    sourceAuthorityScore: zod.number(),
+    primaryTopic: zod.string(),
+    primaryTopicLabel: zod.string(),
+    normalizedTopics: zod.array(zod.string()),
+    unknownTaxonomyTerms: zod.array(zod.string()),
+    discipline: zod.string().nullable(),
+    industries: zod.array(zod.string()),
+    regions: zod.array(zod.string()),
+    entities: zod.array(zod.string()),
+    recommendedAngle: zod
+      .string()
+      .max(
+        selectStoryOpportunityProfessorResponseOpportunityRecommendedAngleMax,
+      ),
+    shortlistPosition: zod.number().min(1),
+    selectionConfiguration: zod.object({
+      minimumNormalizedRelevance: zod.number(),
+      maximumOpportunities: zod.number(),
+      maximumPerSource: zod.number(),
+      maximumPerPrimaryTopic: zod.number(),
+      selectionAlgorithmVersion: zod.string(),
+    }),
+    professorMatches: zod.array(
+      zod.object({
+        professorId: zod.string(),
+        professorName: zod.string(),
+        profileRevision: zod.number(),
+        rank: zod.number().nullable(),
+        totalFitScore: zod.number(),
+        label: zod.enum(["strong", "plausible", "weak"]),
+        dimensions: zod
+          .array(
+            zod.object({
+              dimension: zod.enum([
+                "core_expertise",
+                "research_and_teaching",
+                "experience_and_industries",
+                "topic_interests",
+                "publications_and_themes",
+                "regions_and_affiliations",
+              ]),
+              label: zod.string(),
+              weight: zod.number(),
+              dimensionScore: zod.number(),
+              weightedContribution: zod.number(),
+              matchType: zod.enum(["exact", "alias", "parent_child", "none"]),
+              opportunityConcept: zod.string().nullable(),
+              opportunityLabel: zod.string().nullable(),
+              professorField: zod.string().nullable(),
+              professorValue: zod.string().nullable(),
+            }),
+          )
+          .min(
+            selectStoryOpportunityProfessorResponseOpportunityProfessorMatchesItemDimensionsMin,
+          )
+          .max(
+            selectStoryOpportunityProfessorResponseOpportunityProfessorMatchesItemDimensionsMax,
+          ),
+        profileCoverage: zod.number(),
+        coveredDimensions: zod.array(
+          zod.enum([
+            "core_expertise",
+            "research_and_teaching",
+            "experience_and_industries",
+            "topic_interests",
+            "publications_and_themes",
+            "regions_and_affiliations",
+          ]),
+        ),
+        missingDimensions: zod.array(
+          zod.enum([
+            "core_expertise",
+            "research_and_teaching",
+            "experience_and_industries",
+            "topic_interests",
+            "publications_and_themes",
+            "regions_and_affiliations",
+          ]),
+        ),
+        taxonomyVersion: zod.string(),
+        matchingAlgorithmVersion: zod.string(),
+        coverageCalculationVersion: zod.string(),
+        exclusions: zod.array(zod.string()),
+        warnings: zod.array(zod.string()),
+        rationale: zod.string(),
+      }),
+    ),
+    selectedProfessor: zod.union([
+      zod.object({
+        professorId: zod.string(),
+        professorName: zod.string(),
+        selectedProfileRevision: zod.number(),
+        selectedMatchRank: zod.number(),
+        selectedFitScore: zod.number(),
+        reason: zod.string().nullable(),
+        selectedBy: zod.string(),
+        selectedAt: zod.coerce.date(),
+      }),
+      zod.null(),
+    ]),
+    selectionHistory: zod.array(
+      zod.object({
+        id: zod.string(),
+        action: zod.enum(["selected", "changed", "cleared"]),
+        professorId: zod.string().nullable(),
+        professorName: zod.string().nullable(),
+        previousProfessorId: zod.string().nullable(),
+        selectedProfileRevision: zod.number().nullable(),
+        reason: zod.string().nullable(),
+        actorId: zod.string(),
+        occurredAt: zod.coerce.date(),
+      }),
+    ),
+    workflowState: zod.enum(["shortlisted", "professor_selected", "closed"]),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+    configurationVersion: zod.string(),
+    taxonomyVersion: zod.string(),
+    matchingAlgorithmVersion: zod.string(),
+  }),
+  readsEnabled: zod.boolean(),
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary Clear the current manual professor selection
+ */
+export const clearStoryOpportunityProfessorPathIdRegExp = new RegExp(
+  "^[A-Za-z0-9_-]{8,160}$",
+);
+
+export const ClearStoryOpportunityProfessorParams = zod.object({
+  id: zod.coerce.string().regex(clearStoryOpportunityProfessorPathIdRegExp),
+});
+
+export const clearStoryOpportunityProfessorBodyReasonMax = 1000;
+
+export const ClearStoryOpportunityProfessorBody = zod.object({
+  expectedRevision: zod.number().min(1),
+  reason: zod
+    .string()
+    .max(clearStoryOpportunityProfessorBodyReasonMax)
+    .optional(),
+});
+
+export const clearStoryOpportunityProfessorResponseOpportunityNormalizedRgiRelevanceScoreMin = 0;
+export const clearStoryOpportunityProfessorResponseOpportunityNormalizedRgiRelevanceScoreMax = 100;
+
+export const clearStoryOpportunityProfessorResponseOpportunityRecommendedAngleMax = 500;
+
+export const clearStoryOpportunityProfessorResponseOpportunityProfessorMatchesItemDimensionsMin = 6;
+export const clearStoryOpportunityProfessorResponseOpportunityProfessorMatchesItemDimensionsMax = 6;
+
+export const ClearStoryOpportunityProfessorResponse: zod.ZodTypeAny = zod.object({
+  opportunity: zod.object({
+    id: zod.string(),
+    revision: zod.number(),
+    windowId: zod.string(),
+    windowStart: zod.coerce.date(),
+    windowEnd: zod.coerce.date(),
+    operationalTimezone: zod.string(),
+    primaryArticleId: zod.number(),
+    primaryEvidence: zod.object({
+      articleId: zod.number(),
+      headline: zod.string(),
+      canonicalUrl: zod.string(),
+      sourceName: zod.string(),
+      sourceUrl: zod.string().nullable(),
+      author: zod.string().nullable(),
+      excerpt: zod.string().nullable(),
+      publishedAt: zod.coerce.date().nullable(),
+      scrapedAt: zod.coerce.date().nullable(),
+      effectivePublishedAt: zod.coerce.date(),
+      timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+      timestampFallback: zod.boolean(),
+      capturedAt: zod.coerce.date(),
+      contentHash: zod.string(),
+    }),
+    supportingEvidence: zod.array(
+      zod.object({
+        articleId: zod.number(),
+        headline: zod.string(),
+        canonicalUrl: zod.string(),
+        sourceName: zod.string(),
+        sourceUrl: zod.string().nullable(),
+        author: zod.string().nullable(),
+        excerpt: zod.string().nullable(),
+        publishedAt: zod.coerce.date().nullable(),
+        scrapedAt: zod.coerce.date().nullable(),
+        effectivePublishedAt: zod.coerce.date(),
+        timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+        timestampFallback: zod.boolean(),
+        capturedAt: zod.coerce.date(),
+        contentHash: zod.string(),
+      }),
+    ),
+    sourceName: zod.string(),
+    canonicalUrl: zod.string(),
+    effectivePublishedAt: zod.coerce.date(),
+    timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+    timestampFallback: zod.boolean(),
+    originalRgiRelevanceScore: zod.number(),
+    originalRgiRelevanceScale: zod.enum(["1-10"]),
+    originalRgiRelevanceField: zod.enum(["relevancyScore"]),
+    normalizedRgiRelevanceScore: zod
+      .number()
+      .min(
+        clearStoryOpportunityProfessorResponseOpportunityNormalizedRgiRelevanceScoreMin,
+      )
+      .max(
+        clearStoryOpportunityProfessorResponseOpportunityNormalizedRgiRelevanceScoreMax,
+      ),
+    relevanceExplanation: zod.string().nullable(),
+    relevanceComponents: zod.record(zod.string(), zod.unknown()).nullable(),
+    relevanceScoringVersion: zod.string(),
+    relevanceNormalizationVersion: zod.string(),
+    sourceAuthorityScore: zod.number(),
+    primaryTopic: zod.string(),
+    primaryTopicLabel: zod.string(),
+    normalizedTopics: zod.array(zod.string()),
+    unknownTaxonomyTerms: zod.array(zod.string()),
+    discipline: zod.string().nullable(),
+    industries: zod.array(zod.string()),
+    regions: zod.array(zod.string()),
+    entities: zod.array(zod.string()),
+    recommendedAngle: zod
+      .string()
+      .max(
+        clearStoryOpportunityProfessorResponseOpportunityRecommendedAngleMax,
+      ),
+    shortlistPosition: zod.number().min(1),
+    selectionConfiguration: zod.object({
+      minimumNormalizedRelevance: zod.number(),
+      maximumOpportunities: zod.number(),
+      maximumPerSource: zod.number(),
+      maximumPerPrimaryTopic: zod.number(),
+      selectionAlgorithmVersion: zod.string(),
+    }),
+    professorMatches: zod.array(
+      zod.object({
+        professorId: zod.string(),
+        professorName: zod.string(),
+        profileRevision: zod.number(),
+        rank: zod.number().nullable(),
+        totalFitScore: zod.number(),
+        label: zod.enum(["strong", "plausible", "weak"]),
+        dimensions: zod
+          .array(
+            zod.object({
+              dimension: zod.enum([
+                "core_expertise",
+                "research_and_teaching",
+                "experience_and_industries",
+                "topic_interests",
+                "publications_and_themes",
+                "regions_and_affiliations",
+              ]),
+              label: zod.string(),
+              weight: zod.number(),
+              dimensionScore: zod.number(),
+              weightedContribution: zod.number(),
+              matchType: zod.enum(["exact", "alias", "parent_child", "none"]),
+              opportunityConcept: zod.string().nullable(),
+              opportunityLabel: zod.string().nullable(),
+              professorField: zod.string().nullable(),
+              professorValue: zod.string().nullable(),
+            }),
+          )
+          .min(
+            clearStoryOpportunityProfessorResponseOpportunityProfessorMatchesItemDimensionsMin,
+          )
+          .max(
+            clearStoryOpportunityProfessorResponseOpportunityProfessorMatchesItemDimensionsMax,
+          ),
+        profileCoverage: zod.number(),
+        coveredDimensions: zod.array(
+          zod.enum([
+            "core_expertise",
+            "research_and_teaching",
+            "experience_and_industries",
+            "topic_interests",
+            "publications_and_themes",
+            "regions_and_affiliations",
+          ]),
+        ),
+        missingDimensions: zod.array(
+          zod.enum([
+            "core_expertise",
+            "research_and_teaching",
+            "experience_and_industries",
+            "topic_interests",
+            "publications_and_themes",
+            "regions_and_affiliations",
+          ]),
+        ),
+        taxonomyVersion: zod.string(),
+        matchingAlgorithmVersion: zod.string(),
+        coverageCalculationVersion: zod.string(),
+        exclusions: zod.array(zod.string()),
+        warnings: zod.array(zod.string()),
+        rationale: zod.string(),
+      }),
+    ),
+    selectedProfessor: zod.union([
+      zod.object({
+        professorId: zod.string(),
+        professorName: zod.string(),
+        selectedProfileRevision: zod.number(),
+        selectedMatchRank: zod.number(),
+        selectedFitScore: zod.number(),
+        reason: zod.string().nullable(),
+        selectedBy: zod.string(),
+        selectedAt: zod.coerce.date(),
+      }),
+      zod.null(),
+    ]),
+    selectionHistory: zod.array(
+      zod.object({
+        id: zod.string(),
+        action: zod.enum(["selected", "changed", "cleared"]),
+        professorId: zod.string().nullable(),
+        professorName: zod.string().nullable(),
+        previousProfessorId: zod.string().nullable(),
+        selectedProfileRevision: zod.number().nullable(),
+        reason: zod.string().nullable(),
+        actorId: zod.string(),
+        occurredAt: zod.coerce.date(),
+      }),
+    ),
+    workflowState: zod.enum(["shortlisted", "professor_selected", "closed"]),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+    configurationVersion: zod.string(),
+    taxonomyVersion: zod.string(),
+    matchingAlgorithmVersion: zod.string(),
+  }),
+  readsEnabled: zod.boolean(),
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary Update the editor-controlled recommended angle
+ */
+export const updateStoryOpportunityAnglePathIdRegExp = new RegExp(
+  "^[A-Za-z0-9_-]{8,160}$",
+);
+
+export const UpdateStoryOpportunityAngleParams = zod.object({
+  id: zod.coerce.string().regex(updateStoryOpportunityAnglePathIdRegExp),
+});
+
+export const updateStoryOpportunityAngleBodyAngleMax = 500;
+
+export const UpdateStoryOpportunityAngleBody = zod.object({
+  expectedRevision: zod.number().min(1),
+  angle: zod.string().min(1).max(updateStoryOpportunityAngleBodyAngleMax),
+});
+
+export const updateStoryOpportunityAngleResponseOpportunityNormalizedRgiRelevanceScoreMin = 0;
+export const updateStoryOpportunityAngleResponseOpportunityNormalizedRgiRelevanceScoreMax = 100;
+
+export const updateStoryOpportunityAngleResponseOpportunityRecommendedAngleMax = 500;
+
+export const updateStoryOpportunityAngleResponseOpportunityProfessorMatchesItemDimensionsMin = 6;
+export const updateStoryOpportunityAngleResponseOpportunityProfessorMatchesItemDimensionsMax = 6;
+
+export const UpdateStoryOpportunityAngleResponse: zod.ZodTypeAny = zod.object({
+  opportunity: zod.object({
+    id: zod.string(),
+    revision: zod.number(),
+    windowId: zod.string(),
+    windowStart: zod.coerce.date(),
+    windowEnd: zod.coerce.date(),
+    operationalTimezone: zod.string(),
+    primaryArticleId: zod.number(),
+    primaryEvidence: zod.object({
+      articleId: zod.number(),
+      headline: zod.string(),
+      canonicalUrl: zod.string(),
+      sourceName: zod.string(),
+      sourceUrl: zod.string().nullable(),
+      author: zod.string().nullable(),
+      excerpt: zod.string().nullable(),
+      publishedAt: zod.coerce.date().nullable(),
+      scrapedAt: zod.coerce.date().nullable(),
+      effectivePublishedAt: zod.coerce.date(),
+      timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+      timestampFallback: zod.boolean(),
+      capturedAt: zod.coerce.date(),
+      contentHash: zod.string(),
+    }),
+    supportingEvidence: zod.array(
+      zod.object({
+        articleId: zod.number(),
+        headline: zod.string(),
+        canonicalUrl: zod.string(),
+        sourceName: zod.string(),
+        sourceUrl: zod.string().nullable(),
+        author: zod.string().nullable(),
+        excerpt: zod.string().nullable(),
+        publishedAt: zod.coerce.date().nullable(),
+        scrapedAt: zod.coerce.date().nullable(),
+        effectivePublishedAt: zod.coerce.date(),
+        timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+        timestampFallback: zod.boolean(),
+        capturedAt: zod.coerce.date(),
+        contentHash: zod.string(),
+      }),
+    ),
+    sourceName: zod.string(),
+    canonicalUrl: zod.string(),
+    effectivePublishedAt: zod.coerce.date(),
+    timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+    timestampFallback: zod.boolean(),
+    originalRgiRelevanceScore: zod.number(),
+    originalRgiRelevanceScale: zod.enum(["1-10"]),
+    originalRgiRelevanceField: zod.enum(["relevancyScore"]),
+    normalizedRgiRelevanceScore: zod
+      .number()
+      .min(
+        updateStoryOpportunityAngleResponseOpportunityNormalizedRgiRelevanceScoreMin,
+      )
+      .max(
+        updateStoryOpportunityAngleResponseOpportunityNormalizedRgiRelevanceScoreMax,
+      ),
+    relevanceExplanation: zod.string().nullable(),
+    relevanceComponents: zod.record(zod.string(), zod.unknown()).nullable(),
+    relevanceScoringVersion: zod.string(),
+    relevanceNormalizationVersion: zod.string(),
+    sourceAuthorityScore: zod.number(),
+    primaryTopic: zod.string(),
+    primaryTopicLabel: zod.string(),
+    normalizedTopics: zod.array(zod.string()),
+    unknownTaxonomyTerms: zod.array(zod.string()),
+    discipline: zod.string().nullable(),
+    industries: zod.array(zod.string()),
+    regions: zod.array(zod.string()),
+    entities: zod.array(zod.string()),
+    recommendedAngle: zod
+      .string()
+      .max(updateStoryOpportunityAngleResponseOpportunityRecommendedAngleMax),
+    shortlistPosition: zod.number().min(1),
+    selectionConfiguration: zod.object({
+      minimumNormalizedRelevance: zod.number(),
+      maximumOpportunities: zod.number(),
+      maximumPerSource: zod.number(),
+      maximumPerPrimaryTopic: zod.number(),
+      selectionAlgorithmVersion: zod.string(),
+    }),
+    professorMatches: zod.array(
+      zod.object({
+        professorId: zod.string(),
+        professorName: zod.string(),
+        profileRevision: zod.number(),
+        rank: zod.number().nullable(),
+        totalFitScore: zod.number(),
+        label: zod.enum(["strong", "plausible", "weak"]),
+        dimensions: zod
+          .array(
+            zod.object({
+              dimension: zod.enum([
+                "core_expertise",
+                "research_and_teaching",
+                "experience_and_industries",
+                "topic_interests",
+                "publications_and_themes",
+                "regions_and_affiliations",
+              ]),
+              label: zod.string(),
+              weight: zod.number(),
+              dimensionScore: zod.number(),
+              weightedContribution: zod.number(),
+              matchType: zod.enum(["exact", "alias", "parent_child", "none"]),
+              opportunityConcept: zod.string().nullable(),
+              opportunityLabel: zod.string().nullable(),
+              professorField: zod.string().nullable(),
+              professorValue: zod.string().nullable(),
+            }),
+          )
+          .min(
+            updateStoryOpportunityAngleResponseOpportunityProfessorMatchesItemDimensionsMin,
+          )
+          .max(
+            updateStoryOpportunityAngleResponseOpportunityProfessorMatchesItemDimensionsMax,
+          ),
+        profileCoverage: zod.number(),
+        coveredDimensions: zod.array(
+          zod.enum([
+            "core_expertise",
+            "research_and_teaching",
+            "experience_and_industries",
+            "topic_interests",
+            "publications_and_themes",
+            "regions_and_affiliations",
+          ]),
+        ),
+        missingDimensions: zod.array(
+          zod.enum([
+            "core_expertise",
+            "research_and_teaching",
+            "experience_and_industries",
+            "topic_interests",
+            "publications_and_themes",
+            "regions_and_affiliations",
+          ]),
+        ),
+        taxonomyVersion: zod.string(),
+        matchingAlgorithmVersion: zod.string(),
+        coverageCalculationVersion: zod.string(),
+        exclusions: zod.array(zod.string()),
+        warnings: zod.array(zod.string()),
+        rationale: zod.string(),
+      }),
+    ),
+    selectedProfessor: zod.union([
+      zod.object({
+        professorId: zod.string(),
+        professorName: zod.string(),
+        selectedProfileRevision: zod.number(),
+        selectedMatchRank: zod.number(),
+        selectedFitScore: zod.number(),
+        reason: zod.string().nullable(),
+        selectedBy: zod.string(),
+        selectedAt: zod.coerce.date(),
+      }),
+      zod.null(),
+    ]),
+    selectionHistory: zod.array(
+      zod.object({
+        id: zod.string(),
+        action: zod.enum(["selected", "changed", "cleared"]),
+        professorId: zod.string().nullable(),
+        professorName: zod.string().nullable(),
+        previousProfessorId: zod.string().nullable(),
+        selectedProfileRevision: zod.number().nullable(),
+        reason: zod.string().nullable(),
+        actorId: zod.string(),
+        occurredAt: zod.coerce.date(),
+      }),
+    ),
+    workflowState: zod.enum(["shortlisted", "professor_selected", "closed"]),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+    configurationVersion: zod.string(),
+    taxonomyVersion: zod.string(),
+    matchingAlgorithmVersion: zod.string(),
+  }),
+  readsEnabled: zod.boolean(),
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary Close a Story Opportunity
+ */
+export const closeStoryOpportunityPathIdRegExp = new RegExp(
+  "^[A-Za-z0-9_-]{8,160}$",
+);
+
+export const CloseStoryOpportunityParams = zod.object({
+  id: zod.coerce.string().regex(closeStoryOpportunityPathIdRegExp),
+});
+
+export const CloseStoryOpportunityBody = zod.object({
+  expectedRevision: zod.number().min(1),
+});
+
+export const closeStoryOpportunityResponseOpportunityNormalizedRgiRelevanceScoreMin = 0;
+export const closeStoryOpportunityResponseOpportunityNormalizedRgiRelevanceScoreMax = 100;
+
+export const closeStoryOpportunityResponseOpportunityRecommendedAngleMax = 500;
+
+export const closeStoryOpportunityResponseOpportunityProfessorMatchesItemDimensionsMin = 6;
+export const closeStoryOpportunityResponseOpportunityProfessorMatchesItemDimensionsMax = 6;
+
+export const CloseStoryOpportunityResponse: zod.ZodTypeAny = zod.object({
+  opportunity: zod.object({
+    id: zod.string(),
+    revision: zod.number(),
+    windowId: zod.string(),
+    windowStart: zod.coerce.date(),
+    windowEnd: zod.coerce.date(),
+    operationalTimezone: zod.string(),
+    primaryArticleId: zod.number(),
+    primaryEvidence: zod.object({
+      articleId: zod.number(),
+      headline: zod.string(),
+      canonicalUrl: zod.string(),
+      sourceName: zod.string(),
+      sourceUrl: zod.string().nullable(),
+      author: zod.string().nullable(),
+      excerpt: zod.string().nullable(),
+      publishedAt: zod.coerce.date().nullable(),
+      scrapedAt: zod.coerce.date().nullable(),
+      effectivePublishedAt: zod.coerce.date(),
+      timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+      timestampFallback: zod.boolean(),
+      capturedAt: zod.coerce.date(),
+      contentHash: zod.string(),
+    }),
+    supportingEvidence: zod.array(
+      zod.object({
+        articleId: zod.number(),
+        headline: zod.string(),
+        canonicalUrl: zod.string(),
+        sourceName: zod.string(),
+        sourceUrl: zod.string().nullable(),
+        author: zod.string().nullable(),
+        excerpt: zod.string().nullable(),
+        publishedAt: zod.coerce.date().nullable(),
+        scrapedAt: zod.coerce.date().nullable(),
+        effectivePublishedAt: zod.coerce.date(),
+        timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+        timestampFallback: zod.boolean(),
+        capturedAt: zod.coerce.date(),
+        contentHash: zod.string(),
+      }),
+    ),
+    sourceName: zod.string(),
+    canonicalUrl: zod.string(),
+    effectivePublishedAt: zod.coerce.date(),
+    timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+    timestampFallback: zod.boolean(),
+    originalRgiRelevanceScore: zod.number(),
+    originalRgiRelevanceScale: zod.enum(["1-10"]),
+    originalRgiRelevanceField: zod.enum(["relevancyScore"]),
+    normalizedRgiRelevanceScore: zod
+      .number()
+      .min(
+        closeStoryOpportunityResponseOpportunityNormalizedRgiRelevanceScoreMin,
+      )
+      .max(
+        closeStoryOpportunityResponseOpportunityNormalizedRgiRelevanceScoreMax,
+      ),
+    relevanceExplanation: zod.string().nullable(),
+    relevanceComponents: zod.record(zod.string(), zod.unknown()).nullable(),
+    relevanceScoringVersion: zod.string(),
+    relevanceNormalizationVersion: zod.string(),
+    sourceAuthorityScore: zod.number(),
+    primaryTopic: zod.string(),
+    primaryTopicLabel: zod.string(),
+    normalizedTopics: zod.array(zod.string()),
+    unknownTaxonomyTerms: zod.array(zod.string()),
+    discipline: zod.string().nullable(),
+    industries: zod.array(zod.string()),
+    regions: zod.array(zod.string()),
+    entities: zod.array(zod.string()),
+    recommendedAngle: zod
+      .string()
+      .max(closeStoryOpportunityResponseOpportunityRecommendedAngleMax),
+    shortlistPosition: zod.number().min(1),
+    selectionConfiguration: zod.object({
+      minimumNormalizedRelevance: zod.number(),
+      maximumOpportunities: zod.number(),
+      maximumPerSource: zod.number(),
+      maximumPerPrimaryTopic: zod.number(),
+      selectionAlgorithmVersion: zod.string(),
+    }),
+    professorMatches: zod.array(
+      zod.object({
+        professorId: zod.string(),
+        professorName: zod.string(),
+        profileRevision: zod.number(),
+        rank: zod.number().nullable(),
+        totalFitScore: zod.number(),
+        label: zod.enum(["strong", "plausible", "weak"]),
+        dimensions: zod
+          .array(
+            zod.object({
+              dimension: zod.enum([
+                "core_expertise",
+                "research_and_teaching",
+                "experience_and_industries",
+                "topic_interests",
+                "publications_and_themes",
+                "regions_and_affiliations",
+              ]),
+              label: zod.string(),
+              weight: zod.number(),
+              dimensionScore: zod.number(),
+              weightedContribution: zod.number(),
+              matchType: zod.enum(["exact", "alias", "parent_child", "none"]),
+              opportunityConcept: zod.string().nullable(),
+              opportunityLabel: zod.string().nullable(),
+              professorField: zod.string().nullable(),
+              professorValue: zod.string().nullable(),
+            }),
+          )
+          .min(
+            closeStoryOpportunityResponseOpportunityProfessorMatchesItemDimensionsMin,
+          )
+          .max(
+            closeStoryOpportunityResponseOpportunityProfessorMatchesItemDimensionsMax,
+          ),
+        profileCoverage: zod.number(),
+        coveredDimensions: zod.array(
+          zod.enum([
+            "core_expertise",
+            "research_and_teaching",
+            "experience_and_industries",
+            "topic_interests",
+            "publications_and_themes",
+            "regions_and_affiliations",
+          ]),
+        ),
+        missingDimensions: zod.array(
+          zod.enum([
+            "core_expertise",
+            "research_and_teaching",
+            "experience_and_industries",
+            "topic_interests",
+            "publications_and_themes",
+            "regions_and_affiliations",
+          ]),
+        ),
+        taxonomyVersion: zod.string(),
+        matchingAlgorithmVersion: zod.string(),
+        coverageCalculationVersion: zod.string(),
+        exclusions: zod.array(zod.string()),
+        warnings: zod.array(zod.string()),
+        rationale: zod.string(),
+      }),
+    ),
+    selectedProfessor: zod.union([
+      zod.object({
+        professorId: zod.string(),
+        professorName: zod.string(),
+        selectedProfileRevision: zod.number(),
+        selectedMatchRank: zod.number(),
+        selectedFitScore: zod.number(),
+        reason: zod.string().nullable(),
+        selectedBy: zod.string(),
+        selectedAt: zod.coerce.date(),
+      }),
+      zod.null(),
+    ]),
+    selectionHistory: zod.array(
+      zod.object({
+        id: zod.string(),
+        action: zod.enum(["selected", "changed", "cleared"]),
+        professorId: zod.string().nullable(),
+        professorName: zod.string().nullable(),
+        previousProfessorId: zod.string().nullable(),
+        selectedProfileRevision: zod.number().nullable(),
+        reason: zod.string().nullable(),
+        actorId: zod.string(),
+        occurredAt: zod.coerce.date(),
+      }),
+    ),
+    workflowState: zod.enum(["shortlisted", "professor_selected", "closed"]),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+    configurationVersion: zod.string(),
+    taxonomyVersion: zod.string(),
+    matchingAlgorithmVersion: zod.string(),
+  }),
+  readsEnabled: zod.boolean(),
+  writesEnabled: zod.boolean(),
+});
+
+/**
+ * @summary Reopen a closed Story Opportunity
+ */
+export const reopenStoryOpportunityPathIdRegExp = new RegExp(
+  "^[A-Za-z0-9_-]{8,160}$",
+);
+
+export const ReopenStoryOpportunityParams = zod.object({
+  id: zod.coerce.string().regex(reopenStoryOpportunityPathIdRegExp),
+});
+
+export const ReopenStoryOpportunityBody = zod.object({
+  expectedRevision: zod.number().min(1),
+});
+
+export const reopenStoryOpportunityResponseOpportunityNormalizedRgiRelevanceScoreMin = 0;
+export const reopenStoryOpportunityResponseOpportunityNormalizedRgiRelevanceScoreMax = 100;
+
+export const reopenStoryOpportunityResponseOpportunityRecommendedAngleMax = 500;
+
+export const reopenStoryOpportunityResponseOpportunityProfessorMatchesItemDimensionsMin = 6;
+export const reopenStoryOpportunityResponseOpportunityProfessorMatchesItemDimensionsMax = 6;
+
+export const ReopenStoryOpportunityResponse: zod.ZodTypeAny = zod.object({
+  opportunity: zod.object({
+    id: zod.string(),
+    revision: zod.number(),
+    windowId: zod.string(),
+    windowStart: zod.coerce.date(),
+    windowEnd: zod.coerce.date(),
+    operationalTimezone: zod.string(),
+    primaryArticleId: zod.number(),
+    primaryEvidence: zod.object({
+      articleId: zod.number(),
+      headline: zod.string(),
+      canonicalUrl: zod.string(),
+      sourceName: zod.string(),
+      sourceUrl: zod.string().nullable(),
+      author: zod.string().nullable(),
+      excerpt: zod.string().nullable(),
+      publishedAt: zod.coerce.date().nullable(),
+      scrapedAt: zod.coerce.date().nullable(),
+      effectivePublishedAt: zod.coerce.date(),
+      timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+      timestampFallback: zod.boolean(),
+      capturedAt: zod.coerce.date(),
+      contentHash: zod.string(),
+    }),
+    supportingEvidence: zod.array(
+      zod.object({
+        articleId: zod.number(),
+        headline: zod.string(),
+        canonicalUrl: zod.string(),
+        sourceName: zod.string(),
+        sourceUrl: zod.string().nullable(),
+        author: zod.string().nullable(),
+        excerpt: zod.string().nullable(),
+        publishedAt: zod.coerce.date().nullable(),
+        scrapedAt: zod.coerce.date().nullable(),
+        effectivePublishedAt: zod.coerce.date(),
+        timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+        timestampFallback: zod.boolean(),
+        capturedAt: zod.coerce.date(),
+        contentHash: zod.string(),
+      }),
+    ),
+    sourceName: zod.string(),
+    canonicalUrl: zod.string(),
+    effectivePublishedAt: zod.coerce.date(),
+    timestampSource: zod.enum(["publishedAt", "scrapedAt"]),
+    timestampFallback: zod.boolean(),
+    originalRgiRelevanceScore: zod.number(),
+    originalRgiRelevanceScale: zod.enum(["1-10"]),
+    originalRgiRelevanceField: zod.enum(["relevancyScore"]),
+    normalizedRgiRelevanceScore: zod
+      .number()
+      .min(
+        reopenStoryOpportunityResponseOpportunityNormalizedRgiRelevanceScoreMin,
+      )
+      .max(
+        reopenStoryOpportunityResponseOpportunityNormalizedRgiRelevanceScoreMax,
+      ),
+    relevanceExplanation: zod.string().nullable(),
+    relevanceComponents: zod.record(zod.string(), zod.unknown()).nullable(),
+    relevanceScoringVersion: zod.string(),
+    relevanceNormalizationVersion: zod.string(),
+    sourceAuthorityScore: zod.number(),
+    primaryTopic: zod.string(),
+    primaryTopicLabel: zod.string(),
+    normalizedTopics: zod.array(zod.string()),
+    unknownTaxonomyTerms: zod.array(zod.string()),
+    discipline: zod.string().nullable(),
+    industries: zod.array(zod.string()),
+    regions: zod.array(zod.string()),
+    entities: zod.array(zod.string()),
+    recommendedAngle: zod
+      .string()
+      .max(reopenStoryOpportunityResponseOpportunityRecommendedAngleMax),
+    shortlistPosition: zod.number().min(1),
+    selectionConfiguration: zod.object({
+      minimumNormalizedRelevance: zod.number(),
+      maximumOpportunities: zod.number(),
+      maximumPerSource: zod.number(),
+      maximumPerPrimaryTopic: zod.number(),
+      selectionAlgorithmVersion: zod.string(),
+    }),
+    professorMatches: zod.array(
+      zod.object({
+        professorId: zod.string(),
+        professorName: zod.string(),
+        profileRevision: zod.number(),
+        rank: zod.number().nullable(),
+        totalFitScore: zod.number(),
+        label: zod.enum(["strong", "plausible", "weak"]),
+        dimensions: zod
+          .array(
+            zod.object({
+              dimension: zod.enum([
+                "core_expertise",
+                "research_and_teaching",
+                "experience_and_industries",
+                "topic_interests",
+                "publications_and_themes",
+                "regions_and_affiliations",
+              ]),
+              label: zod.string(),
+              weight: zod.number(),
+              dimensionScore: zod.number(),
+              weightedContribution: zod.number(),
+              matchType: zod.enum(["exact", "alias", "parent_child", "none"]),
+              opportunityConcept: zod.string().nullable(),
+              opportunityLabel: zod.string().nullable(),
+              professorField: zod.string().nullable(),
+              professorValue: zod.string().nullable(),
+            }),
+          )
+          .min(
+            reopenStoryOpportunityResponseOpportunityProfessorMatchesItemDimensionsMin,
+          )
+          .max(
+            reopenStoryOpportunityResponseOpportunityProfessorMatchesItemDimensionsMax,
+          ),
+        profileCoverage: zod.number(),
+        coveredDimensions: zod.array(
+          zod.enum([
+            "core_expertise",
+            "research_and_teaching",
+            "experience_and_industries",
+            "topic_interests",
+            "publications_and_themes",
+            "regions_and_affiliations",
+          ]),
+        ),
+        missingDimensions: zod.array(
+          zod.enum([
+            "core_expertise",
+            "research_and_teaching",
+            "experience_and_industries",
+            "topic_interests",
+            "publications_and_themes",
+            "regions_and_affiliations",
+          ]),
+        ),
+        taxonomyVersion: zod.string(),
+        matchingAlgorithmVersion: zod.string(),
+        coverageCalculationVersion: zod.string(),
+        exclusions: zod.array(zod.string()),
+        warnings: zod.array(zod.string()),
+        rationale: zod.string(),
+      }),
+    ),
+    selectedProfessor: zod.union([
+      zod.object({
+        professorId: zod.string(),
+        professorName: zod.string(),
+        selectedProfileRevision: zod.number(),
+        selectedMatchRank: zod.number(),
+        selectedFitScore: zod.number(),
+        reason: zod.string().nullable(),
+        selectedBy: zod.string(),
+        selectedAt: zod.coerce.date(),
+      }),
+      zod.null(),
+    ]),
+    selectionHistory: zod.array(
+      zod.object({
+        id: zod.string(),
+        action: zod.enum(["selected", "changed", "cleared"]),
+        professorId: zod.string().nullable(),
+        professorName: zod.string().nullable(),
+        previousProfessorId: zod.string().nullable(),
+        selectedProfileRevision: zod.number().nullable(),
+        reason: zod.string().nullable(),
+        actorId: zod.string(),
+        occurredAt: zod.coerce.date(),
+      }),
+    ),
+    workflowState: zod.enum(["shortlisted", "professor_selected", "closed"]),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+    configurationVersion: zod.string(),
+    taxonomyVersion: zod.string(),
+    matchingAlgorithmVersion: zod.string(),
+  }),
+  readsEnabled: zod.boolean(),
   writesEnabled: zod.boolean(),
 });
 

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "codegen": "orval --config ./orval.config.ts && printf 'export * from \"./generated/api\";\\nexport * from \"./professors\";\\n' > ../api-zod/src/index.ts && pnpm -w run typecheck:libs",
+    "codegen": "orval --config ./orval.config.ts && node ./scripts/compact-story-opportunity-zod.mjs && printf 'export * from \"./generated/api\";\\nexport * from \"./professors\";\\n' > ../api-zod/src/index.ts && pnpm -w run typecheck:libs",
     "codegen:verify": "node ./scripts/verify-codegen.mjs",
     "test": "tsx --test ./test/*.test.ts"
   },

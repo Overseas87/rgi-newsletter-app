@@ -11,6 +11,7 @@ import newsletterRouter from "./newsletter";
 import jobsRouter from "./jobs";
 import publicRouter from "./public";
 import professorsRouter from "./professors";
+import storyOpportunitiesRouter from "./story-opportunities";
 
 const router: IRouter = Router();
 
@@ -25,6 +26,7 @@ router.use(settingsRouter);
 router.use(newsletterRouter);
 router.use(jobsRouter);
 router.use(professorsRouter);
+router.use(storyOpportunitiesRouter);
 router.use(publicRouter);
 
 export default router;

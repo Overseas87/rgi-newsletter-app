@@ -18,6 +18,9 @@ import type {
 
 import type {
   Article,
+  CalculateStoryOpportunityWindowBody,
+  CalculateStoryOpportunityWindowResponse,
+  ClearStoryOpportunityProfessorBody,
   CreateProfessorProfileBody,
   CreateSourceBody,
   DashboardSummary,
@@ -29,18 +32,26 @@ import type {
   ListDigestArticlesParams,
   ListProfessorProfilesParams,
   ListProfessorProfilesResponse,
+  ListStoryOpportunityWindowsResponse,
   ProfessorLibraryConfigResponse,
+  ProfessorMatchListResponse,
   ProfessorProfileDetailResponse,
   RegenerateDigestBody,
   RejectDigestBody,
   ScrapeResult,
   ScrapeStatus,
+  SelectStoryOpportunityProfessorBody,
   Settings,
   Source,
+  StoryOpportunityConfigResponse,
+  StoryOpportunityDetailResponse,
+  StoryOpportunityListResponse,
+  StoryOpportunityRevisionCommandBody,
   UpdateDigestArticleBody,
   UpdateProfessorProfileBody,
   UpdateSettingsBody,
   UpdateSourceBody,
+  UpdateStoryOpportunityAngleBody,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -739,6 +750,1083 @@ export const useUpdateProfessorProfile = <
   TContext
 > => {
   return useMutation(getUpdateProfessorProfileMutationOptions(options));
+};
+
+/**
+ * @summary Get internal Story Opportunity feature configuration
+ */
+export const getGetStoryOpportunityConfigUrl = () => {
+  return `/api/opportunity-windows/config`;
+};
+
+export const getStoryOpportunityConfig = async (
+  options?: RequestInit,
+): Promise<StoryOpportunityConfigResponse> => {
+  return customFetch<StoryOpportunityConfigResponse>(
+    getGetStoryOpportunityConfigUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetStoryOpportunityConfigQueryKey = () => {
+  return [`/api/opportunity-windows/config`] as const;
+};
+
+export const getGetStoryOpportunityConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStoryOpportunityConfig>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getStoryOpportunityConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetStoryOpportunityConfigQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getStoryOpportunityConfig>>
+  > = ({ signal }) => getStoryOpportunityConfig({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStoryOpportunityConfig>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetStoryOpportunityConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStoryOpportunityConfig>>
+>;
+export type GetStoryOpportunityConfigQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get internal Story Opportunity feature configuration
+ */
+
+export function useGetStoryOpportunityConfig<
+  TData = Awaited<ReturnType<typeof getStoryOpportunityConfig>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getStoryOpportunityConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetStoryOpportunityConfigQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List completed frozen Story Opportunity windows
+ */
+export const getListStoryOpportunityWindowsUrl = () => {
+  return `/api/opportunity-windows`;
+};
+
+export const listStoryOpportunityWindows = async (
+  options?: RequestInit,
+): Promise<ListStoryOpportunityWindowsResponse> => {
+  return customFetch<ListStoryOpportunityWindowsResponse>(
+    getListStoryOpportunityWindowsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListStoryOpportunityWindowsQueryKey = () => {
+  return [`/api/opportunity-windows`] as const;
+};
+
+export const getListStoryOpportunityWindowsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStoryOpportunityWindows>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listStoryOpportunityWindows>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListStoryOpportunityWindowsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listStoryOpportunityWindows>>
+  > = ({ signal }) =>
+    listStoryOpportunityWindows({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStoryOpportunityWindows>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListStoryOpportunityWindowsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStoryOpportunityWindows>>
+>;
+export type ListStoryOpportunityWindowsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List completed frozen Story Opportunity windows
+ */
+
+export function useListStoryOpportunityWindows<
+  TData = Awaited<ReturnType<typeof listStoryOpportunityWindows>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listStoryOpportunityWindows>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListStoryOpportunityWindowsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get the latest completed frozen window and its shortlist
+ */
+export const getGetCurrentStoryOpportunityWindowUrl = () => {
+  return `/api/opportunity-windows/current`;
+};
+
+export const getCurrentStoryOpportunityWindow = async (
+  options?: RequestInit,
+): Promise<StoryOpportunityListResponse> => {
+  return customFetch<StoryOpportunityListResponse>(
+    getGetCurrentStoryOpportunityWindowUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCurrentStoryOpportunityWindowQueryKey = () => {
+  return [`/api/opportunity-windows/current`] as const;
+};
+
+export const getGetCurrentStoryOpportunityWindowQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCurrentStoryOpportunityWindow>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCurrentStoryOpportunityWindow>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCurrentStoryOpportunityWindowQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCurrentStoryOpportunityWindow>>
+  > = ({ signal }) =>
+    getCurrentStoryOpportunityWindow({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCurrentStoryOpportunityWindow>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCurrentStoryOpportunityWindowQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCurrentStoryOpportunityWindow>>
+>;
+export type GetCurrentStoryOpportunityWindowQueryError =
+  ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get the latest completed frozen window and its shortlist
+ */
+
+export function useGetCurrentStoryOpportunityWindow<
+  TData = Awaited<ReturnType<typeof getCurrentStoryOpportunityWindow>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCurrentStoryOpportunityWindow>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCurrentStoryOpportunityWindowQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Explicitly and idempotently calculate one frozen daily window
+ */
+export const getCalculateStoryOpportunityWindowUrl = () => {
+  return `/api/opportunity-windows/calculate`;
+};
+
+export const calculateStoryOpportunityWindow = async (
+  calculateStoryOpportunityWindowBody: CalculateStoryOpportunityWindowBody,
+  options?: RequestInit,
+): Promise<CalculateStoryOpportunityWindowResponse> => {
+  return customFetch<CalculateStoryOpportunityWindowResponse>(
+    getCalculateStoryOpportunityWindowUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(calculateStoryOpportunityWindowBody),
+    },
+  );
+};
+
+export const getCalculateStoryOpportunityWindowMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof calculateStoryOpportunityWindow>>,
+    TError,
+    { data: BodyType<CalculateStoryOpportunityWindowBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof calculateStoryOpportunityWindow>>,
+  TError,
+  { data: BodyType<CalculateStoryOpportunityWindowBody> },
+  TContext
+> => {
+  const mutationKey = ["calculateStoryOpportunityWindow"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof calculateStoryOpportunityWindow>>,
+    { data: BodyType<CalculateStoryOpportunityWindowBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return calculateStoryOpportunityWindow(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CalculateStoryOpportunityWindowMutationResult = NonNullable<
+  Awaited<ReturnType<typeof calculateStoryOpportunityWindow>>
+>;
+export type CalculateStoryOpportunityWindowMutationBody =
+  BodyType<CalculateStoryOpportunityWindowBody>;
+export type CalculateStoryOpportunityWindowMutationError =
+  ErrorType<ErrorResponse>;
+
+/**
+ * @summary Explicitly and idempotently calculate one frozen daily window
+ */
+export const useCalculateStoryOpportunityWindow = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof calculateStoryOpportunityWindow>>,
+    TError,
+    { data: BodyType<CalculateStoryOpportunityWindowBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof calculateStoryOpportunityWindow>>,
+  TError,
+  { data: BodyType<CalculateStoryOpportunityWindowBody> },
+  TContext
+> => {
+  return useMutation(
+    getCalculateStoryOpportunityWindowMutationOptions(options),
+  );
+};
+
+/**
+ * @summary List the frozen shortlist for one window
+ */
+export const getListStoryOpportunitiesForWindowUrl = (windowId: string) => {
+  return `/api/opportunity-windows/${windowId}/opportunities`;
+};
+
+export const listStoryOpportunitiesForWindow = async (
+  windowId: string,
+  options?: RequestInit,
+): Promise<StoryOpportunityListResponse> => {
+  return customFetch<StoryOpportunityListResponse>(
+    getListStoryOpportunitiesForWindowUrl(windowId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListStoryOpportunitiesForWindowQueryKey = (
+  windowId: string,
+) => {
+  return [`/api/opportunity-windows/${windowId}/opportunities`] as const;
+};
+
+export const getListStoryOpportunitiesForWindowQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStoryOpportunitiesForWindow>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  windowId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStoryOpportunitiesForWindow>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getListStoryOpportunitiesForWindowQueryKey(windowId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listStoryOpportunitiesForWindow>>
+  > = ({ signal }) =>
+    listStoryOpportunitiesForWindow(windowId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!windowId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStoryOpportunitiesForWindow>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListStoryOpportunitiesForWindowQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStoryOpportunitiesForWindow>>
+>;
+export type ListStoryOpportunitiesForWindowQueryError =
+  ErrorType<ErrorResponse>;
+
+/**
+ * @summary List the frozen shortlist for one window
+ */
+
+export function useListStoryOpportunitiesForWindow<
+  TData = Awaited<ReturnType<typeof listStoryOpportunitiesForWindow>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  windowId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStoryOpportunitiesForWindow>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListStoryOpportunitiesForWindowQueryOptions(
+    windowId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get one Story Opportunity workbench record
+ */
+export const getGetStoryOpportunityUrl = (id: string) => {
+  return `/api/story-opportunities/${id}`;
+};
+
+export const getStoryOpportunity = async (
+  id: string,
+  options?: RequestInit,
+): Promise<StoryOpportunityDetailResponse> => {
+  return customFetch<StoryOpportunityDetailResponse>(
+    getGetStoryOpportunityUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetStoryOpportunityQueryKey = (id: string) => {
+  return [`/api/story-opportunities/${id}`] as const;
+};
+
+export const getGetStoryOpportunityQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStoryOpportunity>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStoryOpportunity>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStoryOpportunityQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getStoryOpportunity>>
+  > = ({ signal }) => getStoryOpportunity(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStoryOpportunity>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetStoryOpportunityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStoryOpportunity>>
+>;
+export type GetStoryOpportunityQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get one Story Opportunity workbench record
+ */
+
+export function useGetStoryOpportunity<
+  TData = Awaited<ReturnType<typeof getStoryOpportunity>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStoryOpportunity>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetStoryOpportunityQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List persisted deterministic Professor Matches
+ */
+export const getListStoryOpportunityProfessorMatchesUrl = (id: string) => {
+  return `/api/story-opportunities/${id}/matches`;
+};
+
+export const listStoryOpportunityProfessorMatches = async (
+  id: string,
+  options?: RequestInit,
+): Promise<ProfessorMatchListResponse> => {
+  return customFetch<ProfessorMatchListResponse>(
+    getListStoryOpportunityProfessorMatchesUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListStoryOpportunityProfessorMatchesQueryKey = (id: string) => {
+  return [`/api/story-opportunities/${id}/matches`] as const;
+};
+
+export const getListStoryOpportunityProfessorMatchesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStoryOpportunityProfessorMatches>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStoryOpportunityProfessorMatches>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getListStoryOpportunityProfessorMatchesQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listStoryOpportunityProfessorMatches>>
+  > = ({ signal }) =>
+    listStoryOpportunityProfessorMatches(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStoryOpportunityProfessorMatches>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListStoryOpportunityProfessorMatchesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStoryOpportunityProfessorMatches>>
+>;
+export type ListStoryOpportunityProfessorMatchesQueryError =
+  ErrorType<ErrorResponse>;
+
+/**
+ * @summary List persisted deterministic Professor Matches
+ */
+
+export function useListStoryOpportunityProfessorMatches<
+  TData = Awaited<ReturnType<typeof listStoryOpportunityProfessorMatches>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listStoryOpportunityProfessorMatches>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListStoryOpportunityProfessorMatchesQueryOptions(
+    id,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Manually select or change the professor for an opportunity
+ */
+export const getSelectStoryOpportunityProfessorUrl = (id: string) => {
+  return `/api/story-opportunities/${id}/select-professor`;
+};
+
+export const selectStoryOpportunityProfessor = async (
+  id: string,
+  selectStoryOpportunityProfessorBody: SelectStoryOpportunityProfessorBody,
+  options?: RequestInit,
+): Promise<StoryOpportunityDetailResponse> => {
+  return customFetch<StoryOpportunityDetailResponse>(
+    getSelectStoryOpportunityProfessorUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(selectStoryOpportunityProfessorBody),
+    },
+  );
+};
+
+export const getSelectStoryOpportunityProfessorMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof selectStoryOpportunityProfessor>>,
+    TError,
+    { id: string; data: BodyType<SelectStoryOpportunityProfessorBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof selectStoryOpportunityProfessor>>,
+  TError,
+  { id: string; data: BodyType<SelectStoryOpportunityProfessorBody> },
+  TContext
+> => {
+  const mutationKey = ["selectStoryOpportunityProfessor"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof selectStoryOpportunityProfessor>>,
+    { id: string; data: BodyType<SelectStoryOpportunityProfessorBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return selectStoryOpportunityProfessor(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SelectStoryOpportunityProfessorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof selectStoryOpportunityProfessor>>
+>;
+export type SelectStoryOpportunityProfessorMutationBody =
+  BodyType<SelectStoryOpportunityProfessorBody>;
+export type SelectStoryOpportunityProfessorMutationError =
+  ErrorType<ErrorResponse>;
+
+/**
+ * @summary Manually select or change the professor for an opportunity
+ */
+export const useSelectStoryOpportunityProfessor = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof selectStoryOpportunityProfessor>>,
+    TError,
+    { id: string; data: BodyType<SelectStoryOpportunityProfessorBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof selectStoryOpportunityProfessor>>,
+  TError,
+  { id: string; data: BodyType<SelectStoryOpportunityProfessorBody> },
+  TContext
+> => {
+  return useMutation(
+    getSelectStoryOpportunityProfessorMutationOptions(options),
+  );
+};
+
+/**
+ * @summary Clear the current manual professor selection
+ */
+export const getClearStoryOpportunityProfessorUrl = (id: string) => {
+  return `/api/story-opportunities/${id}/clear-professor`;
+};
+
+export const clearStoryOpportunityProfessor = async (
+  id: string,
+  clearStoryOpportunityProfessorBody: ClearStoryOpportunityProfessorBody,
+  options?: RequestInit,
+): Promise<StoryOpportunityDetailResponse> => {
+  return customFetch<StoryOpportunityDetailResponse>(
+    getClearStoryOpportunityProfessorUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(clearStoryOpportunityProfessorBody),
+    },
+  );
+};
+
+export const getClearStoryOpportunityProfessorMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearStoryOpportunityProfessor>>,
+    TError,
+    { id: string; data: BodyType<ClearStoryOpportunityProfessorBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearStoryOpportunityProfessor>>,
+  TError,
+  { id: string; data: BodyType<ClearStoryOpportunityProfessorBody> },
+  TContext
+> => {
+  const mutationKey = ["clearStoryOpportunityProfessor"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearStoryOpportunityProfessor>>,
+    { id: string; data: BodyType<ClearStoryOpportunityProfessorBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return clearStoryOpportunityProfessor(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearStoryOpportunityProfessorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearStoryOpportunityProfessor>>
+>;
+export type ClearStoryOpportunityProfessorMutationBody =
+  BodyType<ClearStoryOpportunityProfessorBody>;
+export type ClearStoryOpportunityProfessorMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Clear the current manual professor selection
+ */
+export const useClearStoryOpportunityProfessor = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearStoryOpportunityProfessor>>,
+    TError,
+    { id: string; data: BodyType<ClearStoryOpportunityProfessorBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clearStoryOpportunityProfessor>>,
+  TError,
+  { id: string; data: BodyType<ClearStoryOpportunityProfessorBody> },
+  TContext
+> => {
+  return useMutation(getClearStoryOpportunityProfessorMutationOptions(options));
+};
+
+/**
+ * @summary Update the editor-controlled recommended angle
+ */
+export const getUpdateStoryOpportunityAngleUrl = (id: string) => {
+  return `/api/story-opportunities/${id}/update-angle`;
+};
+
+export const updateStoryOpportunityAngle = async (
+  id: string,
+  updateStoryOpportunityAngleBody: UpdateStoryOpportunityAngleBody,
+  options?: RequestInit,
+): Promise<StoryOpportunityDetailResponse> => {
+  return customFetch<StoryOpportunityDetailResponse>(
+    getUpdateStoryOpportunityAngleUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(updateStoryOpportunityAngleBody),
+    },
+  );
+};
+
+export const getUpdateStoryOpportunityAngleMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateStoryOpportunityAngle>>,
+    TError,
+    { id: string; data: BodyType<UpdateStoryOpportunityAngleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateStoryOpportunityAngle>>,
+  TError,
+  { id: string; data: BodyType<UpdateStoryOpportunityAngleBody> },
+  TContext
+> => {
+  const mutationKey = ["updateStoryOpportunityAngle"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateStoryOpportunityAngle>>,
+    { id: string; data: BodyType<UpdateStoryOpportunityAngleBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateStoryOpportunityAngle(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateStoryOpportunityAngleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateStoryOpportunityAngle>>
+>;
+export type UpdateStoryOpportunityAngleMutationBody =
+  BodyType<UpdateStoryOpportunityAngleBody>;
+export type UpdateStoryOpportunityAngleMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update the editor-controlled recommended angle
+ */
+export const useUpdateStoryOpportunityAngle = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateStoryOpportunityAngle>>,
+    TError,
+    { id: string; data: BodyType<UpdateStoryOpportunityAngleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateStoryOpportunityAngle>>,
+  TError,
+  { id: string; data: BodyType<UpdateStoryOpportunityAngleBody> },
+  TContext
+> => {
+  return useMutation(getUpdateStoryOpportunityAngleMutationOptions(options));
+};
+
+/**
+ * @summary Close a Story Opportunity
+ */
+export const getCloseStoryOpportunityUrl = (id: string) => {
+  return `/api/story-opportunities/${id}/close`;
+};
+
+export const closeStoryOpportunity = async (
+  id: string,
+  storyOpportunityRevisionCommandBody: StoryOpportunityRevisionCommandBody,
+  options?: RequestInit,
+): Promise<StoryOpportunityDetailResponse> => {
+  return customFetch<StoryOpportunityDetailResponse>(
+    getCloseStoryOpportunityUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(storyOpportunityRevisionCommandBody),
+    },
+  );
+};
+
+export const getCloseStoryOpportunityMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeStoryOpportunity>>,
+    TError,
+    { id: string; data: BodyType<StoryOpportunityRevisionCommandBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof closeStoryOpportunity>>,
+  TError,
+  { id: string; data: BodyType<StoryOpportunityRevisionCommandBody> },
+  TContext
+> => {
+  const mutationKey = ["closeStoryOpportunity"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof closeStoryOpportunity>>,
+    { id: string; data: BodyType<StoryOpportunityRevisionCommandBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return closeStoryOpportunity(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CloseStoryOpportunityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof closeStoryOpportunity>>
+>;
+export type CloseStoryOpportunityMutationBody =
+  BodyType<StoryOpportunityRevisionCommandBody>;
+export type CloseStoryOpportunityMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Close a Story Opportunity
+ */
+export const useCloseStoryOpportunity = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeStoryOpportunity>>,
+    TError,
+    { id: string; data: BodyType<StoryOpportunityRevisionCommandBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof closeStoryOpportunity>>,
+  TError,
+  { id: string; data: BodyType<StoryOpportunityRevisionCommandBody> },
+  TContext
+> => {
+  return useMutation(getCloseStoryOpportunityMutationOptions(options));
+};
+
+/**
+ * @summary Reopen a closed Story Opportunity
+ */
+export const getReopenStoryOpportunityUrl = (id: string) => {
+  return `/api/story-opportunities/${id}/reopen`;
+};
+
+export const reopenStoryOpportunity = async (
+  id: string,
+  storyOpportunityRevisionCommandBody: StoryOpportunityRevisionCommandBody,
+  options?: RequestInit,
+): Promise<StoryOpportunityDetailResponse> => {
+  return customFetch<StoryOpportunityDetailResponse>(
+    getReopenStoryOpportunityUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(storyOpportunityRevisionCommandBody),
+    },
+  );
+};
+
+export const getReopenStoryOpportunityMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reopenStoryOpportunity>>,
+    TError,
+    { id: string; data: BodyType<StoryOpportunityRevisionCommandBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reopenStoryOpportunity>>,
+  TError,
+  { id: string; data: BodyType<StoryOpportunityRevisionCommandBody> },
+  TContext
+> => {
+  const mutationKey = ["reopenStoryOpportunity"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reopenStoryOpportunity>>,
+    { id: string; data: BodyType<StoryOpportunityRevisionCommandBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return reopenStoryOpportunity(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReopenStoryOpportunityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reopenStoryOpportunity>>
+>;
+export type ReopenStoryOpportunityMutationBody =
+  BodyType<StoryOpportunityRevisionCommandBody>;
+export type ReopenStoryOpportunityMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Reopen a closed Story Opportunity
+ */
+export const useReopenStoryOpportunity = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reopenStoryOpportunity>>,
+    TError,
+    { id: string; data: BodyType<StoryOpportunityRevisionCommandBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof reopenStoryOpportunity>>,
+  TError,
+  { id: string; data: BodyType<StoryOpportunityRevisionCommandBody> },
+  TContext
+> => {
+  return useMutation(getReopenStoryOpportunityMutationOptions(options));
 };
 
 /**
