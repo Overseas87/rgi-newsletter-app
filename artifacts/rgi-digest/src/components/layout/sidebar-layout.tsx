@@ -9,6 +9,7 @@ import {
   Database,
   Settings as SettingsIcon,
   GraduationCap,
+  Lightbulb,
   RefreshCw,
   Menu,
   Wand2,
@@ -38,6 +39,7 @@ const NAV_GROUPS = [
     label: "Intelligence",
     items: [
       { path: "/", label: "Dashboard", icon: LayoutDashboard },
+      { path: "/opportunities", label: "Daily Opportunities", icon: Lightbulb },
       { path: "/feed", label: "Intelligence Feed", icon: Rss },
       { path: "/topics", label: "Today's Topics", icon: Tag },
     ],

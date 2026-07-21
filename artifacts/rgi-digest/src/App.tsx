@@ -15,6 +15,8 @@ import Published from "@/pages/published";
 import Rejected from "@/pages/rejected";
 import Sources from "@/pages/sources";
 import Professors from "@/pages/professors";
+import Opportunities from "@/pages/opportunities";
+import OpportunityDetail from "@/pages/opportunity-detail";
 import Settings from "@/pages/settings";
 import About from "@/pages/about";
 import NotFound from "@/pages/not-found";
@@ -43,6 +45,8 @@ function Router() {
         <Switch>
           <Route path="/"><SafeRoute><Dashboard /></SafeRoute></Route>
           <Route path="/feed"><SafeRoute><Feed /></SafeRoute></Route>
+          <Route path="/opportunities"><SafeRoute><Opportunities /></SafeRoute></Route>
+          <Route path="/opportunities/:id"><SafeRoute><OpportunityDetail /></SafeRoute></Route>
           <Route path="/articles/:id"><SafeRoute><ArticleDetail /></SafeRoute></Route>
           <Route path="/topics"><SafeRoute><Topics /></SafeRoute></Route>
           <Route path="/review"><SafeRoute><Review /></SafeRoute></Route>

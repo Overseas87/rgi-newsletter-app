@@ -31,14 +31,22 @@ type ProfessorFormState = {
   coursesTaught: string;
   expertiseTags: string;
   researchInterests: string;
+  professionalExperienceTags: string;
+  academicExperienceTags: string;
   industries: string;
+  topicInterests: string;
   regions: string;
+  affiliations: string;
   professionalBackground: string;
   approvedBio: string;
   publications: string;
+  publicationTopicTags: string;
   recurringThemes: string;
   contactableTopics: string;
+  restrictedTopics: string;
   doNotContactTopics: string;
+  institutionalConflicts: string;
+  affiliationConcerns: string;
   status: ProfileStatus;
 };
 
@@ -49,14 +57,22 @@ const EMPTY_FORM: ProfessorFormState = {
   coursesTaught: "",
   expertiseTags: "",
   researchInterests: "",
+  professionalExperienceTags: "",
+  academicExperienceTags: "",
   industries: "",
+  topicInterests: "",
   regions: "",
+  affiliations: "",
   professionalBackground: "",
   approvedBio: "",
   publications: "",
+  publicationTopicTags: "",
   recurringThemes: "",
   contactableTopics: "",
+  restrictedTopics: "",
   doNotContactTopics: "",
+  institutionalConflicts: "",
+  affiliationConcerns: "",
   status: "active",
 };
 
@@ -87,14 +103,22 @@ function formFromProfile(profile?: ProfessorProfile): ProfessorFormState {
     coursesTaught: join(profile.coursesTaught),
     expertiseTags: join(profile.expertiseTags),
     researchInterests: join(profile.researchInterests),
+    professionalExperienceTags: join(profile.professionalExperienceTags),
+    academicExperienceTags: join(profile.academicExperienceTags),
     industries: join(profile.industries),
+    topicInterests: join(profile.topicInterests),
     regions: join(profile.regions),
+    affiliations: join(profile.affiliations),
     professionalBackground: profile.professionalBackground,
     approvedBio: profile.approvedBio,
     publications: join(profile.publications),
+    publicationTopicTags: join(profile.publicationTopicTags),
     recurringThemes: join(profile.recurringThemes),
     contactableTopics: join(profile.contactableTopics),
+    restrictedTopics: join(profile.restrictedTopics),
     doNotContactTopics: join(profile.doNotContactTopics),
+    institutionalConflicts: join(profile.institutionalConflicts),
+    affiliationConcerns: join(profile.affiliationConcerns),
     status: profile.status,
   };
 }
@@ -107,14 +131,22 @@ function payloadFromForm(form: ProfessorFormState): CreateProfessorProfileBody {
     coursesTaught: split(form.coursesTaught),
     expertiseTags: split(form.expertiseTags),
     researchInterests: split(form.researchInterests),
+    professionalExperienceTags: split(form.professionalExperienceTags),
+    academicExperienceTags: split(form.academicExperienceTags),
     industries: split(form.industries),
+    topicInterests: split(form.topicInterests),
     regions: split(form.regions),
+    affiliations: split(form.affiliations),
     professionalBackground: form.professionalBackground,
     approvedBio: form.approvedBio,
     publications: split(form.publications),
+    publicationTopicTags: split(form.publicationTopicTags),
     recurringThemes: split(form.recurringThemes),
     contactableTopics: split(form.contactableTopics),
+    restrictedTopics: split(form.restrictedTopics),
     doNotContactTopics: split(form.doNotContactTopics),
+    institutionalConflicts: split(form.institutionalConflicts),
+    affiliationConcerns: split(form.affiliationConcerns),
     status: form.status,
   };
 }
@@ -262,11 +294,19 @@ function ProfessorForm({
             ["expertiseTags", "Expertise tags", "strategy, governance, global trade"],
             ["coursesTaught", "Courses taught", "Course names separated by commas"],
             ["researchInterests", "Research interests", "Research areas separated by commas"],
+            ["professionalExperienceTags", "Professional experience tags", "board advisory, consulting, executive leadership"],
+            ["academicExperienceTags", "Academic experience tags", "business education, curriculum design"],
             ["industries", "Industries", "Industries separated by commas"],
+            ["topicInterests", "Topic interests", "Approved editorial interests"],
             ["regions", "Regions", "Regions separated by commas"],
+            ["affiliations", "Affiliations", "Approved institutions and organizations"],
             ["recurringThemes", "Recurring themes", "Themes separated by commas"],
             ["contactableTopics", "Contactable topics", "Topics this professor can address"],
+            ["publicationTopicTags", "Past-publication topic tags", "Approved topic tags, not publication titles"],
+            ["restrictedTopics", "Restricted topics", "Hard topic restrictions"],
             ["doNotContactTopics", "Do-not-contact topics", "Topics to avoid"],
+            ["institutionalConflicts", "Hard institutional conflicts", "Exact institution or source names"],
+            ["affiliationConcerns", "Affiliation concerns", "Soft concerns shown as warnings"],
             ["publications", "Publications", "Publication titles or citations"],
           ].map(([key, label, placeholder]) => (
             <div key={key}>
@@ -324,8 +364,12 @@ export default function Professors() {
       profile.department,
       ...profile.expertiseTags,
       ...profile.researchInterests,
+      ...profile.professionalExperienceTags,
+      ...profile.academicExperienceTags,
       ...profile.industries,
+      ...profile.topicInterests,
       ...profile.regions,
+      ...profile.affiliations,
     ].join(" ").toLowerCase().includes(q);
   });
   return (
@@ -421,6 +465,7 @@ export default function Professors() {
                     <p className="mt-1 text-xs text-muted-foreground">
                       Contactable topics: <span className="text-foreground">{tagPreview(profile.contactableTopics)}</span>
                     </p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">Matching profile revision {profile.profileRevision}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" onClick={() => { setEditing(profile); setAdding(false); }} disabled={!writesEnabled}>
