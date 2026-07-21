@@ -12,15 +12,26 @@ import { getFirebaseBundle, isFirestoreTemporarilyDegraded, withFirestoreRetry, 
 export const PROFESSOR_PROFILES_COLLECTION = "professor_profiles";
 
 export function professorLibraryWritesEnabled(): boolean {
-  return process.env.PROFESSOR_LIBRARY_WRITES_ENABLED === "true";
+  return (
+    process.env.PROFESSOR_LIBRARY_WRITES_ENABLED === "true" &&
+    process.env.RGI_READ_ONLY_STARTUP !== "true"
+  );
 }
 
 export function professorWritesDisabledPayload() {
+  if (process.env.RGI_READ_ONLY_STARTUP === "true") {
+    return {
+      error: "Professor Library writes are blocked by read-only startup",
+      code: "READ_ONLY_STARTUP",
+      retryable: false,
+      userMessage: "Professor Library editing is blocked while the application is in read-only mode.",
+    };
+  }
   return {
     error: "Professor Library writes are disabled",
     code: "PROFESSOR_LIBRARY_WRITES_DISABLED",
     retryable: false,
-    userMessage: "Professor Library editing is disabled in this environment until administrator authentication is implemented.",
+    userMessage: "Professor Library editing is disabled in this environment.",
   };
 }
 
@@ -35,7 +46,7 @@ function isoDate(value: unknown): string {
   return date.toISOString();
 }
 
-function professorFromDoc(doc: any): ProfessorProfile {
+export function professorProfileFromDoc(doc: any): ProfessorProfile {
   const data = doc.data?.() ?? doc;
   return ProfessorProfileSchema.parse({
     ...data,
@@ -50,16 +61,19 @@ function createDoc(profile: CreateProfessorProfileInput, id: string, FieldValue:
   return {
     ...parsed,
     id,
-    schemaVersion: 1,
+    schemaVersion: 2,
+    profileRevision: 1,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };
 }
 
-function updateDoc(patch: UpdateProfessorProfileInput, FieldValue: any): Record<string, unknown> {
+function updateDoc(patch: UpdateProfessorProfileInput, FieldValue: any, profileRevision: number): Record<string, unknown> {
   const parsed = UpdateProfessorProfileBodySchema.parse(patch);
   return {
     ...parsed,
+    schemaVersion: 2,
+    profileRevision,
     updatedAt: FieldValue.serverTimestamp(),
   };
 }
@@ -78,7 +92,7 @@ export async function listProfessorProfilesFromDb(db: any, query: unknown = {}):
     return ref.get();
   });
   return snapshot.docs
-    .map(professorFromDoc)
+    .map(professorProfileFromDoc)
     .sort((a: ProfessorProfile, b: ProfessorProfile) => a.fullName.localeCompare(b.fullName));
 }
 
@@ -90,7 +104,7 @@ export async function getProfessorProfile(id: string): Promise<ProfessorProfile 
 
 export async function getProfessorProfileFromDb(db: any, id: string): Promise<ProfessorProfile | null> {
   const snapshot: any = await withTimeout("Read professor profile", db.collection(PROFESSOR_PROFILES_COLLECTION).doc(id).get());
-  return snapshot.exists ? professorFromDoc(snapshot) : null;
+  return snapshot.exists ? professorProfileFromDoc(snapshot) : null;
 }
 
 export async function createProfessorProfile(profile: CreateProfessorProfileInput): Promise<ProfessorProfile> {
@@ -102,7 +116,7 @@ export async function createProfessorProfile(profile: CreateProfessorProfileInpu
 export async function createProfessorProfileInDb(db: any, FieldValue: any, profile: CreateProfessorProfileInput): Promise<ProfessorProfile> {
   const ref = db.collection(PROFESSOR_PROFILES_COLLECTION).doc();
   await withTimeout("Create professor profile", ref.set(createDoc(profile, ref.id, FieldValue)));
-  return professorFromDoc(await withTimeout("Read created professor profile", ref.get()));
+  return professorProfileFromDoc(await withTimeout("Read created professor profile", ref.get()));
 }
 
 export async function updateProfessorProfile(id: string, patch: UpdateProfessorProfileInput): Promise<ProfessorProfile | null> {
@@ -113,8 +127,16 @@ export async function updateProfessorProfile(id: string, patch: UpdateProfessorP
 
 export async function updateProfessorProfileInDb(db: any, FieldValue: any, id: string, patch: UpdateProfessorProfileInput): Promise<ProfessorProfile | null> {
   const ref = db.collection(PROFESSOR_PROFILES_COLLECTION).doc(id);
-  const snapshot: any = await withTimeout("Read professor profile before update", ref.get());
-  if (!snapshot.exists) return null;
-  await withTimeout("Update professor profile", ref.set(updateDoc(patch, FieldValue), { merge: true }));
-  return professorFromDoc(await withTimeout("Read updated professor profile", ref.get()));
+  const updated = await withTimeout(
+    "Update professor profile",
+    db.runTransaction(async (transaction: any) => {
+      const snapshot: any = await transaction.get(ref);
+      if (!snapshot.exists) return false;
+      const current = professorProfileFromDoc(snapshot);
+      transaction.set(ref, updateDoc(patch, FieldValue, current.profileRevision + 1), { merge: true });
+      return true;
+    }),
+  );
+  if (!updated) return null;
+  return professorProfileFromDoc(await withTimeout("Read updated professor profile", ref.get()));
 }

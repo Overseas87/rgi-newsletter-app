@@ -8,6 +8,7 @@ import {
   UpdateProfessorProfileBodySchema,
 } from "@workspace/api-zod";
 import { sendApiError } from "../lib/api-errors";
+import { requireInternalEditor } from "../lib/internal-editor-auth";
 import {
   createProfessorProfile,
   getProfessorProfile,
@@ -18,6 +19,7 @@ import {
 } from "../lib/professor-profiles";
 
 const router: IRouter = Router();
+router.use(requireInternalEditor);
 
 function validationError(error: { issues: Array<{ path: Array<string | number>; message: string }> }) {
   return {

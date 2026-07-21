@@ -4,6 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { EditorAuthGate } from "@/components/editor-auth-gate";
+import { EditorAuthProvider } from "@/lib/editor-auth";
 import type { ReactNode } from "react";
 
 import Dashboard from "@/pages/dashboard";
@@ -15,6 +17,8 @@ import Published from "@/pages/published";
 import Rejected from "@/pages/rejected";
 import Sources from "@/pages/sources";
 import Professors from "@/pages/professors";
+import Opportunities from "@/pages/opportunities";
+import OpportunityDetail from "@/pages/opportunity-detail";
 import Settings from "@/pages/settings";
 import About from "@/pages/about";
 import NotFound from "@/pages/not-found";
@@ -43,13 +47,15 @@ function Router() {
         <Switch>
           <Route path="/"><SafeRoute><Dashboard /></SafeRoute></Route>
           <Route path="/feed"><SafeRoute><Feed /></SafeRoute></Route>
+          <Route path="/opportunities"><SafeRoute><EditorAuthGate><Opportunities /></EditorAuthGate></SafeRoute></Route>
+          <Route path="/opportunities/:id"><SafeRoute><EditorAuthGate><OpportunityDetail /></EditorAuthGate></SafeRoute></Route>
           <Route path="/articles/:id"><SafeRoute><ArticleDetail /></SafeRoute></Route>
           <Route path="/topics"><SafeRoute><Topics /></SafeRoute></Route>
           <Route path="/review"><SafeRoute><Review /></SafeRoute></Route>
           <Route path="/published"><SafeRoute><Published /></SafeRoute></Route>
           <Route path="/rejected"><SafeRoute><Rejected /></SafeRoute></Route>
           <Route path="/sources"><SafeRoute><Sources /></SafeRoute></Route>
-          <Route path="/professors"><SafeRoute><Professors /></SafeRoute></Route>
+          <Route path="/professors"><SafeRoute><EditorAuthGate><Professors /></EditorAuthGate></SafeRoute></Route>
           <Route path="/settings"><SafeRoute><Settings /></SafeRoute></Route>
           <Route path="/about"><SafeRoute><About /></SafeRoute></Route>
           <Route><SafeRoute><NotFound /></SafeRoute></Route>
@@ -63,12 +69,14 @@ function App() {
   return (
     <ErrorBoundary fallbackTitle="The app hit a recoverable error">
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
+        <EditorAuthProvider>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </EditorAuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

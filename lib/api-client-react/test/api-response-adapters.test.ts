@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 
 import {
+  getCurrentStoryOpportunityWindow,
   getDashboardSummary,
   listArticles,
   listDigestArticles,
   listSources,
+  selectStoryOpportunityProfessor,
 } from "../src/generated/api";
 import { ApiError, setAuthTokenGetter, setBaseUrl } from "../src/custom-fetch";
 
@@ -116,4 +118,71 @@ test("source reads force no-store JSON handling and normalize envelopes", async 
   assert.deepEqual(result, [{ id: "source-1", weight: 1.25 }]);
   assert.equal(capturedInit?.cache, "no-store");
   assert.match(new Headers(capturedInit?.headers).get("accept") ?? "", /application\/json/);
+});
+
+test("Story Opportunity operations use the generated endpoint-specific method, body, and bearer credential", async () => {
+  const requests: { input: string; init?: RequestInit }[] = [];
+  setAuthTokenGetter(() => "editor-test-token");
+  globalThis.fetch = async (input, init) => {
+    requests.push({ input: String(input), init });
+    return jsonResponse(
+      requests.length === 1
+        ? {
+            window: null,
+            items: [],
+            total: 0,
+            readsEnabled: true,
+            writesEnabled: true,
+          }
+        : {
+            opportunity: { id: "opp_test_01" },
+            readsEnabled: true,
+            writesEnabled: true,
+          },
+    );
+  };
+
+  await getCurrentStoryOpportunityWindow();
+  await selectStoryOpportunityProfessor("opp_test_01", {
+    professorId: "prof_test_01",
+    expectedRevision: 1,
+    reason: "Editorial rationale",
+  });
+
+  assert.equal(requests[0]?.input, "/api/opportunity-windows/current");
+  assert.equal(requests[0]?.init?.method, "GET");
+  assert.equal(new Headers(requests[0]?.init?.headers).get("authorization"), "Bearer editor-test-token");
+  assert.equal(requests[1]?.input, "/api/story-opportunities/opp_test_01/select-professor");
+  assert.equal(requests[1]?.init?.method, "POST");
+  assert.equal(new Headers(requests[1]?.init?.headers).get("content-type"), "application/json");
+  assert.deepEqual(JSON.parse(String(requests[1]?.init?.body)), {
+    professorId: "prof_test_01",
+    expectedRevision: 1,
+    reason: "Editorial rationale",
+  });
+});
+
+test("Story Opportunity reads preserve authorization and feature errors", async () => {
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        error: "Story Opportunity reads are disabled",
+        code: "STORY_OPPORTUNITIES_READS_DISABLED",
+      }),
+      {
+        status: 403,
+        statusText: "Forbidden",
+        headers: { "content-type": "application/json" },
+      },
+    );
+
+  await assert.rejects(getCurrentStoryOpportunityWindow(), (error: unknown) => {
+    assert.ok(error instanceof ApiError);
+    assert.equal(error.status, 403);
+    assert.deepEqual(error.data, {
+      error: "Story Opportunity reads are disabled",
+      code: "STORY_OPPORTUNITIES_READS_DISABLED",
+    });
+    return true;
+  });
 });

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const ProfessorProfileStatusSchema = z.enum(["active", "inactive"]);
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 function normalizeText(value: string): string {
   return value.trim().replace(/\s+/g, " ");
@@ -58,16 +58,25 @@ export const ProfessorProfileSchema = z.object({
   coursesTaught: textList(40, 120),
   expertiseTags: textList(40, 80, normalizeTag),
   researchInterests: textList(40, 160),
+  professionalExperienceTags: textList(40, 120),
+  academicExperienceTags: textList(40, 120),
   industries: textList(30, 80),
+  topicInterests: textList(40, 120),
   regions: textList(30, 80),
+  affiliations: textList(40, 160),
   professionalBackground: optionalText(2000),
   approvedBio: optionalText(2000),
   publications: textList(40, 240),
+  publicationTopicTags: textList(40, 120),
   recurringThemes: textList(40, 120),
   contactableTopics: textList(40, 120),
+  restrictedTopics: textList(40, 120),
   doNotContactTopics: textList(40, 120),
+  institutionalConflicts: textList(40, 160),
+  affiliationConcerns: textList(40, 160),
   status: ProfessorProfileStatusSchema.default("active"),
-  schemaVersion: z.literal(SCHEMA_VERSION).default(SCHEMA_VERSION),
+  schemaVersion: z.number().int().min(1).default(SCHEMA_VERSION),
+  profileRevision: z.number().int().min(1).default(1),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -79,14 +88,22 @@ const professorProfileWritableFields = {
   coursesTaught: textList(40, 120),
   expertiseTags: textList(40, 80, normalizeTag),
   researchInterests: textList(40, 160),
+  professionalExperienceTags: textList(40, 120),
+  academicExperienceTags: textList(40, 120),
   industries: textList(30, 80),
+  topicInterests: textList(40, 120),
   regions: textList(30, 80),
+  affiliations: textList(40, 160),
   professionalBackground: optionalText(2000),
   approvedBio: optionalText(2000),
   publications: textList(40, 240),
+  publicationTopicTags: textList(40, 120),
   recurringThemes: textList(40, 120),
   contactableTopics: textList(40, 120),
+  restrictedTopics: textList(40, 120),
   doNotContactTopics: textList(40, 120),
+  institutionalConflicts: textList(40, 160),
+  affiliationConcerns: textList(40, 160),
   status: ProfessorProfileStatusSchema.default("active"),
 } satisfies z.ZodRawShape;
 

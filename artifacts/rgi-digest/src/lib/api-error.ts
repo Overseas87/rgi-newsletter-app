@@ -1,8 +1,30 @@
-export function userSafeErrorMessage(error: unknown, fallback: string): string {
-  const responseData = typeof error === "object" && error !== null
-    ? (error as { response?: { data?: { userMessage?: unknown; error?: unknown; code?: unknown } } }).response?.data
+type ApiErrorPayload = {
+  userMessage?: unknown;
+  error?: unknown;
+  code?: unknown;
+};
+
+function apiErrorPayload(error: unknown): ApiErrorPayload | undefined {
+  if (typeof error !== "object" || error === null) return undefined;
+  const direct = (error as { data?: unknown }).data;
+  if (typeof direct === "object" && direct !== null) {
+    return direct as ApiErrorPayload;
+  }
+  const responseData = (error as { response?: { data?: unknown } }).response
+    ?.data;
+  return typeof responseData === "object" && responseData !== null
+    ? (responseData as ApiErrorPayload)
     : undefined;
-  const responseMessage = responseData?.userMessage ?? responseData?.error;
+}
+
+export function apiErrorCode(error: unknown): string | null {
+  const code = apiErrorPayload(error)?.code;
+  return typeof code === "string" && code.trim() ? code : null;
+}
+
+export function userSafeErrorMessage(error: unknown, fallback: string): string {
+  const payload = apiErrorPayload(error);
+  const responseMessage = payload?.userMessage ?? payload?.error;
   if (typeof responseMessage === "string" && responseMessage.trim()) return responseMessage;
 
   const message = error instanceof Error ? error.message : String(error ?? "");

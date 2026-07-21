@@ -193,7 +193,7 @@ Every recommendation should expose:
 
 Restrictions may exclude a professor or produce a visible warning according to the versioned rules. Weak or missing matches should be shown honestly rather than inflated.
 
-The editor always selects the professor manually. Selecting a lower-ranked professor preserves the calculated ranking and records an override reason; it does not rewrite the score.
+The editor always selects the professor manually. Selecting a weak match requires an override reason. A reason is optional for a lower-ranked strong or plausible match. Every selection preserves the calculated ranking and does not rewrite the score.
 
 The authoritative initial weights, normalization, thresholds, and exclusion precedence appear in the Milestone 1 Decision Parameters below. Any later configuration must retain an explicit algorithm version.
 
@@ -576,7 +576,7 @@ Persist:
 
 These labels assist editorial judgment and must not trigger automatic assignment.
 
-The editor may select a weak or lower-ranked professor but must record an override reason. The original calculated ranking remains unchanged.
+The editor may select a weak professor only with a recorded override reason. A lower-ranked strong or plausible professor remains selectable with an optional reason. The original calculated ranking remains unchanged.
 
 ### Exclusion Precedence
 

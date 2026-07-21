@@ -11,10 +11,13 @@
     "start:local": "bash ./scripts/start-local-detached.sh",
     "stop:local": "bash ./scripts/stop-local.sh",
     "smoke:local": "bash ./scripts/smoke-local.sh",
-    "smoke:firebase-readonly": "bash ./scripts/smoke-firebase-readonly.sh"
+    "smoke:firebase-readonly": "bash ./scripts/smoke-firebase-readonly.sh",
+    "verify:frontend-no-admin-secret": "node ./scripts/verify-frontend-no-admin-secret.mjs",
+    "test:opportunities:emulator": "firebase emulators:exec --only auth,firestore --project demo-rgi-opportunities \"bash ./scripts/test-story-opportunities-emulator-e2e.sh\""
   },
   "private": true,
   "devDependencies": {
+    "firebase-tools": "15.24.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2",
     "postcss": "^8.4.49",

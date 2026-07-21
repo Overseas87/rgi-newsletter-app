@@ -11,6 +11,9 @@ export interface HealthStatus {
 
 export interface ErrorResponse {
   error: string;
+  code?: string;
+  retryable?: boolean;
+  userMessage?: string;
 }
 
 export interface ScrapeResult {
@@ -61,10 +64,18 @@ export interface ProfessorProfile {
   expertiseTags: string[];
   /** @maxItems 40 */
   researchInterests: string[];
+  /** @maxItems 40 */
+  professionalExperienceTags: string[];
+  /** @maxItems 40 */
+  academicExperienceTags: string[];
   /** @maxItems 30 */
   industries: string[];
+  /** @maxItems 40 */
+  topicInterests: string[];
   /** @maxItems 30 */
   regions: string[];
+  /** @maxItems 40 */
+  affiliations: string[];
   /** @maxLength 2000 */
   professionalBackground: string;
   /** @maxLength 2000 */
@@ -72,15 +83,25 @@ export interface ProfessorProfile {
   /** @maxItems 40 */
   publications: string[];
   /** @maxItems 40 */
+  publicationTopicTags: string[];
+  /** @maxItems 40 */
   recurringThemes: string[];
   /** @maxItems 40 */
   contactableTopics: string[];
   /** @maxItems 40 */
+  restrictedTopics: string[];
+  /** @maxItems 40 */
   doNotContactTopics: string[];
+  /** @maxItems 40 */
+  institutionalConflicts: string[];
+  /** @maxItems 40 */
+  affiliationConcerns: string[];
   /** Active profiles are included in future article matching; inactive profiles are retained but excluded. */
   status: ProfessorProfileStatus;
   /** @minimum 1 */
   schemaVersion: number;
+  /** @minimum 1 */
+  profileRevision: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -130,14 +151,22 @@ export interface CreateProfessorProfileBody {
   coursesTaught?: string[];
   expertiseTags?: string[];
   researchInterests?: string[];
+  professionalExperienceTags?: string[];
+  academicExperienceTags?: string[];
   industries?: string[];
+  topicInterests?: string[];
   regions?: string[];
+  affiliations?: string[];
   professionalBackground?: string;
   approvedBio?: string;
   publications?: string[];
+  publicationTopicTags?: string[];
   recurringThemes?: string[];
   contactableTopics?: string[];
+  restrictedTopics?: string[];
   doNotContactTopics?: string[];
+  institutionalConflicts?: string[];
+  affiliationConcerns?: string[];
   /** Active profiles are included in future article matching; inactive profiles are retained but excluded. */
   status?: CreateProfessorProfileBodyStatus;
 }
@@ -172,16 +201,403 @@ export interface UpdateProfessorProfileBody {
   coursesTaught?: string[];
   expertiseTags?: string[];
   researchInterests?: string[];
+  professionalExperienceTags?: string[];
+  academicExperienceTags?: string[];
   industries?: string[];
+  topicInterests?: string[];
   regions?: string[];
+  affiliations?: string[];
   professionalBackground?: string;
   approvedBio?: string;
   publications?: string[];
+  publicationTopicTags?: string[];
   recurringThemes?: string[];
   contactableTopics?: string[];
+  restrictedTopics?: string[];
   doNotContactTopics?: string[];
+  institutionalConflicts?: string[];
+  affiliationConcerns?: string[];
   /** Active profiles are included in future article matching; inactive profiles are retained but excluded. */
   status?: UpdateProfessorProfileBodyStatus;
+}
+
+export interface StoryOpportunityConfigResponse {
+  readsEnabled: boolean;
+  writesEnabled: boolean;
+}
+
+export type StoryOpportunityWindowStatus =
+  (typeof StoryOpportunityWindowStatus)[keyof typeof StoryOpportunityWindowStatus];
+
+export const StoryOpportunityWindowStatus = {
+  completed: "completed",
+} as const;
+
+export interface StoryOpportunityWindow {
+  id: string;
+  /** @minimum 1 */
+  snapshotRevision: number;
+  asOf: string;
+  windowStart: string;
+  windowEnd: string;
+  operationalTimezone: string;
+  localCutoff: string;
+  calculatedAt: string;
+  status: StoryOpportunityWindowStatus;
+  configurationVersion: string;
+  windowAlgorithmVersion: string;
+  selectionAlgorithmVersion: string;
+  scoringVersion: string;
+  normalizationVersion: string;
+  taxonomyVersion: string;
+  matchingAlgorithmVersion: string;
+  coverageCalculationVersion: string;
+  minimumNormalizedRelevance: number;
+  maximumOpportunities: number;
+  maximumPerSource: number;
+  maximumPerPrimaryTopic: number;
+  lowCoverageWarningThreshold: number;
+  totalArticlesConsidered: number;
+  eligibleArticleCount: number;
+  qualifyingArticleCount: number;
+  opportunityCount: number;
+  fallbackTimestampCount: number;
+}
+
+export type StoryOpportunityEvidenceTimestampSource =
+  (typeof StoryOpportunityEvidenceTimestampSource)[keyof typeof StoryOpportunityEvidenceTimestampSource];
+
+export const StoryOpportunityEvidenceTimestampSource = {
+  publishedAt: "publishedAt",
+  scrapedAt: "scrapedAt",
+} as const;
+
+export interface StoryOpportunityEvidence {
+  articleId: number;
+  headline: string;
+  canonicalUrl: string;
+  sourceName: string;
+  /** @nullable */
+  sourceUrl: string | null;
+  /** @nullable */
+  author: string | null;
+  /** @nullable */
+  excerpt: string | null;
+  /** @nullable */
+  publishedAt: string | null;
+  /** @nullable */
+  scrapedAt: string | null;
+  effectivePublishedAt: string;
+  timestampSource: StoryOpportunityEvidenceTimestampSource;
+  timestampFallback: boolean;
+  capturedAt: string;
+  contentHash: string;
+}
+
+export type ProfessorDimensionMatchDimension =
+  (typeof ProfessorDimensionMatchDimension)[keyof typeof ProfessorDimensionMatchDimension];
+
+export const ProfessorDimensionMatchDimension = {
+  core_expertise: "core_expertise",
+  research_and_teaching: "research_and_teaching",
+  experience_and_industries: "experience_and_industries",
+  topic_interests: "topic_interests",
+  publications_and_themes: "publications_and_themes",
+  regions_and_affiliations: "regions_and_affiliations",
+} as const;
+
+export type ProfessorDimensionMatchMatchType =
+  (typeof ProfessorDimensionMatchMatchType)[keyof typeof ProfessorDimensionMatchMatchType];
+
+export const ProfessorDimensionMatchMatchType = {
+  exact: "exact",
+  alias: "alias",
+  parent_child: "parent_child",
+  none: "none",
+} as const;
+
+export interface ProfessorDimensionMatch {
+  dimension: ProfessorDimensionMatchDimension;
+  label: string;
+  weight: number;
+  dimensionScore: number;
+  weightedContribution: number;
+  matchType: ProfessorDimensionMatchMatchType;
+  /** @nullable */
+  opportunityConcept: string | null;
+  /** @nullable */
+  opportunityLabel: string | null;
+  /** @nullable */
+  professorField: string | null;
+  /** @nullable */
+  professorValue: string | null;
+}
+
+export type ProfessorMatchLabel =
+  (typeof ProfessorMatchLabel)[keyof typeof ProfessorMatchLabel];
+
+export const ProfessorMatchLabel = {
+  strong: "strong",
+  plausible: "plausible",
+  weak: "weak",
+} as const;
+
+export type ProfessorMatchCoveredDimensionsItem =
+  (typeof ProfessorMatchCoveredDimensionsItem)[keyof typeof ProfessorMatchCoveredDimensionsItem];
+
+export const ProfessorMatchCoveredDimensionsItem = {
+  core_expertise: "core_expertise",
+  research_and_teaching: "research_and_teaching",
+  experience_and_industries: "experience_and_industries",
+  topic_interests: "topic_interests",
+  publications_and_themes: "publications_and_themes",
+  regions_and_affiliations: "regions_and_affiliations",
+} as const;
+
+export type ProfessorMatchMissingDimensionsItem =
+  (typeof ProfessorMatchMissingDimensionsItem)[keyof typeof ProfessorMatchMissingDimensionsItem];
+
+export const ProfessorMatchMissingDimensionsItem = {
+  core_expertise: "core_expertise",
+  research_and_teaching: "research_and_teaching",
+  experience_and_industries: "experience_and_industries",
+  topic_interests: "topic_interests",
+  publications_and_themes: "publications_and_themes",
+  regions_and_affiliations: "regions_and_affiliations",
+} as const;
+
+export interface ProfessorMatch {
+  professorId: string;
+  professorName: string;
+  profileRevision: number;
+  /** @nullable */
+  rank: number | null;
+  totalFitScore: number;
+  label: ProfessorMatchLabel;
+  /**
+   * @minItems 6
+   * @maxItems 6
+   */
+  dimensions: ProfessorDimensionMatch[];
+  profileCoverage: number;
+  coveredDimensions: ProfessorMatchCoveredDimensionsItem[];
+  missingDimensions: ProfessorMatchMissingDimensionsItem[];
+  taxonomyVersion: string;
+  matchingAlgorithmVersion: string;
+  coverageCalculationVersion: string;
+  exclusions: string[];
+  warnings: string[];
+  rationale: string;
+}
+
+export interface ProfessorSelection {
+  professorId: string;
+  professorName: string;
+  selectedProfileRevision: number;
+  selectedMatchRank: number;
+  selectedFitScore: number;
+  /** @nullable */
+  reason: string | null;
+  selectedBy: string;
+  selectedAt: string;
+}
+
+export type ProfessorSelectionHistoryEntryAction =
+  (typeof ProfessorSelectionHistoryEntryAction)[keyof typeof ProfessorSelectionHistoryEntryAction];
+
+export const ProfessorSelectionHistoryEntryAction = {
+  selected: "selected",
+  changed: "changed",
+  cleared: "cleared",
+} as const;
+
+export interface ProfessorSelectionHistoryEntry {
+  id: string;
+  action: ProfessorSelectionHistoryEntryAction;
+  /** @nullable */
+  professorId: string | null;
+  /** @nullable */
+  professorName: string | null;
+  /** @nullable */
+  previousProfessorId: string | null;
+  /** @nullable */
+  selectedProfileRevision: number | null;
+  /** @nullable */
+  reason: string | null;
+  actorId: string;
+  occurredAt: string;
+}
+
+export interface StoryOpportunitySelectionConfiguration {
+  minimumNormalizedRelevance: number;
+  maximumOpportunities: number;
+  maximumPerSource: number;
+  maximumPerPrimaryTopic: number;
+  selectionAlgorithmVersion: string;
+}
+
+export type StoryOpportunityTimestampSource =
+  (typeof StoryOpportunityTimestampSource)[keyof typeof StoryOpportunityTimestampSource];
+
+export const StoryOpportunityTimestampSource = {
+  publishedAt: "publishedAt",
+  scrapedAt: "scrapedAt",
+} as const;
+
+export type StoryOpportunityOriginalRgiRelevanceScale =
+  (typeof StoryOpportunityOriginalRgiRelevanceScale)[keyof typeof StoryOpportunityOriginalRgiRelevanceScale];
+
+export const StoryOpportunityOriginalRgiRelevanceScale = {
+  "1-10": "1-10",
+} as const;
+
+export type StoryOpportunityOriginalRgiRelevanceField =
+  (typeof StoryOpportunityOriginalRgiRelevanceField)[keyof typeof StoryOpportunityOriginalRgiRelevanceField];
+
+export const StoryOpportunityOriginalRgiRelevanceField = {
+  relevancyScore: "relevancyScore",
+} as const;
+
+/**
+ * @nullable
+ */
+export type StoryOpportunityRelevanceComponents = {
+  [key: string]: unknown;
+} | null;
+
+export type StoryOpportunityWorkflowState =
+  (typeof StoryOpportunityWorkflowState)[keyof typeof StoryOpportunityWorkflowState];
+
+export const StoryOpportunityWorkflowState = {
+  shortlisted: "shortlisted",
+  professor_selected: "professor_selected",
+  closed: "closed",
+} as const;
+
+export interface StoryOpportunity {
+  id: string;
+  revision: number;
+  windowId: string;
+  windowStart: string;
+  windowEnd: string;
+  operationalTimezone: string;
+  primaryArticleId: number;
+  primaryEvidence: StoryOpportunityEvidence;
+  supportingEvidence: StoryOpportunityEvidence[];
+  sourceName: string;
+  canonicalUrl: string;
+  effectivePublishedAt: string;
+  timestampSource: StoryOpportunityTimestampSource;
+  timestampFallback: boolean;
+  originalRgiRelevanceScore: number;
+  originalRgiRelevanceScale: StoryOpportunityOriginalRgiRelevanceScale;
+  originalRgiRelevanceField: StoryOpportunityOriginalRgiRelevanceField;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  normalizedRgiRelevanceScore: number;
+  /** @nullable */
+  relevanceExplanation: string | null;
+  /** @nullable */
+  relevanceComponents: StoryOpportunityRelevanceComponents;
+  relevanceScoringVersion: string;
+  relevanceNormalizationVersion: string;
+  sourceAuthorityScore: number;
+  primaryTopic: string;
+  primaryTopicLabel: string;
+  normalizedTopics: string[];
+  unknownTaxonomyTerms: string[];
+  /** @nullable */
+  discipline: string | null;
+  industries: string[];
+  regions: string[];
+  entities: string[];
+  /** @maxLength 500 */
+  recommendedAngle: string;
+  /** @minimum 1 */
+  shortlistPosition: number;
+  selectionConfiguration: StoryOpportunitySelectionConfiguration;
+  professorMatches: ProfessorMatch[];
+  selectedProfessor: ProfessorSelection | null;
+  selectionHistory: ProfessorSelectionHistoryEntry[];
+  workflowState: StoryOpportunityWorkflowState;
+  createdAt: string;
+  updatedAt: string;
+  configurationVersion: string;
+  taxonomyVersion: string;
+  matchingAlgorithmVersion: string;
+}
+
+export interface ListStoryOpportunityWindowsResponse {
+  items: StoryOpportunityWindow[];
+  total: number;
+  readsEnabled: boolean;
+  writesEnabled: boolean;
+}
+
+export interface StoryOpportunityListResponse {
+  window: StoryOpportunityWindow | null;
+  items: StoryOpportunity[];
+  total: number;
+  readsEnabled: boolean;
+  writesEnabled: boolean;
+}
+
+export interface StoryOpportunityDetailResponse {
+  opportunity: StoryOpportunity;
+  readsEnabled: boolean;
+  writesEnabled: boolean;
+}
+
+export interface ProfessorMatchListResponse {
+  items: ProfessorMatch[];
+  total: number;
+}
+
+export interface CalculateStoryOpportunityWindowBody {
+  asOf: string;
+  /** @minimum 1 */
+  snapshotRevision?: number;
+}
+
+export interface CalculateStoryOpportunityWindowResponse {
+  created: boolean;
+  window: StoryOpportunityWindow;
+  opportunities: StoryOpportunity[];
+  readsEnabled: boolean;
+  writesEnabled: boolean;
+}
+
+export interface SelectStoryOpportunityProfessorBody {
+  /** @pattern ^[A-Za-z0-9_-]{8,128}$ */
+  professorId: string;
+  /** @maxLength 1000 */
+  reason?: string;
+  /** @minimum 1 */
+  expectedRevision: number;
+}
+
+export interface StoryOpportunityRevisionCommandBody {
+  /** @minimum 1 */
+  expectedRevision: number;
+}
+
+export interface ClearStoryOpportunityProfessorBody {
+  /** @minimum 1 */
+  expectedRevision: number;
+  /** @maxLength 1000 */
+  reason?: string;
+}
+
+export interface UpdateStoryOpportunityAngleBody {
+  /** @minimum 1 */
+  expectedRevision: number;
+  /**
+   * @minLength 1
+   * @maxLength 500
+   */
+  angle: string;
 }
 
 export type ArticleStatus = (typeof ArticleStatus)[keyof typeof ArticleStatus];
@@ -575,6 +991,21 @@ export interface UpdateSettingsBody {
   scrapeIntervalHours?: number;
   scrapeTimeUtc?: string;
 }
+
+/**
+ * Missing, malformed, invalid, expired, or revoked Firebase ID token, or invalid internal service credential
+ */
+export type InternalEditorUnauthorizedResponse = ErrorResponse;
+
+/**
+ * Authenticated user is not an approved RGI editor, or the requested feature is disabled
+ */
+export type InternalEditorForbiddenResponse = ErrorResponse;
+
+/**
+ * Server-side Firebase token verification or approved-editor configuration is unavailable
+ */
+export type InternalEditorAuthUnavailableResponse = ErrorResponse;
 
 export type ListProfessorProfilesParams = {
   /**

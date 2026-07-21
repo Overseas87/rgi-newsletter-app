@@ -32,10 +32,19 @@ function hasWellKnownApplicationDefaultCredentials(): boolean {
   return existsSync(wellKnownAdcPath());
 }
 
+function firestoreEmulatorActive(): boolean {
+  return Boolean(process.env.FIRESTORE_EMULATOR_HOST);
+}
+
+function authEmulatorActive(): boolean {
+  return Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST);
+}
+
 export function isFirebaseConfigured(): boolean {
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   const hasUsableServiceAccount = Boolean(serviceAccount && !serviceAccount.includes("PLACEHOLDER"));
   return Boolean(
+    firestoreEmulatorActive() ||
     hasUsableServiceAccount ||
     process.env.GOOGLE_APPLICATION_CREDENTIALS ||
     hasWellKnownApplicationDefaultCredentials() ||
@@ -56,6 +65,8 @@ export function getFirebaseDiagnostics(): Record<string, unknown> {
     googleApplicationCredentialsExists: credentialsPath ? existsSync(credentialsPath) : false,
     hasWellKnownApplicationDefaultCredentials: hasWellKnownApplicationDefaultCredentials(),
     managedGoogleRuntime: isManagedGoogleRuntime(),
+    firestoreEmulatorActive: firestoreEmulatorActive(),
+    authEmulatorActive: authEmulatorActive(),
     nodeEnv: process.env.NODE_ENV ?? null,
   };
 }
@@ -71,6 +82,7 @@ export function assertSafeFirebaseProjectTarget(): void {
 
 export function missingFirebaseConfig(): string[] {
   const missing: string[] = [];
+  if (firestoreEmulatorActive()) return missing;
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   const hasJson = Boolean(serviceAccount && !serviceAccount.includes("PLACEHOLDER"));
   const hasGoogleCredentials = Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS);
@@ -130,12 +142,14 @@ export async function getFirebaseBundle(): Promise<FirebaseBundle> {
       const firestoreModule = await runtimeImport<any>("firebase-admin/firestore");
       const existingApps = appModule.getApps();
       const serviceAccount = parseServiceAccount();
-      const credential = serviceAccount
-        ? appModule.cert(serviceAccount)
-        : appModule.applicationDefault();
+      const credential = firestoreEmulatorActive()
+        ? undefined
+        : serviceAccount
+          ? appModule.cert(serviceAccount)
+          : appModule.applicationDefault();
 
       const app = existingApps[0] ?? appModule.initializeApp({
-        credential,
+        ...(credential ? { credential } : {}),
         projectId: FIREBASE_PROJECT_ID,
       });
 

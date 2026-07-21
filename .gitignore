@@ -33,6 +33,11 @@ node_modules
 /.sass-cache
 /connect.lock
 /coverage
+/artifacts/rgi-digest/test-results/
+/artifacts/rgi-digest/playwright-report/
+/firebase-debug.log
+/firestore-debug.log
+/ui-debug.log
 /libpeerconnection.log
 npm-debug.log
 yarn-error.log
