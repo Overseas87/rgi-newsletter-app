@@ -50,16 +50,19 @@ function createDoc(profile: CreateProfessorProfileInput, id: string, FieldValue:
   return {
     ...parsed,
     id,
-    schemaVersion: 1,
+    schemaVersion: 2,
+    profileRevision: 1,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };
 }
 
-function updateDoc(patch: UpdateProfessorProfileInput, FieldValue: any): Record<string, unknown> {
+function updateDoc(patch: UpdateProfessorProfileInput, FieldValue: any, profileRevision: number): Record<string, unknown> {
   const parsed = UpdateProfessorProfileBodySchema.parse(patch);
   return {
     ...parsed,
+    schemaVersion: 2,
+    profileRevision,
     updatedAt: FieldValue.serverTimestamp(),
   };
 }
@@ -113,8 +116,16 @@ export async function updateProfessorProfile(id: string, patch: UpdateProfessorP
 
 export async function updateProfessorProfileInDb(db: any, FieldValue: any, id: string, patch: UpdateProfessorProfileInput): Promise<ProfessorProfile | null> {
   const ref = db.collection(PROFESSOR_PROFILES_COLLECTION).doc(id);
-  const snapshot: any = await withTimeout("Read professor profile before update", ref.get());
-  if (!snapshot.exists) return null;
-  await withTimeout("Update professor profile", ref.set(updateDoc(patch, FieldValue), { merge: true }));
+  const updated = await withTimeout(
+    "Update professor profile",
+    db.runTransaction(async (transaction: any) => {
+      const snapshot: any = await transaction.get(ref);
+      if (!snapshot.exists) return false;
+      const current = professorFromDoc(snapshot);
+      transaction.set(ref, updateDoc(patch, FieldValue, current.profileRevision + 1), { merge: true });
+      return true;
+    }),
+  );
+  if (!updated) return null;
   return professorFromDoc(await withTimeout("Read updated professor profile", ref.get()));
 }
