@@ -656,20 +656,20 @@ function institutionalCandidates(
     .filter(Boolean);
 }
 
-function exclusionAndWarnings(
-  opportunity: StoryOpportunity,
+export function professorHardExclusionsForOpportunity(
+  opportunity: Pick<
+    StoryOpportunity,
+    | "normalizedTopics"
+    | "sourceName"
+    | "canonicalUrl"
+    | "entities"
+  >,
   profile: ProfessorProfile,
-  opportunityTerms: ResolvedTaxonomyTerm[],
-  coverage: number,
-  label: MatchLabel,
-): { exclusions: string[]; warnings: string[] } {
+): string[] {
   const exclusions: string[] = [];
-  const warnings: string[] = [];
-  if (profile.status !== "active")
-    exclusions.push(
-      "Professor Profile is inactive and excluded from matching.",
-    );
-
+  const opportunityTerms = opportunity.normalizedTopics.map((term) =>
+    resolveTaxonomyTerm(term),
+  );
   const restrictedValues = [
     ...profile.restrictedTopics,
     ...profile.doNotContactTopics,
@@ -695,10 +695,28 @@ function exclusionAndWarnings(
   const hardConflict = profile.institutionalConflicts.find((value) =>
     institutionTerms.includes(normalizeTaxonomyTerm(value)),
   );
-  if (hardConflict)
+  if (hardConflict) {
     exclusions.push(
       `Hard institutional conflict: “${hardConflict}” matches the story source or named entity.`,
     );
+  }
+  return exclusions;
+}
+
+function exclusionAndWarnings(
+  opportunity: StoryOpportunity,
+  profile: ProfessorProfile,
+  coverage: number,
+  label: MatchLabel,
+): { exclusions: string[]; warnings: string[] } {
+  const exclusions: string[] = [];
+  const warnings: string[] = [];
+  if (profile.status !== "active")
+    exclusions.push(
+      "Professor Profile is inactive and excluded from matching.",
+    );
+  exclusions.push(...professorHardExclusionsForOpportunity(opportunity, profile));
+  const institutionTerms = institutionalCandidates(opportunity);
   const softConflict = profile.affiliationConcerns.find((value) =>
     institutionTerms.includes(normalizeTaxonomyTerm(value)),
   );
@@ -783,7 +801,6 @@ export function matchProfessors(
     const { exclusions, warnings } = exclusionAndWarnings(
       opportunity,
       profile,
-      opportunityTerms,
       coverage.coverage,
       label,
     );

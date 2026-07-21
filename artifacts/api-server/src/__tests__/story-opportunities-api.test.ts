@@ -79,7 +79,10 @@ test("protected API is fail-closed, feature-gated, idempotent, and validates sel
     writes: process.env.STORY_OPPORTUNITIES_WRITES_ENABLED,
     readOnly: process.env.RGI_READ_ONLY_STARTUP,
   };
-  const repository = new MemoryStoryOpportunityRepository();
+  let currentProfessor = testProfessor;
+  const repository = new MemoryStoryOpportunityRepository((professorId) =>
+    professorId === currentProfessor.id ? currentProfessor : null,
+  );
   const service = new StoryOpportunityService({
     repository,
     loadArticles: async () => [testArticle],
@@ -97,7 +100,7 @@ test("protected API is fail-closed, feature-gated, idempotent, and validates sel
   const port = (server.address() as AddressInfo).port;
   const base = `http://127.0.0.1:${port}/api`;
   const authorized = () => ({
-    authorization: "Bearer integration-secret",
+    "x-admin-api-key": "integration-secret",
     "content-type": "application/json",
   });
 
@@ -105,22 +108,22 @@ test("protected API is fail-closed, feature-gated, idempotent, and validates sel
     delete process.env.ADMIN_API_KEY;
     process.env.NODE_ENV = "development";
     let response = await fetch(`${base}/opportunity-windows/current`);
-    assert.equal(response.status, 503);
+    assert.equal(response.status, 401);
     assert.equal(
       (await responseJson(response)).code,
-      "INTERNAL_EDITOR_AUTH_UNCONFIGURED",
+      "AUTHORIZATION_REQUIRED",
     );
 
     process.env.ADMIN_API_KEY = "integration-secret";
     response = await fetch(`${base}/opportunity-windows/current`, {
-      headers: { authorization: "Bearer wrong" },
+      headers: { "x-admin-api-key": "wrong" },
     });
     assert.equal(response.status, 401);
 
     response = await fetch(`${base}/opportunity-windows/calculate`, {
       method: "POST",
       headers: {
-        authorization: "Bearer wrong",
+        "x-admin-api-key": "wrong",
         "content-type": "application/json",
       },
       body: JSON.stringify({ asOf: "2026-07-20T15:00:00.000Z" }),
@@ -218,6 +221,55 @@ test("protected API is fail-closed, feature-gated, idempotent, and validates sel
       (await responseJson(response)).code,
       "WEAK_MATCH_REASON_REQUIRED",
     );
+
+    currentProfessor = { ...currentProfessor, profileRevision: 2 };
+    response = await fetch(
+      `${base}/story-opportunities/${opportunity.id}/select-professor`,
+      {
+        method: "POST",
+        headers: authorized(),
+        body: JSON.stringify({
+          professorId: testProfessor.id,
+          expectedRevision: opportunity.revision,
+          reason: "Relevant practitioner experience",
+        }),
+      },
+    );
+    assert.equal(response.status, 409);
+    const profileConflict = await responseJson(response);
+    assert.equal(
+      profileConflict.code,
+      "PROFESSOR_PROFILE_REVISION_CONFLICT",
+    );
+    assert.equal(profileConflict.retryable, false);
+    assert.match(profileConflict.userMessage, /Recalculate an explicit snapshot revision/);
+    const unchangedAfterProfileConflict = await repository.getOpportunity(
+      opportunity.id,
+    );
+    assert.equal(unchangedAfterProfileConflict?.revision, 1);
+    assert.equal(unchangedAfterProfileConflict?.selectedProfessor, null);
+    assert.deepEqual(unchangedAfterProfileConflict?.selectionHistory, []);
+
+    currentProfessor = {
+      ...testProfessor,
+      restrictedTopics: ["Leadership & Organizations"],
+    };
+    response = await fetch(
+      `${base}/story-opportunities/${opportunity.id}/select-professor`,
+      {
+        method: "POST",
+        headers: authorized(),
+        body: JSON.stringify({
+          professorId: testProfessor.id,
+          expectedRevision: opportunity.revision,
+          reason: "Relevant practitioner experience",
+        }),
+      },
+    );
+    assert.equal(response.status, 409);
+    assert.equal((await responseJson(response)).code, "PROFESSOR_HARD_EXCLUDED");
+
+    currentProfessor = testProfessor;
 
     response = await fetch(
       `${base}/story-opportunities/${opportunity.id}/select-professor`,

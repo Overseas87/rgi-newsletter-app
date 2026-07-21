@@ -72,7 +72,8 @@ paths:
       tags: [professors]
       summary: Get Professor Library configuration
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       responses:
         "200":
           description: Professor Library configuration
@@ -80,6 +81,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProfessorLibraryConfigResponse"
+        "401":
+          $ref: "#/components/responses/InternalEditorUnauthorized"
+        "403":
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /professors:
     get:
@@ -87,7 +94,8 @@ paths:
       tags: [professors]
       summary: List professor profiles
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       parameters:
         - name: status
           in: query
@@ -102,12 +110,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListProfessorProfilesResponse"
+        "401":
+          $ref: "#/components/responses/InternalEditorUnauthorized"
+        "403":
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
     post:
       operationId: createProfessorProfile
       tags: [professors]
       summary: Create a professor profile
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       requestBody:
         required: true
         content:
@@ -121,12 +136,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProfessorProfileDetailResponse"
+        "401":
+          $ref: "#/components/responses/InternalEditorUnauthorized"
         "403":
-          description: Professor Library writes disabled
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /professors/{id}:
     get:
@@ -134,7 +149,8 @@ paths:
       tags: [professors]
       summary: Get a professor profile
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       parameters:
         - name: id
           in: path
@@ -155,12 +171,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/InternalEditorUnauthorized"
+        "403":
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
     patch:
       operationId: updateProfessorProfile
       tags: [professors]
       summary: Update a professor profile
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       parameters:
         - name: id
           in: path
@@ -181,18 +204,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProfessorProfileDetailResponse"
+        "401":
+          $ref: "#/components/responses/InternalEditorUnauthorized"
         "403":
-          description: Professor Library writes disabled
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/InternalEditorForbidden"
         "404":
           description: Not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /opportunity-windows/config:
     get:
@@ -200,7 +223,8 @@ paths:
       tags: [opportunities]
       summary: Get internal Story Opportunity feature configuration
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       responses:
         "200":
           description: Feature configuration
@@ -209,11 +233,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/StoryOpportunityConfigResponse"
         "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/InternalEditorUnauthorized"
+        "403":
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /opportunity-windows:
     get:
@@ -221,7 +245,8 @@ paths:
       tags: [opportunities]
       summary: List completed frozen Story Opportunity windows
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       responses:
         "200":
           description: Frozen window list
@@ -230,17 +255,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/ListStoryOpportunityWindowsResponse"
         "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/InternalEditorUnauthorized"
         "403":
-          description: Reads disabled
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /opportunity-windows/current:
     get:
@@ -248,7 +267,8 @@ paths:
       tags: [opportunities]
       summary: Get the latest completed frozen window and its shortlist
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       responses:
         "200":
           description: Current window or an explicit no-window response
@@ -257,17 +277,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/StoryOpportunityListResponse"
         "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/InternalEditorUnauthorized"
         "403":
-          description: Reads disabled
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /opportunity-windows/calculate:
     post:
@@ -275,7 +289,8 @@ paths:
       tags: [opportunities]
       summary: Explicitly and idempotently calculate one frozen daily window
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       requestBody:
         required: true
         content:
@@ -296,17 +311,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/CalculateStoryOpportunityWindowResponse"
         "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/InternalEditorUnauthorized"
         "403":
-          description: Writes disabled
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /opportunity-windows/{windowId}/opportunities:
     get:
@@ -314,7 +323,8 @@ paths:
       tags: [opportunities]
       summary: List the frozen shortlist for one window
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       parameters:
         - $ref: "#/components/parameters/StoryOpportunityWindowId"
       responses:
@@ -330,6 +340,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/InternalEditorUnauthorized"
+        "403":
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /story-opportunities/{id}:
     get:
@@ -337,7 +353,8 @@ paths:
       tags: [opportunities]
       summary: Get one Story Opportunity workbench record
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       parameters:
         - $ref: "#/components/parameters/StoryOpportunityId"
       responses:
@@ -353,6 +370,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/InternalEditorUnauthorized"
+        "403":
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /story-opportunities/{id}/matches:
     get:
@@ -360,7 +383,8 @@ paths:
       tags: [opportunities]
       summary: List persisted deterministic Professor Matches
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       parameters:
         - $ref: "#/components/parameters/StoryOpportunityId"
       responses:
@@ -376,6 +400,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/InternalEditorUnauthorized"
+        "403":
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /story-opportunities/{id}/select-professor:
     post:
@@ -383,7 +413,8 @@ paths:
       tags: [opportunities]
       summary: Manually select or change the professor for an opportunity
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       parameters:
         - $ref: "#/components/parameters/StoryOpportunityId"
       requestBody:
@@ -406,11 +437,17 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: Revision conflict or professor excluded
+          description: Opportunity revision conflict, frozen match exclusion, or PROFESSOR_PROFILE_REVISION_CONFLICT when the current Professor Profile no longer matches the frozen revision
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/InternalEditorUnauthorized"
+        "403":
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /story-opportunities/{id}/clear-professor:
     post:
@@ -418,7 +455,8 @@ paths:
       tags: [opportunities]
       summary: Clear the current manual professor selection
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       parameters:
         - $ref: "#/components/parameters/StoryOpportunityId"
       requestBody:
@@ -434,6 +472,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StoryOpportunityDetailResponse"
+        "401":
+          $ref: "#/components/responses/InternalEditorUnauthorized"
+        "403":
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "409":
+          description: Opportunity revision conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /story-opportunities/{id}/update-angle:
     post:
@@ -441,7 +491,8 @@ paths:
       tags: [opportunities]
       summary: Update the editor-controlled recommended angle
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       parameters:
         - $ref: "#/components/parameters/StoryOpportunityId"
       requestBody:
@@ -457,6 +508,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StoryOpportunityDetailResponse"
+        "401":
+          $ref: "#/components/responses/InternalEditorUnauthorized"
+        "403":
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "409":
+          description: Opportunity revision conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /story-opportunities/{id}/close:
     post:
@@ -464,7 +527,8 @@ paths:
       tags: [opportunities]
       summary: Close a Story Opportunity
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       parameters:
         - $ref: "#/components/parameters/StoryOpportunityId"
       requestBody:
@@ -480,6 +544,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StoryOpportunityDetailResponse"
+        "401":
+          $ref: "#/components/responses/InternalEditorUnauthorized"
+        "403":
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "409":
+          description: Opportunity revision conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /story-opportunities/{id}/reopen:
     post:
@@ -487,7 +563,8 @@ paths:
       tags: [opportunities]
       summary: Reopen a closed Story Opportunity
       security:
-        - InternalEditorAuth: []
+        - FirebaseEditorAuth: []
+        - InternalServiceKey: []
       parameters:
         - $ref: "#/components/parameters/StoryOpportunityId"
       requestBody:
@@ -503,6 +580,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StoryOpportunityDetailResponse"
+        "401":
+          $ref: "#/components/responses/InternalEditorUnauthorized"
+        "403":
+          $ref: "#/components/responses/InternalEditorForbidden"
+        "409":
+          description: Opportunity revision conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/InternalEditorAuthUnavailable"
 
   /articles:
     get:
@@ -884,10 +973,35 @@ paths:
 
 components:
   securitySchemes:
-    InternalEditorAuth:
+    FirebaseEditorAuth:
       type: http
       scheme: bearer
-      description: Internal editor credential. Opportunity routes fail closed when server authorization is unconfigured.
+      bearerFormat: Firebase ID token
+      description: Firebase ID token for a user whose UID is present in the server-only approved RGI editor allowlist. Missing verification configuration fails closed.
+    InternalServiceKey:
+      type: apiKey
+      in: header
+      name: x-admin-api-key
+      description: Trusted server-to-server operational credential. This key must never be embedded in or sent by the browser application.
+  responses:
+    InternalEditorUnauthorized:
+      description: Missing, malformed, invalid, expired, or revoked Firebase ID token, or invalid internal service credential
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalEditorForbidden:
+      description: Authenticated user is not an approved RGI editor, or the requested feature is disabled
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalEditorAuthUnavailable:
+      description: Server-side Firebase token verification or approved-editor configuration is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   parameters:
     StoryOpportunityId:
       name: id

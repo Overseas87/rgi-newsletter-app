@@ -76,7 +76,7 @@ Parent/child topic relationships never trigger a hard restricted-topic exclusion
 
 ## API commands
 
-All Story Opportunity routes and Professor Library routes are under `/api`, require the strict internal-editor bearer guard even for GET requests, and fail closed when `ADMIN_API_KEY` is absent. This protects restricted-topic and institutional-conflict profile intelligence as internal editorial data.
+All Story Opportunity routes and Professor Library routes are under `/api`, require strict internal-editor authentication even for GET requests, and fail closed when Firebase token verification or the approved-editor allowlist is unavailable. Browser requests send a Firebase ID token as a Bearer credential. The API verifies that token with revocation checks and authorizes only UIDs listed in the server-only `RGI_EDITOR_UIDS` allowlist. This protects restricted-topic and institutional-conflict profile intelligence as internal editorial data.
 
 - `GET /opportunity-windows/config`
 - `GET /opportunity-windows`
@@ -98,15 +98,55 @@ Commands require an expected opportunity revision. Identical repeated commands a
 - `STORY_OPPORTUNITIES_READS_ENABLED=true` explicitly enables protected reads.
 - `STORY_OPPORTUNITIES_WRITES_ENABLED=true` explicitly enables calculation and editor commands.
 - `RGI_READ_ONLY_STARTUP=true` overrides the write flag and rejects Story Opportunity writes.
-- `STORY_OPPORTUNITIES_ACTOR_ID` optionally labels the server-recognized shared credential actor; otherwise history records `admin-api-key`.
+- `RGI_EDITOR_UIDS` is the server-only comma-separated allowlist of approved Firebase editor UIDs. Missing or empty configuration fails closed for browser authentication.
+- `STORY_OPPORTUNITIES_ACTOR_ID` optionally labels trusted operational tooling that authenticates with `ADMIN_API_KEY` through `x-admin-api-key`; otherwise its history actor is `admin-api-key`.
+- Browser Firebase actions record the authenticated actor as `firebase:<uid>`.
 
 Both feature flags default to false. They are separate from Professor Library writes. Frozen production calculations use direct bounded Firestore queries and never materialize a snapshot from local or last-known-good fallback data. Production writes require the canonical Firebase project unless a Firestore emulator is active.
 
-The existing browser mechanism exposes `VITE_ADMIN_API_KEY` to a built client and is suitable only for controlled local verification, not production editor identity. Enabling the workflow for real production editors remains blocked on browser-safe authentication; this milestone does not weaken the server guard or redesign authentication.
+The browser uses Firebase Authentication for already-provisioned editor accounts. Its public build configuration is limited to `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, and `VITE_FIREBASE_APP_ID`; those values identify the Firebase web app and are not administrative credentials. The browser sends the current Firebase ID token in the `Authorization` header and never receives `ADMIN_API_KEY`. The latter remains optional, server-only, and accepted solely through `x-admin-api-key` for trusted scripts or operational tooling.
 
 ## Generated contracts
 
 OpenAPI remains the contract source of truth. The official generator produces the React client and runtime Zod validators. Because Orval 8.5.3 repeats the complete nested opportunity response schema for every operation, the official command runs a deterministic post-generation step that widens only those response validators' exported TypeScript declaration annotations to `ZodTypeAny`. Their runtime validation remains complete, and request/path schemas plus the generated React client retain their generated types. This prevents pathological declaration expansion without manual generated-file edits; `codegen:verify` covers the post-processed result.
+
+## Isolated real-stack acceptance test
+
+The mocked Playwright suite remains the fast UI-state test. A separate
+real-stack lane exercises the actual Vite application, Express API, Firebase
+Auth middleware, Firestore repository, window calculation, and professor
+selection persistence:
+
+```bash
+pnpm test:opportunities:emulator
+```
+
+The command starts only the Auth and Firestore emulators under the explicit
+demo project `demo-rgi-opportunities`, clears their ephemeral state, seeds four
+synthetic articles, three synthetic Professor Profiles, one allowlisted editor,
+and one non-editor, then runs the dedicated real-stack Playwright spec. The
+browser signs in through the emulator-only email/password editor control; it
+does not use a shared administrative credential. The test verifies unauthenticated and
+non-allowlisted rejection, calculates a frozen window through the real API,
+reviews separate relevance, fit, rationale, and coverage evidence, selects and
+clears a professor with persistent history, enforces weak-match reasoning and a
+hard exclusion, reloads the page, and confirms that the selection and actor UID
+were persisted in emulator Firestore. It then changes a seeded Professor
+Profile revision directly in emulator Firestore and verifies that the stale
+selection receives a real `409` without changing the opportunity or its
+history.
+
+The harness refuses to seed unless both `FIRESTORE_EMULATOR_HOST` and
+`FIREBASE_AUTH_EMULATOR_HOST` point to loopback addresses and every resolved
+Firebase project variable begins with `demo-`. It unsets service-account,
+Application Default Credential override, and shared admin-key environment
+variables before starting the stack. It never imports or exports emulator data,
+never sources the repository `.env`, and keeps schedulers, inline jobs,
+Professor Library writes, scraping, generation, and remote Firebase access out
+of the test.
+
+The Firebase CLI and the Chromium revision required by the pinned Playwright
+version must be installed locally before running the command.
 
 ## Explicit exclusions
 

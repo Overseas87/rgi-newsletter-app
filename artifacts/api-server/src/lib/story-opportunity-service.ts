@@ -8,6 +8,7 @@ import {
   clearProfessorSelection,
   closeOpportunity,
   OpportunityCommandError,
+  professorHardExclusionsForOpportunity,
   reopenOpportunity,
   selectProfessorForOpportunity,
   updateOpportunityAngle,
@@ -98,27 +99,33 @@ export class StoryOpportunityService {
     expectedRevision: number;
     actorId: string;
   }): Promise<StoryOpportunity | null> {
-    const currentProfiles = await this.dependencies.loadProfessorProfiles();
-    const currentProfile = currentProfiles.find(
-      (profile) => profile.id === input.professorId,
-    );
-    return this.dependencies.repository.mutateOpportunity(
+    const reason = input.reason?.trim() || null;
+    const occurredAt = this.dependencies.now().toISOString();
+    return this.dependencies.repository.mutateOpportunityWithProfessor(
       input.id,
-      (opportunity) => {
-        const reason = input.reason?.trim() || null;
-        if (
-          opportunity.selectedProfessor?.professorId === input.professorId &&
-          opportunity.selectedProfessor.reason === reason
-        )
-          return opportunity;
-        assertExpectedRevision(opportunity, input.expectedRevision);
+      input.professorId,
+      (opportunity, currentProfile) => {
         const frozenMatch = opportunity.professorMatches.find(
           (match) => match.professorId === input.professorId,
         );
+        if (!frozenMatch) {
+          throw new OpportunityCommandError(
+            "PROFESSOR_MATCH_NOT_FOUND",
+            "Professor was not evaluated for this frozen opportunity.",
+            404,
+          );
+        }
         if (!currentProfile) {
           throw new OpportunityCommandError(
             "PROFESSOR_PROFILE_UNAVAILABLE",
             "The Professor Profile is no longer available. Recalculate an explicit snapshot revision before selecting.",
+            409,
+          );
+        }
+        if (currentProfile.profileRevision !== frozenMatch.profileRevision) {
+          throw new OpportunityCommandError(
+            "PROFESSOR_PROFILE_REVISION_CONFLICT",
+            `Professor Profile revision ${frozenMatch.profileRevision} is stale; current revision is ${currentProfile.profileRevision}. Recalculate an explicit snapshot revision before selecting.`,
             409,
           );
         }
@@ -129,22 +136,29 @@ export class StoryOpportunityService {
             409,
           );
         }
-        if (
-          frozenMatch &&
-          currentProfile.profileRevision !== frozenMatch.profileRevision
-        ) {
+        const currentHardExclusions = professorHardExclusionsForOpportunity(
+          opportunity,
+          currentProfile,
+        );
+        if (currentHardExclusions.length) {
           throw new OpportunityCommandError(
-            "PROFESSOR_PROFILE_REVISION_CHANGED",
-            `Professor Profile revision ${frozenMatch.profileRevision} is stale; current revision is ${currentProfile.profileRevision}. Recalculate an explicit snapshot revision before selecting.`,
+            "PROFESSOR_HARD_EXCLUDED",
+            currentHardExclusions.join(" "),
             409,
           );
+        }
+        const identicalSelection =
+          opportunity.selectedProfessor?.professorId === input.professorId &&
+          opportunity.selectedProfessor.reason === reason;
+        if (!identicalSelection) {
+          assertExpectedRevision(opportunity, input.expectedRevision);
         }
         return selectProfessorForOpportunity({
           opportunity,
           professorId: input.professorId,
           reason,
           actorId: input.actorId,
-          occurredAt: this.dependencies.now().toISOString(),
+          occurredAt,
         });
       },
     );

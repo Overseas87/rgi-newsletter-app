@@ -10,6 +10,7 @@ import { listFirestoreArticles, listFirestoreDigests } from "./lib/firestore-dat
 import { listFirestoreSources } from "./lib/firestore-sources";
 import { markStaleRunningJobsFailed } from "./lib/job-queue";
 import { getFirebaseDiagnostics, verifyFirestoreConnection } from "./lib/firebase";
+import { createAdminMutationGuard } from "./lib/internal-editor-auth";
 
 const app: Express = express();
 app.set("etag", false);
@@ -36,42 +37,6 @@ function configuredCorsOrigins(): string[] {
 
 function readOnlyStartupEnabled(): boolean {
   return process.env.RGI_READ_ONLY_STARTUP === "true";
-}
-
-function isAdminProtectedRequest(req: express.Request): boolean {
-  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return false;
-  return req.path.startsWith("/api/") || req.path.startsWith("/sources");
-}
-
-function adminGuard(req: express.Request, res: express.Response, next: express.NextFunction): void {
-  if (!isAdminProtectedRequest(req)) {
-    next();
-    return;
-  }
-
-  const adminKey = process.env.ADMIN_API_KEY;
-  if (!adminKey) {
-    if (process.env.NODE_ENV === "production") {
-      res.status(503).json({
-        error: "Admin API is not configured",
-        message: "Set ADMIN_API_KEY before enabling production mutating routes.",
-      });
-      return;
-    }
-    res.setHeader("X-RGI-Admin-Guard", "development-unconfigured");
-    next();
-    return;
-  }
-
-  const authorization = req.get("authorization") ?? "";
-  const bearer = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
-  const provided = req.get("x-admin-api-key") ?? bearer;
-  if (provided !== adminKey) {
-    res.status(401).json({ error: "Unauthorized admin request" });
-    return;
-  }
-
-  next();
 }
 
 async function withStartupTimeout<T>(label: string, promise: Promise<T>, timeoutMs = 8000): Promise<T> {
@@ -178,7 +143,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(adminGuard);
+app.use(createAdminMutationGuard());
 
 app.use(sourcesRouter);
 app.use("/api", router);

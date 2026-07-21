@@ -992,6 +992,21 @@ export interface UpdateSettingsBody {
   scrapeTimeUtc?: string;
 }
 
+/**
+ * Missing, malformed, invalid, expired, or revoked Firebase ID token, or invalid internal service credential
+ */
+export type InternalEditorUnauthorizedResponse = ErrorResponse;
+
+/**
+ * Authenticated user is not an approved RGI editor, or the requested feature is disabled
+ */
+export type InternalEditorForbiddenResponse = ErrorResponse;
+
+/**
+ * Server-side Firebase token verification or approved-editor configuration is unavailable
+ */
+export type InternalEditorAuthUnavailableResponse = ErrorResponse;
+
 export type ListProfessorProfilesParams = {
   /**
    * Filter by whether a professor is included in future article matching.

@@ -28,6 +28,9 @@ import type {
   ErrorResponse,
   GenerateDigestBody,
   HealthStatus,
+  InternalEditorAuthUnavailableResponse,
+  InternalEditorForbiddenResponse,
+  InternalEditorUnauthorizedResponse,
   ListArticlesParams,
   ListDigestArticlesParams,
   ListProfessorProfilesParams,
@@ -324,7 +327,11 @@ export const getGetProfessorLibraryConfigQueryKey = () => {
 
 export const getGetProfessorLibraryConfigQueryOptions = <
   TData = Awaited<ReturnType<typeof getProfessorLibraryConfig>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getProfessorLibraryConfig>>,
@@ -352,7 +359,11 @@ export const getGetProfessorLibraryConfigQueryOptions = <
 export type GetProfessorLibraryConfigQueryResult = NonNullable<
   Awaited<ReturnType<typeof getProfessorLibraryConfig>>
 >;
-export type GetProfessorLibraryConfigQueryError = ErrorType<unknown>;
+export type GetProfessorLibraryConfigQueryError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary Get Professor Library configuration
@@ -360,7 +371,11 @@ export type GetProfessorLibraryConfigQueryError = ErrorType<unknown>;
 
 export function useGetProfessorLibraryConfig<
   TData = Awaited<ReturnType<typeof getProfessorLibraryConfig>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getProfessorLibraryConfig>>,
@@ -420,7 +435,11 @@ export const getListProfessorProfilesQueryKey = (
 
 export const getListProfessorProfilesQueryOptions = <
   TData = Awaited<ReturnType<typeof listProfessorProfiles>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(
   params?: ListProfessorProfilesParams,
   options?: {
@@ -452,7 +471,11 @@ export const getListProfessorProfilesQueryOptions = <
 export type ListProfessorProfilesQueryResult = NonNullable<
   Awaited<ReturnType<typeof listProfessorProfiles>>
 >;
-export type ListProfessorProfilesQueryError = ErrorType<unknown>;
+export type ListProfessorProfilesQueryError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary List professor profiles
@@ -460,7 +483,11 @@ export type ListProfessorProfilesQueryError = ErrorType<unknown>;
 
 export function useListProfessorProfiles<
   TData = Awaited<ReturnType<typeof listProfessorProfiles>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(
   params?: ListProfessorProfilesParams,
   options?: {
@@ -504,7 +531,11 @@ export const createProfessorProfile = async (
 };
 
 export const getCreateProfessorProfileMutationOptions = <
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -546,13 +577,21 @@ export type CreateProfessorProfileMutationResult = NonNullable<
 >;
 export type CreateProfessorProfileMutationBody =
   BodyType<CreateProfessorProfileBody>;
-export type CreateProfessorProfileMutationError = ErrorType<ErrorResponse>;
+export type CreateProfessorProfileMutationError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary Create a professor profile
  */
 export const useCreateProfessorProfile = <
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -597,7 +636,12 @@ export const getGetProfessorProfileQueryKey = (id: string) => {
 
 export const getGetProfessorProfileQueryOptions = <
   TData = Awaited<ReturnType<typeof getProfessorProfile>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(
   id: string,
   options?: {
@@ -632,7 +676,12 @@ export const getGetProfessorProfileQueryOptions = <
 export type GetProfessorProfileQueryResult = NonNullable<
   Awaited<ReturnType<typeof getProfessorProfile>>
 >;
-export type GetProfessorProfileQueryError = ErrorType<ErrorResponse>;
+export type GetProfessorProfileQueryError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | ErrorResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary Get a professor profile
@@ -640,7 +689,12 @@ export type GetProfessorProfileQueryError = ErrorType<ErrorResponse>;
 
 export function useGetProfessorProfile<
   TData = Awaited<ReturnType<typeof getProfessorProfile>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(
   id: string,
   options?: {
@@ -685,7 +739,12 @@ export const updateProfessorProfile = async (
 };
 
 export const getUpdateProfessorProfileMutationOptions = <
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -727,13 +786,23 @@ export type UpdateProfessorProfileMutationResult = NonNullable<
 >;
 export type UpdateProfessorProfileMutationBody =
   BodyType<UpdateProfessorProfileBody>;
-export type UpdateProfessorProfileMutationError = ErrorType<ErrorResponse>;
+export type UpdateProfessorProfileMutationError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | ErrorResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary Update a professor profile
  */
 export const useUpdateProfessorProfile = <
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -777,7 +846,11 @@ export const getGetStoryOpportunityConfigQueryKey = () => {
 
 export const getGetStoryOpportunityConfigQueryOptions = <
   TData = Awaited<ReturnType<typeof getStoryOpportunityConfig>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getStoryOpportunityConfig>>,
@@ -805,7 +878,11 @@ export const getGetStoryOpportunityConfigQueryOptions = <
 export type GetStoryOpportunityConfigQueryResult = NonNullable<
   Awaited<ReturnType<typeof getStoryOpportunityConfig>>
 >;
-export type GetStoryOpportunityConfigQueryError = ErrorType<ErrorResponse>;
+export type GetStoryOpportunityConfigQueryError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary Get internal Story Opportunity feature configuration
@@ -813,7 +890,11 @@ export type GetStoryOpportunityConfigQueryError = ErrorType<ErrorResponse>;
 
 export function useGetStoryOpportunityConfig<
   TData = Awaited<ReturnType<typeof getStoryOpportunityConfig>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getStoryOpportunityConfig>>,
@@ -856,7 +937,11 @@ export const getListStoryOpportunityWindowsQueryKey = () => {
 
 export const getListStoryOpportunityWindowsQueryOptions = <
   TData = Awaited<ReturnType<typeof listStoryOpportunityWindows>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof listStoryOpportunityWindows>>,
@@ -885,7 +970,11 @@ export const getListStoryOpportunityWindowsQueryOptions = <
 export type ListStoryOpportunityWindowsQueryResult = NonNullable<
   Awaited<ReturnType<typeof listStoryOpportunityWindows>>
 >;
-export type ListStoryOpportunityWindowsQueryError = ErrorType<ErrorResponse>;
+export type ListStoryOpportunityWindowsQueryError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary List completed frozen Story Opportunity windows
@@ -893,7 +982,11 @@ export type ListStoryOpportunityWindowsQueryError = ErrorType<ErrorResponse>;
 
 export function useListStoryOpportunityWindows<
   TData = Awaited<ReturnType<typeof listStoryOpportunityWindows>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof listStoryOpportunityWindows>>,
@@ -936,7 +1029,11 @@ export const getGetCurrentStoryOpportunityWindowQueryKey = () => {
 
 export const getGetCurrentStoryOpportunityWindowQueryOptions = <
   TData = Awaited<ReturnType<typeof getCurrentStoryOpportunityWindow>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getCurrentStoryOpportunityWindow>>,
@@ -965,8 +1062,11 @@ export const getGetCurrentStoryOpportunityWindowQueryOptions = <
 export type GetCurrentStoryOpportunityWindowQueryResult = NonNullable<
   Awaited<ReturnType<typeof getCurrentStoryOpportunityWindow>>
 >;
-export type GetCurrentStoryOpportunityWindowQueryError =
-  ErrorType<ErrorResponse>;
+export type GetCurrentStoryOpportunityWindowQueryError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary Get the latest completed frozen window and its shortlist
@@ -974,7 +1074,11 @@ export type GetCurrentStoryOpportunityWindowQueryError =
 
 export function useGetCurrentStoryOpportunityWindow<
   TData = Awaited<ReturnType<typeof getCurrentStoryOpportunityWindow>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getCurrentStoryOpportunityWindow>>,
@@ -1015,7 +1119,11 @@ export const calculateStoryOpportunityWindow = async (
 };
 
 export const getCalculateStoryOpportunityWindowMutationOptions = <
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1057,14 +1165,21 @@ export type CalculateStoryOpportunityWindowMutationResult = NonNullable<
 >;
 export type CalculateStoryOpportunityWindowMutationBody =
   BodyType<CalculateStoryOpportunityWindowBody>;
-export type CalculateStoryOpportunityWindowMutationError =
-  ErrorType<ErrorResponse>;
+export type CalculateStoryOpportunityWindowMutationError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary Explicitly and idempotently calculate one frozen daily window
  */
 export const useCalculateStoryOpportunityWindow = <
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1113,7 +1228,12 @@ export const getListStoryOpportunitiesForWindowQueryKey = (
 
 export const getListStoryOpportunitiesForWindowQueryOptions = <
   TData = Awaited<ReturnType<typeof listStoryOpportunitiesForWindow>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(
   windowId: string,
   options?: {
@@ -1151,8 +1271,12 @@ export const getListStoryOpportunitiesForWindowQueryOptions = <
 export type ListStoryOpportunitiesForWindowQueryResult = NonNullable<
   Awaited<ReturnType<typeof listStoryOpportunitiesForWindow>>
 >;
-export type ListStoryOpportunitiesForWindowQueryError =
-  ErrorType<ErrorResponse>;
+export type ListStoryOpportunitiesForWindowQueryError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | ErrorResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary List the frozen shortlist for one window
@@ -1160,7 +1284,12 @@ export type ListStoryOpportunitiesForWindowQueryError =
 
 export function useListStoryOpportunitiesForWindow<
   TData = Awaited<ReturnType<typeof listStoryOpportunitiesForWindow>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(
   windowId: string,
   options?: {
@@ -1210,7 +1339,12 @@ export const getGetStoryOpportunityQueryKey = (id: string) => {
 
 export const getGetStoryOpportunityQueryOptions = <
   TData = Awaited<ReturnType<typeof getStoryOpportunity>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(
   id: string,
   options?: {
@@ -1245,7 +1379,12 @@ export const getGetStoryOpportunityQueryOptions = <
 export type GetStoryOpportunityQueryResult = NonNullable<
   Awaited<ReturnType<typeof getStoryOpportunity>>
 >;
-export type GetStoryOpportunityQueryError = ErrorType<ErrorResponse>;
+export type GetStoryOpportunityQueryError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | ErrorResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary Get one Story Opportunity workbench record
@@ -1253,7 +1392,12 @@ export type GetStoryOpportunityQueryError = ErrorType<ErrorResponse>;
 
 export function useGetStoryOpportunity<
   TData = Awaited<ReturnType<typeof getStoryOpportunity>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(
   id: string,
   options?: {
@@ -1300,7 +1444,12 @@ export const getListStoryOpportunityProfessorMatchesQueryKey = (id: string) => {
 
 export const getListStoryOpportunityProfessorMatchesQueryOptions = <
   TData = Awaited<ReturnType<typeof listStoryOpportunityProfessorMatches>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(
   id: string,
   options?: {
@@ -1338,8 +1487,12 @@ export const getListStoryOpportunityProfessorMatchesQueryOptions = <
 export type ListStoryOpportunityProfessorMatchesQueryResult = NonNullable<
   Awaited<ReturnType<typeof listStoryOpportunityProfessorMatches>>
 >;
-export type ListStoryOpportunityProfessorMatchesQueryError =
-  ErrorType<ErrorResponse>;
+export type ListStoryOpportunityProfessorMatchesQueryError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | ErrorResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary List persisted deterministic Professor Matches
@@ -1347,7 +1500,12 @@ export type ListStoryOpportunityProfessorMatchesQueryError =
 
 export function useListStoryOpportunityProfessorMatches<
   TData = Awaited<ReturnType<typeof listStoryOpportunityProfessorMatches>>,
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
 >(
   id: string,
   options?: {
@@ -1395,7 +1553,12 @@ export const selectStoryOpportunityProfessor = async (
 };
 
 export const getSelectStoryOpportunityProfessorMutationOptions = <
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | ErrorResponse
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1437,14 +1600,23 @@ export type SelectStoryOpportunityProfessorMutationResult = NonNullable<
 >;
 export type SelectStoryOpportunityProfessorMutationBody =
   BodyType<SelectStoryOpportunityProfessorBody>;
-export type SelectStoryOpportunityProfessorMutationError =
-  ErrorType<ErrorResponse>;
+export type SelectStoryOpportunityProfessorMutationError = ErrorType<
+  | ErrorResponse
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary Manually select or change the professor for an opportunity
  */
 export const useSelectStoryOpportunityProfessor = <
-  TError = ErrorType<ErrorResponse>,
+  TError = ErrorType<
+    | ErrorResponse
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1489,7 +1661,12 @@ export const clearStoryOpportunityProfessor = async (
 };
 
 export const getClearStoryOpportunityProfessorMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1531,13 +1708,23 @@ export type ClearStoryOpportunityProfessorMutationResult = NonNullable<
 >;
 export type ClearStoryOpportunityProfessorMutationBody =
   BodyType<ClearStoryOpportunityProfessorBody>;
-export type ClearStoryOpportunityProfessorMutationError = ErrorType<unknown>;
+export type ClearStoryOpportunityProfessorMutationError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | ErrorResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary Clear the current manual professor selection
  */
 export const useClearStoryOpportunityProfessor = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1580,7 +1767,12 @@ export const updateStoryOpportunityAngle = async (
 };
 
 export const getUpdateStoryOpportunityAngleMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1622,13 +1814,23 @@ export type UpdateStoryOpportunityAngleMutationResult = NonNullable<
 >;
 export type UpdateStoryOpportunityAngleMutationBody =
   BodyType<UpdateStoryOpportunityAngleBody>;
-export type UpdateStoryOpportunityAngleMutationError = ErrorType<unknown>;
+export type UpdateStoryOpportunityAngleMutationError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | ErrorResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary Update the editor-controlled recommended angle
  */
 export const useUpdateStoryOpportunityAngle = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1671,7 +1873,12 @@ export const closeStoryOpportunity = async (
 };
 
 export const getCloseStoryOpportunityMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1713,13 +1920,23 @@ export type CloseStoryOpportunityMutationResult = NonNullable<
 >;
 export type CloseStoryOpportunityMutationBody =
   BodyType<StoryOpportunityRevisionCommandBody>;
-export type CloseStoryOpportunityMutationError = ErrorType<unknown>;
+export type CloseStoryOpportunityMutationError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | ErrorResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary Close a Story Opportunity
  */
 export const useCloseStoryOpportunity = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1762,7 +1979,12 @@ export const reopenStoryOpportunity = async (
 };
 
 export const getReopenStoryOpportunityMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1804,13 +2026,23 @@ export type ReopenStoryOpportunityMutationResult = NonNullable<
 >;
 export type ReopenStoryOpportunityMutationBody =
   BodyType<StoryOpportunityRevisionCommandBody>;
-export type ReopenStoryOpportunityMutationError = ErrorType<unknown>;
+export type ReopenStoryOpportunityMutationError = ErrorType<
+  | InternalEditorUnauthorizedResponse
+  | InternalEditorForbiddenResponse
+  | ErrorResponse
+  | InternalEditorAuthUnavailableResponse
+>;
 
 /**
  * @summary Reopen a closed Story Opportunity
  */
 export const useReopenStoryOpportunity = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<
+    | InternalEditorUnauthorizedResponse
+    | InternalEditorForbiddenResponse
+    | ErrorResponse
+    | InternalEditorAuthUnavailableResponse
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<

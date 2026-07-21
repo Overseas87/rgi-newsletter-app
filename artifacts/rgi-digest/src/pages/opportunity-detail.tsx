@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { userSafeErrorMessage } from "@/lib/api-error";
+import { apiErrorCode, userSafeErrorMessage } from "@/lib/api-error";
 
 function eastern(value: string): string {
   const date = new Date(value);
@@ -111,6 +111,27 @@ export default function OpportunityDetail() {
         variant: "destructive",
       });
     };
+
+  const selectionMutationError = async (error: unknown) => {
+    if (apiErrorCode(error) === "PROFESSOR_PROFILE_REVISION_CONFLICT") {
+      setSelectionTarget(null);
+      setSelectionReason("");
+      await refresh();
+      toast({
+        title: "Professor Profile changed",
+        description: userSafeErrorMessage(
+          error,
+          "This match is stale. Recalculate an explicit snapshot revision before selecting.",
+        ),
+        variant: "destructive",
+      });
+      return;
+    }
+    mutationError(
+      "Selection failed",
+      "The professor selection was not changed.",
+    )(error);
+  };
 
   if (detail.isLoading) {
     return (
@@ -193,10 +214,7 @@ export default function OpportunityDetail() {
               "The selection is preserved. Intake and outreach are not included in Milestone 1.",
           });
         },
-        onError: mutationError(
-          "Selection failed",
-          "The professor selection was not changed.",
-        ),
+        onError: selectionMutationError,
       },
     );
   };
@@ -217,7 +235,9 @@ export default function OpportunityDetail() {
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline">#{opportunity.shortlistPosition}</Badge>
             <Badge variant="secondary">{opportunity.primaryTopicLabel}</Badge>
-            <Badge>{opportunity.workflowState.replace("_", " ")}</Badge>
+            <Badge data-testid="opportunity-workflow-state">
+              {opportunity.workflowState.replace("_", " ")}
+            </Badge>
             {opportunity.timestampFallback ? (
               <Badge
                 variant="outline"

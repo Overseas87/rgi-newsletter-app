@@ -1,4 +1,5 @@
 import type { Article } from "@workspace/db";
+import type { ProfessorProfile } from "@workspace/api-zod";
 import {
   EXPECTED_FIREBASE_PROJECT_ID,
   FIREBASE_PROJECT_ID,
@@ -6,6 +7,10 @@ import {
   isFirestoreTemporarilyDegraded,
   withFirestoreRetry,
 } from "./firebase";
+import {
+  PROFESSOR_PROFILES_COLLECTION,
+  professorProfileFromDoc,
+} from "./professor-profiles";
 import type {
   StoryOpportunity,
   StoryOpportunityWindow,
@@ -34,7 +39,19 @@ export interface StoryOpportunityRepository {
     id: string,
     mutate: (opportunity: StoryOpportunity) => StoryOpportunity,
   ): Promise<StoryOpportunity | null>;
+  mutateOpportunityWithProfessor(
+    id: string,
+    professorId: string,
+    mutate: (
+      opportunity: StoryOpportunity,
+      professorProfile: ProfessorProfile | null,
+    ) => StoryOpportunity,
+  ): Promise<StoryOpportunity | null>;
 }
+
+type ProfessorProfileLoader = (
+  professorId: string,
+) => ProfessorProfile | null | Promise<ProfessorProfile | null>;
 
 function clone<T>(value: T): T {
   return structuredClone(value);
@@ -325,11 +342,47 @@ export class FirestoreStoryOpportunityRepository implements StoryOpportunityRepo
       }),
     );
   }
+
+  async mutateOpportunityWithProfessor(
+    id: string,
+    professorId: string,
+    mutate: (
+      opportunity: StoryOpportunity,
+      professorProfile: ProfessorProfile | null,
+    ) => StoryOpportunity,
+  ): Promise<StoryOpportunity | null> {
+    if (isFirestoreTemporarilyDegraded())
+      throw new Error("Firestore is temporarily degraded");
+    assertCanonicalOpportunityWriteTarget();
+    const { db } = await getFirebaseBundle();
+    const opportunityRef = db
+      .collection(STORY_OPPORTUNITIES_COLLECTION)
+      .doc(id);
+    const professorRef = db
+      .collection(PROFESSOR_PROFILES_COLLECTION)
+      .doc(professorId);
+    return db.runTransaction(async (transaction: any) => {
+      const opportunitySnapshot = await transaction.get(opportunityRef);
+      if (!opportunitySnapshot.exists) return null;
+      const professorSnapshot = await transaction.get(professorRef);
+      const current = opportunityFromDoc(opportunitySnapshot);
+      const professorProfile = professorSnapshot.exists
+        ? professorProfileFromDoc(professorSnapshot)
+        : null;
+      const updated = mutate(current, professorProfile);
+      if (updated !== current) transaction.set(opportunityRef, updated);
+      return clone(updated);
+    });
+  }
 }
 
 export class MemoryStoryOpportunityRepository implements StoryOpportunityRepository {
   private readonly windows = new Map<string, StoryOpportunityWindow>();
   private readonly opportunities = new Map<string, StoryOpportunity>();
+
+  constructor(
+    private readonly loadProfessorProfile: ProfessorProfileLoader = () => null,
+  ) {}
 
   async createFrozenSnapshot(
     window: StoryOpportunityWindow,
@@ -396,6 +449,25 @@ export class MemoryStoryOpportunityRepository implements StoryOpportunityReposit
     const current = this.opportunities.get(id);
     if (!current) return null;
     const updated = mutate(clone(current));
+    this.opportunities.set(id, clone(updated));
+    return clone(updated);
+  }
+
+  async mutateOpportunityWithProfessor(
+    id: string,
+    professorId: string,
+    mutate: (
+      opportunity: StoryOpportunity,
+      professorProfile: ProfessorProfile | null,
+    ) => StoryOpportunity,
+  ): Promise<StoryOpportunity | null> {
+    const current = this.opportunities.get(id);
+    if (!current) return null;
+    const professorProfile = await this.loadProfessorProfile(professorId);
+    const updated = mutate(
+      clone(current),
+      professorProfile ? clone(professorProfile) : null,
+    );
     this.opportunities.set(id, clone(updated));
     return clone(updated);
   }

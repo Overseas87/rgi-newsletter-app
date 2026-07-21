@@ -10,7 +10,9 @@
     "build:prod": "pnpm run db:migrate && pnpm run build",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "worker": "node --enable-source-maps ./dist/worker.mjs",
+    "seed:e2e:emulator": "node --import tsx scripts/seed-story-opportunities-emulator.ts",
     "test:professors": "tsx --test src/__tests__/professor-profiles.test.ts",
+    "test:auth": "tsx --test src/__tests__/internal-editor-auth.test.ts",
     "test:opportunities": "tsx --test src/__tests__/story-opportunities.test.ts src/__tests__/story-opportunities-api.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

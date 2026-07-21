@@ -2,6 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: "**/*.real-stack.spec.ts",
   fullyParallel: false,
   reporter: "list",
   use: {
@@ -15,7 +16,6 @@ export default defineConfig({
     env: {
       PORT: "21412",
       NODE_ENV: "test",
-      VITE_ADMIN_API_KEY: "browser-fixture-key",
     },
     url: "http://127.0.0.1:21412/opportunities",
     reuseExistingServer: false,

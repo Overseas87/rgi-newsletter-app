@@ -40,7 +40,7 @@ const article = {
   moderatedBy: null,
 };
 
-test("Professor Library operations declare strict internal-editor authorization", () => {
+test("internal editor operations declare Firebase editor and server-only service authorization", () => {
   const openapi = readFileSync(new URL("../openapi.yaml", import.meta.url), "utf8");
   for (const operationId of [
     "getProfessorLibraryConfig",
@@ -48,12 +48,31 @@ test("Professor Library operations declare strict internal-editor authorization"
     "createProfessorProfile",
     "getProfessorProfile",
     "updateProfessorProfile",
+    "getStoryOpportunityConfig",
+    "listStoryOpportunityWindows",
+    "getCurrentStoryOpportunityWindow",
+    "calculateStoryOpportunityWindow",
+    "listStoryOpportunitiesForWindow",
+    "getStoryOpportunity",
+    "listStoryOpportunityProfessorMatches",
+    "selectStoryOpportunityProfessor",
+    "clearStoryOpportunityProfessor",
+    "updateStoryOpportunityAngle",
+    "closeStoryOpportunity",
+    "reopenStoryOpportunity",
   ]) {
     assert.match(
       openapi,
-      new RegExp(`operationId: ${operationId}[\\s\\S]{0,240}security:\\n\\s+- InternalEditorAuth: \\[\\]`),
+      new RegExp(
+        `operationId: ${operationId}[\\s\\S]{0,260}security:\\n\\s+- FirebaseEditorAuth: \\[\\]\\n\\s+- InternalServiceKey: \\[\\]`,
+      ),
     );
   }
+  assert.doesNotMatch(openapi, /^\s+InternalEditorAuth:/m);
+  assert.doesNotMatch(openapi, /VITE_ADMIN_API_KEY/);
+  assert.match(openapi, /name: x-admin-api-key/);
+  assert.match(openapi, /bearerFormat: Firebase ID token/);
+  assert.match(openapi, /InternalEditorAuthUnavailable/);
 });
 
 test("generated Story Opportunity response validators use declaration-safe reproducible annotations", () => {

@@ -221,7 +221,8 @@ async function mockApi(
     | "no-window"
     | "empty"
     | "unauthorized"
-    | "reads-disabled" = "normal",
+    | "reads-disabled"
+    | "profile-conflict" = "normal",
 ) {
   let currentOpportunity = structuredClone(opportunities[0]);
   await page.route("**/api/**", async (route) => {
@@ -289,6 +290,19 @@ async function mockApi(
       });
     }
     if (path.endsWith("/select-professor") && request.method() === "POST") {
+      if (mode === "profile-conflict") {
+        return fulfillJson(
+          route,
+          {
+            error: "The Professor Profile changed after this match was calculated.",
+            code: "PROFESSOR_PROFILE_REVISION_CONFLICT",
+            retryable: false,
+            userMessage:
+              "The Professor Profile changed after this match was calculated. Recalculate an explicit snapshot revision before selecting.",
+          },
+          409,
+        );
+      }
       const body = request.postDataJSON() as {
         professorId: string;
         reason?: string;
@@ -417,6 +431,29 @@ test("weak selection requires a substantive editor reason", async ({
       { exact: true },
     ),
   ).toBeVisible();
+});
+
+test("a Professor Profile revision conflict preserves selection state and explains the required recalculation", async ({
+  page,
+}) => {
+  await mockApi(page, "profile-conflict");
+  await page.goto("/opportunities/opp_browser_01");
+  await page.getByTestId("select-professor-prof_alpha_01").click();
+  await page.getByTestId("confirm-professor-selection").click();
+
+  await expect(
+    page.getByText("Professor Profile changed", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByLabel("Notifications (F8)")
+      .getByText(/Recalculate an explicit snapshot revision before selecting/),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("professor-selection-confirmation"),
+  ).toHaveCount(0);
+  await expect(page.getByText("No professor has been selected")).toBeVisible();
+  await expect(page.getByText(/Actor: browser-fixture-editor/)).toHaveCount(0);
 });
 
 test("no-window, empty-window, and authorization states remain distinguishable", async ({

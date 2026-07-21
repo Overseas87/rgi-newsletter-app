@@ -166,7 +166,9 @@ test("invalid required fields fail and update allows partial status changes", ()
 
 test("professor library writes require the exact true flag value", () => {
   const previous = process.env.PROFESSOR_LIBRARY_WRITES_ENABLED;
+  const previousReadOnly = process.env.RGI_READ_ONLY_STARTUP;
   delete process.env.PROFESSOR_LIBRARY_WRITES_ENABLED;
+  delete process.env.RGI_READ_ONLY_STARTUP;
   try {
     assert.equal(professorLibraryWritesEnabled(), false);
     for (const value of ["", "false", "TRUE", "1", " true "]) {
@@ -179,11 +181,21 @@ test("professor library writes require the exact true flag value", () => {
       error: "Professor Library writes are disabled",
       code: "PROFESSOR_LIBRARY_WRITES_DISABLED",
       retryable: false,
-      userMessage: "Professor Library editing is disabled in this environment until administrator authentication is implemented.",
+      userMessage: "Professor Library editing is disabled in this environment.",
+    });
+    process.env.RGI_READ_ONLY_STARTUP = "true";
+    assert.equal(professorLibraryWritesEnabled(), false);
+    assert.deepEqual(professorWritesDisabledPayload(), {
+      error: "Professor Library writes are blocked by read-only startup",
+      code: "READ_ONLY_STARTUP",
+      retryable: false,
+      userMessage: "Professor Library editing is blocked while the application is in read-only mode.",
     });
   } finally {
     if (previous === undefined) delete process.env.PROFESSOR_LIBRARY_WRITES_ENABLED;
     else process.env.PROFESSOR_LIBRARY_WRITES_ENABLED = previous;
+    if (previousReadOnly === undefined) delete process.env.RGI_READ_ONLY_STARTUP;
+    else process.env.RGI_READ_ONLY_STARTUP = previousReadOnly;
   }
 });
 
@@ -225,6 +237,7 @@ test("professor routes do not expose a hard-delete endpoint", () => {
 
 test("professor profile reads fail closed behind internal-editor authorization", async () => {
   const previousAdminKey = process.env.ADMIN_API_KEY;
+  const previousEditorUids = process.env.RGI_EDITOR_UIDS;
   const previousNodeEnv = process.env.NODE_ENV;
   const app = express();
   app.use("/api", professorRouter);
@@ -237,21 +250,30 @@ test("professor profile reads fail closed behind internal-editor authorization",
 
   try {
     delete process.env.ADMIN_API_KEY;
+    delete process.env.RGI_EDITOR_UIDS;
     process.env.NODE_ENV = "development";
     let response = await fetch(`http://127.0.0.1:${port}/api/professors`);
-    assert.equal(response.status, 503);
+    assert.equal(response.status, 401);
     const unconfigured = (await response.json()) as { code?: unknown };
-    assert.equal(unconfigured.code, "INTERNAL_EDITOR_AUTH_UNCONFIGURED");
+    assert.equal(unconfigured.code, "AUTHORIZATION_REQUIRED");
+
+    response = await fetch(`http://127.0.0.1:${port}/api/professors`, {
+      headers: { authorization: "Bearer token-without-allowlist" },
+    });
+    assert.equal(response.status, 503);
+    assert.equal(((await response.json()) as { code?: unknown }).code, "INTERNAL_EDITOR_AUTH_UNCONFIGURED");
 
     process.env.ADMIN_API_KEY = "professor-integration-secret";
     response = await fetch(`http://127.0.0.1:${port}/api/professors`, {
-      headers: { authorization: "Bearer wrong" },
+      headers: { "x-admin-api-key": "wrong" },
     });
     assert.equal(response.status, 401);
   } finally {
     await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
     if (previousAdminKey === undefined) delete process.env.ADMIN_API_KEY;
     else process.env.ADMIN_API_KEY = previousAdminKey;
+    if (previousEditorUids === undefined) delete process.env.RGI_EDITOR_UIDS;
+    else process.env.RGI_EDITOR_UIDS = previousEditorUids;
     if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
     else process.env.NODE_ENV = previousNodeEnv;
   }

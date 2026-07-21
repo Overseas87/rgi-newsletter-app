@@ -776,10 +776,12 @@ test("revision checks reject conflicts and identical selection commands are idem
 });
 
 test("selection rejects a Professor Profile that became inactive or changed after the frozen match", async () => {
-  const repository = new MemoryStoryOpportunityRepository();
   let currentProfile = profile("prof_current_01", {
     expertiseTags: ["Leadership & Organizations"],
   });
+  const repository = new MemoryStoryOpportunityRepository((professorId) =>
+    professorId === currentProfile.id ? currentProfile : null,
+  );
   const service = new StoryOpportunityService({
     repository,
     loadArticles: async () => [article(1)],
@@ -803,7 +805,11 @@ test("selection rejects a Professor Profile that became inactive or changed afte
       error.code === "PROFESSOR_PROFILE_INACTIVE",
   );
 
-  currentProfile = { ...currentProfile, status: "active", profileRevision: 2 };
+  currentProfile = {
+    ...currentProfile,
+    status: "active",
+    restrictedTopics: ["Leadership & Organizations"],
+  };
   await assert.rejects(
     service.selectProfessor({
       id: opportunity.id,
@@ -814,8 +820,92 @@ test("selection rejects a Professor Profile that became inactive or changed afte
     }),
     (error: unknown) =>
       error instanceof OpportunityCommandError &&
-      error.code === "PROFESSOR_PROFILE_REVISION_CHANGED",
+      error.code === "PROFESSOR_HARD_EXCLUDED",
   );
+
+  currentProfile = {
+    ...currentProfile,
+    restrictedTopics: [],
+    institutionalConflicts: ["Source 1"],
+  };
+  await assert.rejects(
+    service.selectProfessor({
+      id: opportunity.id,
+      professorId: currentProfile.id,
+      reason: "Editorial override",
+      expectedRevision: 1,
+      actorId: "editor",
+    }),
+    (error: unknown) =>
+      error instanceof OpportunityCommandError &&
+      error.code === "PROFESSOR_HARD_EXCLUDED",
+  );
+
+  currentProfile = {
+    ...currentProfile,
+    restrictedTopics: [],
+    institutionalConflicts: [],
+    profileRevision: 2,
+  };
+  await assert.rejects(
+    service.selectProfessor({
+      id: opportunity.id,
+      professorId: currentProfile.id,
+      reason: "Editorial override",
+      expectedRevision: 1,
+      actorId: "editor",
+    }),
+    (error: unknown) =>
+      error instanceof OpportunityCommandError &&
+      error.code === "PROFESSOR_PROFILE_REVISION_CONFLICT" &&
+      error.status === 409,
+  );
+
+  const persisted = await repository.getOpportunity(opportunity.id);
+  assert.equal(persisted?.revision, 1);
+  assert.equal(persisted?.selectedProfessor, null);
+  assert.deepEqual(persisted?.selectionHistory, []);
+});
+
+test("an identical selection retry cannot bypass current Professor Profile validation", async () => {
+  let currentProfile = profile("prof_retry_0001", {
+    expertiseTags: ["Leadership & Organizations"],
+  });
+  const repository = new MemoryStoryOpportunityRepository((professorId) =>
+    professorId === currentProfile.id ? currentProfile : null,
+  );
+  const service = new StoryOpportunityService({
+    repository,
+    loadArticles: async () => [article(1)],
+    loadProfessorProfiles: async () => [currentProfile],
+    now: () => NOW,
+  });
+  const opportunity = (await service.calculateWindow(AS_OF)).opportunities[0]!;
+  const selected = await service.selectProfessor({
+    id: opportunity.id,
+    professorId: currentProfile.id,
+    reason: "Editorial override",
+    expectedRevision: opportunity.revision,
+    actorId: "editor",
+  });
+  assert.equal(selected?.revision, 2);
+
+  currentProfile = { ...currentProfile, profileRevision: 2 };
+  await assert.rejects(
+    service.selectProfessor({
+      id: opportunity.id,
+      professorId: currentProfile.id,
+      reason: "Editorial override",
+      expectedRevision: opportunity.revision,
+      actorId: "editor",
+    }),
+    (error: unknown) =>
+      error instanceof OpportunityCommandError &&
+      error.code === "PROFESSOR_PROFILE_REVISION_CONFLICT",
+  );
+  const persisted = await repository.getOpportunity(opportunity.id);
+  assert.equal(persisted?.revision, 2);
+  assert.equal(persisted?.selectionHistory.length, 1);
 });
 
 test("deterministic snapshot creation is idempotent and never mutates the frozen first result", async () => {
